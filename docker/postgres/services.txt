@@ -1,0 +1,14 @@
+# <thu-muc-service> <ten-database>
+# Them service moi: tao thu muc service, them mot dong o day, va (neu co) dat script vao <service>/database/
+auth-service auth_db
+subscription-service subscription_db
+facility-service facility_db
+reporting-service reporting_db
+discovery-service discovery_db
+voucher-service voucher_db
+slot-hold-engine slot_hold_db
+booking-service booking_db
+payment-service payment_db
+staff-operations-service staff_db
+pos-retail-service pos_retail_db
+notification-service notification_db

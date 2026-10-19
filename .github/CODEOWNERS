@@ -1,0 +1,6 @@
+# Điền GitHub username của owner từng service khi đã chốt, mỗi service một dòng.
+# Ví dụ:
+# /auth-service/                 @github-username
+# /booking-service/              @github-username
+#
+# Sau khi điền, bật "Require review from Code Owners" trong branch protection.
