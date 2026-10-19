@@ -66,7 +66,7 @@ Dữ liệu mẫu là dữ liệu demo (tài khoản `@demo.com`, số tài kho�
 1. Tạo folder `<ten-service>/` ở gốc repo.
 2. Thêm một dòng `<ten-service> <ten_database>` vào `docker/postgres/services.txt`.
 3. Nếu có script khởi tạo, đặt vào `<ten-service>/database/` với tên `V<số>__<mô-tả>.sql`.
-4. Cập nhật bảng danh sách service ở trên và `.github/CODEOWNERS`.
+4. Cập nhật bảng danh sách service ở trên.
 
 ## Quy ước làm việc
 
