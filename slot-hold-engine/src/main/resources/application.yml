@@ -1,0 +1,14 @@
+server:
+  port: ${SERVER_PORT:8087}
+spring:
+  application:
+    name: slot-hold-engine
+hold:
+  redis-address: ${REDIS_ADDRESS:redis://localhost:6387}
+  redis-password: ${REDIS_PASSWORD:}
+  discovery-url: ${DISCOVERY_URL:http://localhost:8085}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
