@@ -3,6 +3,9 @@ server:
 spring:
   application:
     name: slot-hold-engine
+  mvc:
+    problemdetails:
+      enabled: true
 hold:
   redis-address: ${REDIS_ADDRESS:redis://localhost:6387}
   redis-password: ${REDIS_PASSWORD:}
