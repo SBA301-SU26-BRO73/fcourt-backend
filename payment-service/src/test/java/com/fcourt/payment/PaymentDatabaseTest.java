@@ -35,11 +35,14 @@ class PaymentDatabaseTest {
     @Autowired org.springframework.transaction.support.TransactionTemplate tx;
 
     ReceiptService receipts(java.time.Clock clock, ReceiptStorage storage) {
+        return receipts(clock,storage,"PENDING_PAYMENT");
+    }
+    ReceiptService receipts(java.time.Clock clock,ReceiptStorage storage,String state) {
         var upstream = org.mockito.Mockito.mock(PaymentUpstreams.class);
         var checkout = org.mockito.Mockito.mock(CheckoutService.class);
         try {
             var json = new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
-            var booking = json.readValue(CheckoutApiTest.BOOKING, PaymentUpstreams.Booking.class);
+            var booking = json.readValue(CheckoutApiTest.BOOKING.replace("PENDING_PAYMENT",state), PaymentUpstreams.Booking.class);
             org.mockito.Mockito.when(upstream.booking(org.mockito.ArgumentMatchers.eq(42L),org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.eq("guest"))).thenReturn(booking);
             var info = new CheckoutInfo(42L,"BK00000042",7L,"Thu Duc","Court 1",booking.date(),booking.slots(),
                     booking.totalPrice(),"VCB","970436","00123","FCOURT","FC BK00000042",booking.holdExpiresAt(), "Khách hàng");
@@ -214,6 +217,91 @@ class PaymentDatabaseTest {
         }
     }
 
+    CheckoutInfo checkout() throws Exception {
+        var booking=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules().readValue(CheckoutApiTest.BOOKING,PaymentUpstreams.Booking.class);
+        return new CheckoutInfo(42L,"BK00000042",7L,"Thu Duc","Court 1",booking.date(),booking.slots(),booking.totalPrice(),
+                "VCB","970436","00123","FCOURT","FC BK00000042",booking.holdExpiresAt(),"Khách hàng");
+    }
+    PaymentSessions sessions(java.time.Clock clock) {return new PaymentSessions(store,tx,clock);}
+    @Test
+    void checkoutTracksExpiryAndSweepCancelsOnlyUnsubmittedSessions() throws Exception {
+        sessions(fixed()).track(checkout());
+        sessions(fixed()).track(checkout());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM payments",Long.class)).isEqualTo(1);
+        sessions(java.time.Clock.fixed(CheckoutApiTest.NOW.plusSeconds(299),java.time.ZoneOffset.UTC)).expire();
+        assertThat(store.find(42).status()).isEqualTo("PENDING");
+        var expired=sessions(java.time.Clock.fixed(CheckoutApiTest.NOW.plusSeconds(300),java.time.ZoneOffset.UTC));
+        expired.expire();expired.expire();
+        assertThat(store.find(42).status()).isEqualTo("CANCELLED");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM payment_outbox WHERE event_type='BookingCancelledEvent'",Long.class)).isEqualTo(1);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> receipts(fixed(),b->"unused").upload(42,null,"guest",image())).hasMessageContaining("410");
+    }
+    @Test
+    void uploadedReceiptIsNeverAutoCancelledAfterFiveMinutes() throws Exception {
+        sessions(fixed()).track(checkout());submitted();
+        sessions(java.time.Clock.fixed(CheckoutApiTest.NOW.plusSeconds(1000),java.time.ZoneOffset.UTC)).expire();
+        assertThat(store.find(42).status()).isEqualTo("PENDING");
+        assertThat(store.find(42).submittedAt()).isNotNull();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM payment_outbox",Long.class)).isEqualTo(1);
+    }
+    @Test
+    void confirmationCreatesStableUniqueCodeAndPngDecodesExactly() throws Exception {
+        var p=submitted();ownBranch();
+        var confirmed=approvals.decide(p.id(),true,null,admin());
+        assertThat(confirmed.checkInCode()).matches("[0-9]{32}");
+        assertThat(approvals.decide(p.id(),true,null,admin()).checkInCode()).isEqualTo(confirmed.checkInCode());
+        assertThat(TicketQr.newCode()).isNotEqualTo(confirmed.checkInCode());
+        var image=javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(TicketQr.png(confirmed.checkInCode())));
+        assertThat(image.getWidth()).isEqualTo(600);
+        var source=new com.google.zxing.client.j2se.BufferedImageLuminanceSource(image);
+        var decoded=new com.google.zxing.MultiFormatReader().decode(new com.google.zxing.BinaryBitmap(new com.google.zxing.common.HybridBinarizer(source)));
+        assertThat(decoded.getText()).isEqualTo(confirmed.checkInCode());
+        var payload=jdbc.queryForObject("SELECT payload::text FROM payment_outbox WHERE event_type='PaymentConfirmedEvent'",String.class);
+        assertThat(payload).contains(confirmed.checkInCode(),"/api/payments/42/ticket/qr");
+    }
+    @Test
+    void ticketRequiresPaymentAndAuthoritativeBookingConfirmationAndOwner() throws Exception {
+        submitted();
+        var customer=receipts(fixed(),b->"unused","CONFIRMED");
+        var controller=new TicketController(customer);
+        var mvc=org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(controller).build();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/payments/42/ticket").header("X-Hold-Token","guest"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isConflict());
+        ownBranch();approvals.decide(store.find(42).id(),true,null,admin());
+        var notSynced=new TicketController(receipts(fixed(),b->"unused"));
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> notSynced.ticket(42,null,"guest")).hasMessageContaining("409");
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/payments/42/ticket"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/payments/42/ticket").header("X-Hold-Token","guest"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Cache-Control","no-store"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.checkInCode").value(store.find(42).checkInCode()));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/payments/42/ticket/qr").header("X-Hold-Token","guest"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().contentType("image/png"));
+    }
+    @Test
+    void uploadRacingExpiryCannotCancelAnAcceptedReceipt() throws Exception {
+        sessions(fixed()).track(checkout());
+        var service=receipts(fixed(),b->"https://res.cloudinary.com/demo/bill.png");
+        var expired=sessions(java.time.Clock.fixed(CheckoutApiTest.NOW.plusSeconds(300),java.time.ZoneOffset.UTC));
+        var file=image();
+        try(var pool=java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            var results=pool.invokeAll(java.util.List.<java.util.concurrent.Callable<String>>of(
+                () -> {try {return service.upload(42,null,"guest",file).status();}catch(org.springframework.web.server.ResponseStatusException e){return "expired";}},
+                () -> {expired.expireOne(42);return "swept";}));
+            for(var result:results) result.get();
+        }
+        var record=store.find(42);
+        if (record.submittedAt()!=null) {
+            assertThat(record.status()).isEqualTo("PENDING");
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM payment_outbox WHERE event_type='BookingCancelledEvent'",Long.class)).isZero();
+        } else {
+            assertThat(record.status()).isEqualTo("CANCELLED");
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM payment_outbox WHERE event_type='PaymentSubmittedEvent'",Long.class)).isZero();
+        }
+    }
+
     @Test
     void migrationsInitializeIsolatedPaymentDatabaseWithExactDecimalAmount() {
         jdbc.update("INSERT INTO payments(branch_id,amount) VALUES (?,?)", 7L, new java.math.BigDecimal("160000.00"));
@@ -221,6 +309,6 @@ class PaymentDatabaseTest {
                 .isEqualByComparingTo("160000.00");
         assertThat(jdbc.queryForObject("SELECT status FROM payments", String.class)).isEqualTo("PENDING");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM refund_requests", Long.class)).isZero();
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success", Long.class)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success", Long.class)).isEqualTo(3);
     }
 }

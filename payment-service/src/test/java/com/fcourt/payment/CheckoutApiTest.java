@@ -46,7 +46,7 @@ class CheckoutApiTest {
         facility = MockRestServiceServer.bindTo(facilityBuilder).build();
         upstreams = new PaymentUpstreams(bookingBuilder.build(), facilityBuilder.build());
         mvc = MockMvcBuilders.standaloneSetup(new CheckoutController(
-                new CheckoutService(upstreams, Clock.fixed(NOW, ZoneOffset.UTC)))).build();
+                new CheckoutService(upstreams, Clock.fixed(NOW, ZoneOffset.UTC)),mock(PaymentSessions.class))).build();
     }
 
     void bookingResponse(String body) {
