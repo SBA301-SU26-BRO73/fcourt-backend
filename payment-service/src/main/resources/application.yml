@@ -1,0 +1,39 @@
+server:
+  port: ${SERVER_PORT:8089}
+spring:
+  application:
+    name: payment-service
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5489/payment_db}
+    username: ${DATABASE_USER:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      properties:
+        max.block.ms: 5000
+        delivery.timeout.ms: 10000
+        request.timeout.ms: 5000
+  mvc:
+    problemdetails:
+      enabled: true
+payment:
+  jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+  jwt-issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
+  jwt-audience: ${AUTH_JWT_AUDIENCE:fcourt}
+  cloudinary-url: ${CLOUDINARY_URL:}
+  events-enabled: ${PAYMENT_EVENTS_ENABLED:true}
+  booking-url: ${BOOKING_URL:http://localhost:8088}
+  facility-url: ${FACILITY_URL:http://localhost:8083}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
