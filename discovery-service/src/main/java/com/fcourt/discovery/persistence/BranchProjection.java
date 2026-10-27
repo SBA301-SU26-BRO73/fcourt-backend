@@ -8,9 +8,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Repository
 public class BranchProjection {
     private final JdbcTemplate jdbc;
+    private final org.springframework.context.ApplicationEventPublisher events;
 
-    public BranchProjection(JdbcTemplate jdbc) {
+    public BranchProjection(JdbcTemplate jdbc, org.springframework.context.ApplicationEventPublisher events) {
         this.jdbc = jdbc;
+        this.events = events;
     }
 
     @Transactional
@@ -40,6 +42,7 @@ public class BranchProjection {
         if (accepted.isEmpty()) {
             return;
         }
+        events.publishEvent(new BranchProjectionChanged(event.branchId()));
         jdbc.update("DELETE FROM court_read_model WHERE branch_id = ?", event.branchId());
         if (event.deleted()) {
             return;

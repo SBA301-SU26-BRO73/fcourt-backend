@@ -1,20 +1,20 @@
 package com.fcourt.discovery.api;
 
-import com.fcourt.discovery.persistence.BranchSearchRepository;
+import com.fcourt.discovery.application.BranchSearchService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/public/branches")
 public class BranchController {
-    private final BranchSearchRepository repository;
+    private final BranchSearchService service;
 
-    public BranchController(BranchSearchRepository repository) {
-        this.repository = repository;
+    public BranchController(BranchSearchService service) {
+        this.service = service;
     }
 
     @GetMapping
     public BranchSearchResponse search(@Valid @ModelAttribute BranchSearchRequest request) {
-        return repository.search(request);
+        return service.search(request);
     }
 }
