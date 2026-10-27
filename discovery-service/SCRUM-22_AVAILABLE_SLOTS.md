@@ -150,6 +150,10 @@ was not run; API behavior was verified by automated real HTTP requests.
 Task: https://bro73.atlassian.net/browse/SCRUM-22
 
 Approach record: https://bro73.atlassian.net/browse/SCRUM-130 (Từ Phúc Nguyên).
+Code review: https://bro73.atlassian.net/browse/SCRUM-138 (Từ Phúc Nguyên).
+PR: https://github.com/SBA301-SU26-BRO73/fcourt-backend/pull/6, requested reviewer
+`donan2k5`. CI runs on feature-branch pushes; live results are on the PR Checks
+tab. Local verification is recorded above independently of CI.
 The user confirmed prior approval; this traceability record was created during
 implementation without backdating approval. The project lacks custom review work
 types, so review records use Task plus [Review]/[Code Review] summary prefixes.
