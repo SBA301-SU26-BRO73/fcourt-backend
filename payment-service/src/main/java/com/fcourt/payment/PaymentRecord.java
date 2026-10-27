@@ -5,4 +5,4 @@ import java.time.Instant;
 
 record PaymentRecord(long id, long bookingId, long branchId, BigDecimal amount,
         String status, String receiptImageUrl, Instant submittedAt, String rejectionReason,
-        CheckoutInfo checkout) { }
+        CheckoutInfo checkout, String checkInCode, String qrImageUrl) { }
