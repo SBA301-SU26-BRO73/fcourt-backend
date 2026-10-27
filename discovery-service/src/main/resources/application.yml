@@ -3,6 +3,13 @@ server:
 spring:
   application:
     name: discovery-service
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6387}
+      password: ${REDIS_PASSWORD:}
+      connect-timeout: 1s
+      timeout: 1s
   datasource:
     url: ${DISCOVERY_DB_URL:jdbc:postgresql://localhost:5432/discovery_db}
     username: ${DISCOVERY_DB_USER:postgres}
@@ -39,6 +46,9 @@ management:
     health:
       show-details: never
 discovery:
+  slots:
+    facility-url: ${FACILITY_URL:http://localhost:8083}
+    booking-url: ${BOOKING_URL:http://localhost:8088}
   search:
     cache-ttl-seconds: ${DISCOVERY_CACHE_TTL_SECONDS:5}
   kafka:
