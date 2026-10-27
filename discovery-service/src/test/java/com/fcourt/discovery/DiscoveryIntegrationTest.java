@@ -29,7 +29,44 @@ import static org.awaitility.Awaitility.await;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "debug=false")
 @EmbeddedKafka(partitions = 1, topics = {"facility.branch-updated.v1", "facility.branch-updated.v1.DLT"},
         bootstrapServersProperty = "spring.kafka.bootstrap-servers")
+@org.testcontainers.junit.jupiter.Testcontainers
+@org.springframework.test.annotation.DirtiesContext
 class DiscoveryIntegrationTest {
+    @org.testcontainers.junit.jupiter.Container
+    static final org.testcontainers.containers.GenericContainer<?> REDIS =
+            new org.testcontainers.containers.GenericContainer<>("redis:7-alpine").withExposedPorts(6379);
+    private static final com.sun.net.httpserver.HttpServer SLOT_SOURCES = startSlotSources();
+
+    private static com.sun.net.httpserver.HttpServer startSlotSources() {
+        try {
+            var server = com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+            server.createContext("/api/internal/courts/", exchange -> {
+                String path = exchange.getRequestURI().getPath();
+                String date = exchange.getRequestURI().getQuery().substring(5);
+                String body = path.endsWith("slot-schedule") ? """
+                        {"courtId":1,"date":"%s","outOfService":false,"slots":[
+                        {"slotId":1,"startTime":"18:00:00","endTime":"18:30:00","price":75000,"outOfService":false},
+                        {"slotId":2,"startTime":"18:30:00","endTime":"19:00:00","price":75000,"outOfService":false},
+                        {"slotId":3,"startTime":"19:00:00","endTime":"19:30:00","price":90000,"outOfService":true}]}
+                        """.formatted(date) : """
+                        {"courtId":1,"date":"%s","bookedSlotIds":[2]}
+                        """.formatted(date);
+                byte[] bytes = body.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().set("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, bytes.length);
+                exchange.getResponseBody().write(bytes);
+                exchange.close();
+            });
+            server.start();
+            return server;
+        } catch (IOException exception) { throw new ExceptionInInitializerError(exception); }
+    }
+
+    @org.junit.jupiter.api.AfterAll
+    static void closeSlotSources(@Autowired org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory connection) {
+        connection.destroy();
+        SLOT_SOURCES.stop(0);
+    }
     private static final EmbeddedPostgres POSTGRES = startPostgres();
 
     private static EmbeddedPostgres startPostgres() {
@@ -45,6 +82,10 @@ class DiscoveryIntegrationTest {
         registry.add("spring.datasource.url", () -> POSTGRES.getJdbcUrl("postgres", "postgres"));
         registry.add("spring.datasource.username", () -> "postgres");
         registry.add("spring.datasource.password", () -> "postgres");
+        registry.add("spring.data.redis.host", REDIS::getHost);
+        registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(6379));
+        registry.add("discovery.slots.facility-url", () -> "http://127.0.0.1:" + SLOT_SOURCES.getAddress().getPort());
+        registry.add("discovery.slots.booking-url", () -> "http://127.0.0.1:" + SLOT_SOURCES.getAddress().getPort());
     }
 
     @Autowired BranchProjection projection;
@@ -55,6 +96,32 @@ class DiscoveryIntegrationTest {
     @Autowired KafkaTemplate<String, String> kafka;
     @Autowired ObjectMapper mapper;
     @Autowired org.springframework.kafka.test.EmbeddedKafkaBroker broker;
+    @Autowired org.springframework.data.redis.core.StringRedisTemplate redis;
+
+    @Test
+    void realHttpSlotApiCombinesUpstreamFixturesAndRedisTtl() throws Exception {
+        String date = "2099-01-01";
+        String key = "fcourt:hold:1:" + date + ":1";
+        redis.opsForValue().set(key, "private-hold-token", Duration.ofSeconds(300));
+        var response = http.getForEntity("/api/public/courts/1/slots?date=" + date, String.class);
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getHeaders().getCacheControl()).isEqualTo("no-store");
+        var slots = mapper.readTree(response.getBody());
+        assertThat(slots.get(0).get("status").asText()).isEqualTo("HOLD");
+        assertThat(slots.get(0).get("startTime").asText()).isEqualTo("18:00:00");
+        assertThat(slots.get(1).get("status").asText()).isEqualTo("BOOKED");
+        assertThat(slots.get(2).get("status").asText()).isEqualTo("OUT_OF_SERVICE");
+        assertThat(response.getBody()).doesNotContain("private-hold-token");
+        redis.expire(key, Duration.ofMillis(100));
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+            var fresh = http.getForEntity("/api/public/courts/1/slots?date=" + date, String.class);
+            assertThat(mapper.readTree(fresh.getBody()).get(0).get("status").asText()).isEqualTo("AVAILABLE");
+        });
+        var past = http.getForEntity("/api/public/courts/1/slots?date=2000-01-01", String.class);
+        for (var slot : mapper.readTree(past.getBody())) assertThat(slot.get("status").asText()).isEqualTo("EXPIRED");
+        assertThat(http.getForEntity("/api/public/courts/0/slots?date=" + date, String.class)
+                .getStatusCode().value()).isEqualTo(400);
+    }
 
     @BeforeEach
     void clean() {
