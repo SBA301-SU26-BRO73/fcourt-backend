@@ -1,5 +1,17 @@
 name: fcourt-discovery
 services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:${DISCOVERY_REDIS_PORT:-6387}:6379"
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - discovery-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
   postgres:
     image: postgres:17
     environment:
@@ -57,10 +69,17 @@ services:
       DISCOVERY_DB_USER: discovery
       DISCOVERY_DB_PASSWORD: discovery_local
       KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      FACILITY_URL: ${FACILITY_URL:-http://host.docker.internal:8083}
+      BOOKING_URL: ${BOOKING_URL:-http://host.docker.internal:8088}
     depends_on:
+      redis:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       topics:
         condition: service_completed_successfully
 volumes:
+  discovery-redis:
   discovery-data:
