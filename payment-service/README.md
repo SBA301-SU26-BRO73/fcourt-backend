@@ -99,3 +99,15 @@ Tests cover credential forwarding, 404, 410 (including expiration in flight),
 state conflicts, decimal money, leading-zero accounts, malformed dependencies,
 branch mismatch and fail-closed behavior. A PostgreSQL 16 Testcontainer starts
 the full Spring application, applies Flyway and verifies decimal persistence.
+
+## Receipt submission — SCRUM-34
+
+`POST /api/payments/{bookingId}/upload-receipt`, multipart part `file`, accepts decoded JPEG/PNG up to 5 MiB / 25 megapixels. Supply `Authorization: Bearer ...` or `X-Hold-Token` in headers. The booking authority must authorize the caller before any existing payment is disclosed. A retry returns the existing payment and does not replace the receipt. `GET /api/payments/{bookingId}/status` uses the same authorization and returns `id`, `bookingId`, `status` (`PENDING`, `CONFIRMED`, `REJECTED`), `receiptImageUrl`, `submittedAt`, `rejectionReason`, and the server checkout snapshot. All responses use `Cache-Control: no-store`.
+
+Set `CLOUDINARY_URL` through the environment (signed SDK credentials); missing storage configuration returns 503. Credentials and caller tokens are never saved in the database or emitted in events. The SDK validates HTTPS Cloudinary delivery URLs. Receipt images use unguessable public IDs; configure the storage account's access and retention policy before production use. Aborted/concurrent uploads may leave unreferenced images, which require a storage retention job.
+
+Submission commits the payment and `PaymentSubmittedEvent` to `payment_outbox` in one PostgreSQL transaction. The relay publishes to `fcourt.payment.events`, keyed by booking ID, with `eventId`, `type`, and `payment`. `KAFKA_BOOTSTRAP_SERVERS` defaults to localhost:9092. Acknowledged events are marked published; broker failure preserves pending rows. At-least-once delivery requires consumers to deduplicate `eventId`. One advisory lock preserves publication order across instances. Disable only the relay in tests with `PAYMENT_EVENTS_ENABLED=false`.
+
+**Integration contract:** booking-service consumes `PaymentSubmittedEvent` and atomically changes an eligible `PENDING_PAYMENT` booking to `AWAITING_CONFIRMATION`, retaining occupied slots. This consumer and the actual booking/facility APIs are not implemented on `dev`; payment-service never writes their databases. Receipt persistence alone does not establish this cross-service acceptance condition. Coordinate booking expiry against receipt submission at this boundary before enabling customer traffic.
+
+Validation: Java 21 `mvn -f payment-service/pom.xml clean verify` (18 tests, PostgreSQL 16 Testcontainer); mocks isolate Cloudinary/upstream HTTP and Kafka acknowledgement/failure. Real Cloudinary credentials and live booking/facility/Kafka acceptance remain external checks. SDK references: [Cloudinary Java](https://cloudinary.com/documentation/java_integration), [Spring Kafka sending](https://docs.spring.io/spring-kafka/reference/kafka/sending-messages.html).
