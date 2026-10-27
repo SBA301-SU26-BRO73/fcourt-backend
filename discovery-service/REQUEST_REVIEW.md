@@ -1,22 +1,28 @@
-# [Review] BE Discovery ? Kh?i t?o service v? API t?m ki?m chi nh?nh
+# [Review] BE Discovery - Initialize service and public branch search
 
-- Lo?i: Request Review; assignee: Minh (Leader).
-- Task cha: task th? t? #15/111, Sprint 1 #15/34. Ch?a x?c minh Jira key; kh?ng suy ?o?n SCRUM-15.
-- Estimate: 1 ng?y.
+Prepared review content; no Jira ticket or approval has been created by this work.
 
-## Vi?c c?n l?m
-- [ ] Spring Boot 3 / Java 21, port 8085, PostgreSQL discovery_db ri?ng.
-- [ ] Read model chi nh?nh v? s?n; t?m g?n ??ng pg_trgm, b? d?u ti?ng Vi?t.
-- [ ] Kafka BranchUpdatedEvent full snapshot, version t?ng theo branch; b? event c?/tr?ng; gi? tombstone.
-- [ ] GET /api/public/branches kh?ng JWT; query/city/district/courtTypeId/minPrice/maxPrice, ph?n trang v? Haversine.
-- [ ] Ki?m th? API, d? li?u, Kafka; ?o latency ri?ng tr??c khi x?c nh?n <80ms.
+- Work type: Request Review
+- Assignee: Minh (Leader), as explicitly requested in the task (overrides the convention examples naming Nguyen).
+- Parent: task order #15/111, Sprint 1 #15/34. Confirm its Jira key; the ordinal does not establish SCRUM-15.
+- Estimate: 1 day.
 
-## ?nh h??ng ??n team
-- Ph? thu?c SCRUM-14 v? SCRUM-16. Facility hi?n ch? c? SQL, ch?a c? producer.
-- C?n th?ng nh?t topic/event: district, GPS, danh s?ch s?n active v?i gi? t? time_slot_templates.
-- Court/pricing/status/delete c?ng ph?i ph?t l?i full snapshot branch; outbox v? replay thu?c facility owner.
-- Kh?ng ??c ch?o facility_db, kh?ng chuy?n logic booking/auth sang discovery.
+## Work to implement
 
-## Tr?ng th?i th?c t?
-??y l? b?n nh?p n?i dung tr??c khi code, ch?a ph?i ticket Jira ?? t?o ho?c ?? ???c duy?t.
-Ng??i d?ng y?u c?u tri?n khai v? xu?t h??ng d?n Jira sau khi ho?n th?nh; kh?ng t? ghi nh?n approval.
+- [ ] Independent Spring Boot 3 / Java 21 service, port 8085, own PostgreSQL database.
+- [ ] Read model for branches/courts, accent-insensitive substring/fuzzy matching with pg_trgm.
+- [ ] Full BranchUpdatedEvent snapshots, increasing branch versions, atomic replacement and tombstones.
+- [ ] Anonymous GET /api/public/branches with name/address query, city/district, court type, prices, pagination and Haversine distance.
+- [ ] Unit, database, HTTP and Kafka/DLT tests; repeatable local latency measurement.
+
+## Team impact
+
+- Depends on SCRUM-14 and SCRUM-16; facility currently supplies SQL rather than a running producer.
+- Agree district/GPS enrichment and published active-court prices from time_slot_templates with the facility owner.
+- Facility owns outbox publication after branch/court/pricing/status changes, monotonic aggregate versions and replay/bootstrap.
+- No cross-service database reads, shared entities, booking or auth business logic.
+- Service bootstrap exceeds the convention's approximate 300-line review target; review the staged commits. Leader decides any ticket split.
+
+## Review workflow
+
+The convention expects Request Review before coding and leader approval before In Progress. The user explicitly requested implementation and a Jira instruction file afterward. Do not backdate a ticket or claim prior approval. Record the actual chronology when creating the review tickets, then request code review against the real PR.
