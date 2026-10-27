@@ -1,0 +1,45 @@
+server:
+  port: ${SERVER_PORT:8085}
+spring:
+  application:
+    name: discovery-service
+  datasource:
+    url: ${DISCOVERY_DB_URL:jdbc:postgresql://localhost:5432/discovery_db}
+    username: ${DISCOVERY_DB_USER:postgres}
+    password: ${DISCOVERY_DB_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 10
+  jdbc:
+    template:
+      query-timeout: 3s
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: discovery-service-v1
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    listener:
+      ack-mode: record
+      missing-topics-fatal: true
+  jackson:
+    deserialization:
+      fail-on-null-for-primitives: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+discovery:
+  search:
+    cache-ttl-seconds: ${DISCOVERY_CACHE_TTL_SECONDS:5}
+  kafka:
+    branch-topic: ${BRANCH_UPDATED_TOPIC:facility.branch-updated.v1}
