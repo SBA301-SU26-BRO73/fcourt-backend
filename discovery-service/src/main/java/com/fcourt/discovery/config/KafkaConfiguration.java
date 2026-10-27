@@ -1,4 +1,4 @@
-package com.fcourt.discovery.messaging;
+package com.fcourt.discovery.config;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.validation.ConstraintViolationException;

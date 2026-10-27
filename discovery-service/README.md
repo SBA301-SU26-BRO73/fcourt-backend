@@ -2,6 +2,28 @@
 
 Independent Spring Boot 3 / Java 21 service on port **8085**. Public branch search reads only `discovery_db`; it never queries facility tables or requires a JWT. PostgreSQL `pg_trgm` provides fuzzy matching and `unaccent` normalizes Vietnamese text.
 
+## Source structure
+
+Packages follow the original backend's layer-based organization:
+
+```text
+src/main/java/com/fcourt/discovery/
+|-- DiscoveryApplication.java
+|-- component/          # Kafka event listener
+|-- config/             # Kafka retry and dead-letter configuration
+|-- controller/         # Public HTTP endpoints
+|-- dto/
+|   |-- request/        # Search parameters and validation
+|   `-- response/       # Paginated branch summaries
+|-- exception/          # HTTP exception handling
+|-- model/
+|   `-- event/          # Kafka snapshots and projection change events
+|-- repository/         # JDBC search and transactional read-model writes
+`-- service/            # Search orchestration and cache consistency
+```
+
+Tests for components and services mirror their packages; the full integration test stays at the application root. PostgreSQL read models are managed by JDBC/Flyway, so no JPA entity layer is introduced.
+
 ## Run locally
 
 From this directory, with Docker Desktop running:
@@ -48,7 +70,7 @@ With user GPS, sort by Haversine distance (Earth radius 6371.0088 km), unknown b
 
 ## Facility event contract
 
-Topic: `facility.branch-updated.v1` (override `BRANCH_UPDATED_TOPIC`). Key: decimal branch ID string. Value: UTF-8 JSON, see `examples/branch-updated.json` and `messaging/BranchUpdatedEvent.java`.
+Topic: `facility.branch-updated.v1` (override `BRANCH_UPDATED_TOPIC`). Key: decimal branch ID string. Value: UTF-8 JSON, see `examples/branch-updated.json` and `src/main/java/com/fcourt/discovery/model/event/BranchUpdatedEvent.java`.
 
 - Full snapshot fields: `branchId`, strictly increasing per-branch `version`, `name`, `address`, `city`, optional `district`, optional coordinate pair, `active`, `deleted`, `courts`.
 - `courts` contains every ACTIVE, non-deleted court; IDs must be unique. Each entry includes `id`, `courtTypeId`, and either an ordered `minPrice`/`maxPrice` pair or both null. Derive prices from active, non-deleted `time_slot_templates` across days/times. Do not publish private bank/admin data.

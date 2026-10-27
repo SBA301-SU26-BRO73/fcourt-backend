@@ -1,8 +1,8 @@
-package com.fcourt.discovery.persistence;
+package com.fcourt.discovery.repository;
 
-import com.fcourt.discovery.api.BranchSearchRequest;
-import com.fcourt.discovery.api.BranchSearchResponse;
-import com.fcourt.discovery.api.BranchSearchResponse.BranchSummary;
+import com.fcourt.discovery.dto.request.BranchSearchRequest;
+import com.fcourt.discovery.dto.response.BranchSearchResponse;
+import com.fcourt.discovery.dto.response.BranchSearchResponse.BranchSummary;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;

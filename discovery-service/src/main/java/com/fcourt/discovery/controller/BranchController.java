@@ -1,6 +1,8 @@
-package com.fcourt.discovery.api;
+package com.fcourt.discovery.controller;
 
-import com.fcourt.discovery.application.BranchSearchService;
+import com.fcourt.discovery.service.BranchSearchService;
+import com.fcourt.discovery.dto.request.BranchSearchRequest;
+import com.fcourt.discovery.dto.response.BranchSearchResponse;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 

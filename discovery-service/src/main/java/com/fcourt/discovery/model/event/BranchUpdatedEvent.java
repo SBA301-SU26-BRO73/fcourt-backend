@@ -1,4 +1,4 @@
-package com.fcourt.discovery.messaging;
+package com.fcourt.discovery.model.event;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.Valid;

@@ -1,10 +1,10 @@
-package com.fcourt.discovery;
+package com.fcourt.discovery.service;
 
-import com.fcourt.discovery.api.BranchSearchRequest;
-import com.fcourt.discovery.api.BranchSearchResponse;
-import com.fcourt.discovery.application.BranchSearchService;
-import com.fcourt.discovery.persistence.BranchProjectionChanged;
-import com.fcourt.discovery.persistence.BranchSearchRepository;
+import com.fcourt.discovery.dto.request.BranchSearchRequest;
+import com.fcourt.discovery.dto.response.BranchSearchResponse;
+import com.fcourt.discovery.service.BranchSearchService;
+import com.fcourt.discovery.model.event.BranchProjectionChanged;
+import com.fcourt.discovery.repository.BranchSearchRepository;
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.concurrent.*;

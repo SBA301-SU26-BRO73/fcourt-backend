@@ -1,10 +1,10 @@
 package com.fcourt.discovery;
 
-import com.fcourt.discovery.api.BranchSearchRequest;
-import com.fcourt.discovery.messaging.BranchUpdatedEvent;
-import com.fcourt.discovery.messaging.BranchUpdatedEvent.CourtSnapshot;
-import com.fcourt.discovery.persistence.BranchProjection;
-import com.fcourt.discovery.persistence.BranchSearchRepository;
+import com.fcourt.discovery.dto.request.BranchSearchRequest;
+import com.fcourt.discovery.model.event.BranchUpdatedEvent;
+import com.fcourt.discovery.model.event.BranchUpdatedEvent.CourtSnapshot;
+import com.fcourt.discovery.repository.BranchProjection;
+import com.fcourt.discovery.repository.BranchSearchRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,7 +48,7 @@ class DiscoveryIntegrationTest {
     }
 
     @Autowired BranchProjection projection;
-    @Autowired com.fcourt.discovery.application.BranchSearchService searchService;
+    @Autowired com.fcourt.discovery.service.BranchSearchService searchService;
     @Autowired BranchSearchRepository repository;
     @Autowired JdbcTemplate jdbc;
     @Autowired TestRestTemplate http;
@@ -59,7 +59,7 @@ class DiscoveryIntegrationTest {
     @BeforeEach
     void clean() {
         jdbc.execute("TRUNCATE branch_read_model CASCADE");
-        searchService.projectionChanged(new com.fcourt.discovery.persistence.BranchProjectionChanged(0));
+        searchService.projectionChanged(new com.fcourt.discovery.model.event.BranchProjectionChanged(0));
     }
 
     static BranchUpdatedEvent snapshot(long id, long version, boolean active, boolean deleted) {

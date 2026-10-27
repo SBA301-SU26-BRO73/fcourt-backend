@@ -1,6 +1,7 @@
-package com.fcourt.discovery.persistence;
+package com.fcourt.discovery.repository;
 
-import com.fcourt.discovery.messaging.BranchUpdatedEvent;
+import com.fcourt.discovery.model.event.BranchUpdatedEvent;
+import com.fcourt.discovery.model.event.BranchProjectionChanged;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;

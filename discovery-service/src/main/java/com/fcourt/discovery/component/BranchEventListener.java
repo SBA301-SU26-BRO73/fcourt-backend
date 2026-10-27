@@ -1,8 +1,9 @@
-package com.fcourt.discovery.messaging;
+package com.fcourt.discovery.component;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fcourt.discovery.persistence.BranchProjection;
+import com.fcourt.discovery.repository.BranchProjection;
+import com.fcourt.discovery.model.event.BranchUpdatedEvent;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
 import org.springframework.kafka.annotation.KafkaListener;

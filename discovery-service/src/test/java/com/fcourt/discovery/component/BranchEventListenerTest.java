@@ -1,9 +1,9 @@
-package com.fcourt.discovery;
+package com.fcourt.discovery.component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fcourt.discovery.messaging.BranchEventListener;
-import com.fcourt.discovery.messaging.BranchUpdatedEvent;
-import com.fcourt.discovery.persistence.BranchProjection;
+import com.fcourt.discovery.component.BranchEventListener;
+import com.fcourt.discovery.model.event.BranchUpdatedEvent;
+import com.fcourt.discovery.repository.BranchProjection;
 import jakarta.validation.Validation;
 import org.junit.jupiter.api.Test;
 import java.util.List;

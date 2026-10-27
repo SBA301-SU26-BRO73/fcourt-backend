@@ -1,4 +1,4 @@
-package com.fcourt.discovery.api;
+package com.fcourt.discovery.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;

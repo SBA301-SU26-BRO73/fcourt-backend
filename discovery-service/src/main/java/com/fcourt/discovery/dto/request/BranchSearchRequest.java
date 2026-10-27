@@ -1,4 +1,4 @@
-package com.fcourt.discovery.api;
+package com.fcourt.discovery.dto.request;
 
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;

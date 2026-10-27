@@ -43,3 +43,7 @@ The final query materializes branch matches once, returning count and page in on
 - With multiple replicas in one consumer group, other replicas may serve cached data until the configured TTL. This is the documented eventual-consistency window.
 - Run the Compose image stack and Postman collection when Docker is available; verify GitHub Actions separately.
 - Create/link the two Jira review tickets and obtain Minh's actual approval. Neither approval, merge nor Jira status changes are performed by this implementation.
+
+## Layered package refactor verification
+
+After moving source into controller, dto/request, dto/response, model/event, service, repository, component, config and exception packages, `mvnw.cmd clean verify -B -ntp` completed successfully on 2026-10-27. Result: 13 functional/unit/integration tests passed, 0 failures/errors; the optional performance benchmark was skipped (14 discovered tests, 1 skipped). Main and test classes were rebuilt from a clean target directory to verify package imports and Spring component discovery. This refactor changes organization only; the latency measurements above are from the earlier benchmark run.

@@ -1,4 +1,4 @@
-package com.fcourt.discovery.api;
+package com.fcourt.discovery.dto.response;
 
 import java.math.BigDecimal;
 import java.util.List;

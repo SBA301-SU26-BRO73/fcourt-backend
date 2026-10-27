@@ -1,9 +1,9 @@
-package com.fcourt.discovery.application;
+package com.fcourt.discovery.service;
 
-import com.fcourt.discovery.api.BranchSearchRequest;
-import com.fcourt.discovery.api.BranchSearchResponse;
-import com.fcourt.discovery.persistence.BranchProjectionChanged;
-import com.fcourt.discovery.persistence.BranchSearchRepository;
+import com.fcourt.discovery.dto.request.BranchSearchRequest;
+import com.fcourt.discovery.dto.response.BranchSearchResponse;
+import com.fcourt.discovery.model.event.BranchProjectionChanged;
+import com.fcourt.discovery.repository.BranchSearchRepository;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.beans.factory.annotation.Value;
