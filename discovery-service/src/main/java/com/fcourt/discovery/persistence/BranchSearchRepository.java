@@ -54,9 +54,10 @@ public class BranchSearchRepository {
             }
             where.append(")");
         }
-        long total = jdbc.queryForObject("SELECT count(*) FROM branch_read_model b" + where, params, Long.class);
+
         String distance = "NULL::double precision";
         String order = "b.id";
+        String score = "0::real";
         if (request.latitude() != null) {
             params.addValue("lat", request.latitude()).addValue("lon", request.longitude());
             distance = """
@@ -68,25 +69,39 @@ public class BranchSearchRepository {
                     """;
             order = "distance_km ASC NULLS LAST, b.id";
         } else if (hasText(request.query())) {
-            order = "word_similarity(lower(unaccent(:query)), b.search_text) DESC, b.id";
+            score = "word_similarity((SELECT lower(unaccent(:query))), b.search_text)";
+            order = "relevance DESC, b.id";
         }
         params.addValue("limit", request.pageSize())
                 .addValue("offset", (long) request.pageNumber() * request.pageSize());
         // Aggregate only the selected page, keeping counts/prices over all active courts.
         String sql = "SELECT p.*, a.min_price, a.max_price, a.court_count FROM (SELECT b.*, "
+                + "count(*) OVER() AS total_elements, " + score + " AS relevance, "
                 + distance + " AS distance_km FROM branch_read_model b" + where
                 + " ORDER BY " + order + " LIMIT :limit OFFSET :offset) p "
                 + "LEFT JOIN LATERAL (SELECT min(c.min_price) AS min_price, max(c.max_price) AS max_price, "
                 + "count(*) AS court_count FROM court_read_model c WHERE c.branch_id = p.id) a ON true "
                 + (request.latitude() != null ? "ORDER BY p.distance_km ASC NULLS LAST, p.id"
-                : hasText(request.query()) ? "ORDER BY word_similarity(lower(unaccent(:query)), p.search_text) DESC, p.id"
+                : hasText(request.query()) ? "ORDER BY p.relevance DESC, p.id"
                 : "ORDER BY p.id");
-        var content = jdbc.query(sql, params, (rs, row) -> new BranchSummary(
+        // Unaccent is stable rather than immutable: scalar subqueries normalize once per statement.
+        for (String key : new String[]{"query", "pattern", "city", "district"}) {
+            sql = sql.replace("lower(unaccent(:" + key + "))", "(SELECT lower(unaccent(:" + key + ")))" );
+        }
+        var totalRows = new long[1];
+        var content = jdbc.query(sql, params, (rs, row) -> {
+            totalRows[0] = rs.getLong("total_elements");
+            return new BranchSummary(
                 rs.getLong("id"), rs.getString("name"), rs.getString("address"),
                 rs.getString("city"), rs.getString("district"),
                 rs.getObject("latitude", Double.class), rs.getObject("longitude", Double.class),
                 rs.getBigDecimal("min_price"), rs.getBigDecimal("max_price"),
-                rs.getLong("court_count"), rs.getObject("distance_km", Double.class)));
+                rs.getLong("court_count"), rs.getObject("distance_km", Double.class));
+        });
+        // An empty/out-of-range page still needs an accurate total.
+        long total = content.isEmpty()
+                ? jdbc.queryForObject("SELECT count(*) FROM branch_read_model b" + where, params, Long.class)
+                : totalRows[0];
         return new BranchSearchResponse(content, request.pageNumber(), request.pageSize(), total,
                 (total + request.pageSize() - 1) / request.pageSize());
     }
