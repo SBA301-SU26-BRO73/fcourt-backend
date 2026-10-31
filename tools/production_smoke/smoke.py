@@ -128,3 +128,39 @@ class Probes:
         report["overall"] = "FAIL" if any(r["status"] == "FAIL" for r in report["checks"].values()) else "PARTIAL"
         report["readOnlyProbesPassed"] = all(report["checks"][s]["status"] == "PASS" for s in SERVICES)
         return report
+
+
+def initial(scope):
+    return {"task":"SCRUM-107","scope":scope,"recordedAt":datetime.now(timezone.utc).isoformat(),"overall":"NOT_RUN",
+            "productionReady":False,"readOnlyProbesPassed":False,
+            "checks":{name:{"status":"NOT_RUN","detail":"Execution not requested/configured"} for name in sorted(SERVICES)},
+            "externalGates":{name:{"status":"NOT_RUN","detail":detail} for name,detail in EXTERNAL.items()}}
+
+
+def write(report, destination):
+    destination = Path(destination); destination.parent.mkdir(parents=True,exist_ok=True)
+    destination.write_text(json.dumps(report,indent=2)+"\n",encoding="utf-8")
+    lines = ["# SCRUM-107 production readiness","", "Overall: **"+report["overall"]+"**; scope: "+report["scope"],
+             "Production ready: **false**. Health probes cannot accept the full release.","", "| Check | Result |","|---|---|"]
+    for name,row in list(report["checks"].items())+list(report["externalGates"].items()): lines.append("| "+name+" | "+row["status"]+" |")
+    destination.with_suffix(".md").write_text("\n".join(lines)+"\n",encoding="utf-8")
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--config",type=Path,required=True); parser.add_argument("--execute",action="store_true")
+    parser.add_argument("--report",type=Path,default=Path("tools/production_smoke/target/report.json"))
+    args = parser.parse_args(argv); report = initial("production")
+    try:
+        config = validate(json.loads(args.config.read_text(encoding="utf-8")),args.execute)
+        report = initial(config["scope"])
+        if args.execute: report = Probes(config,os.environ).run()
+    except (Failure,OSError,ValueError,KeyError,TypeError) as error:
+        report["overall"] = "BLOCKED"
+        report["checks"]["preflight"] = {"status":"BLOCKED","detail":str(error) if isinstance(error,Failure) else "Invalid/missing local configuration"}
+    write(report,args.report); print(report["overall"]+": "+str(args.report))
+    # PARTIAL indicates successful read-only probes with outstanding acceptance.
+    return 0 if report["overall"] == "PARTIAL" else 2
+
+
+if __name__ == "__main__": raise SystemExit(main())
