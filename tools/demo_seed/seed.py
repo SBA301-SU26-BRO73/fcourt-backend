@@ -193,3 +193,43 @@ def sql_for(db, tables, m, hashed_password, plan_limits):
         sql.append(f"SELECT 1/(CASE WHEN (SELECT count(*) FROM (VALUES {','.join(expected)}) e(id,fields) JOIN public.{table} t ON t.id=e.id AND to_jsonb(t) @> e.fields)={len(values)} THEN 1 ELSE 0 END);")
         sql.append(f"SELECT setval('public.{table}_id_seq',GREATEST((SELECT COALESCE(max(id),1) FROM public.{table}),(SELECT last_value FROM public.{table}_id_seq),{base+9999}),true);")
     return "\n".join(sql+["COMMIT;"])
+
+
+class DockerDatabase:
+    def __init__(self, container, user="postgres"):
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", container) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,62}", user):
+            raise SeedError("Invalid container/user identifier")
+        self.container, self.user = container, user
+
+    def execute(self, db, sql):
+        if db not in {"postgres", "auth_db", "subscription_db", "facility_db", "staff_db", "voucher_db", "payment_db", "booking_db"}:
+            raise SeedError("Database is outside the demo service allowlist")
+        try:
+            result = subprocess.run(["docker", "exec", "-i", self.container, "psql", "-v", "ON_ERROR_STOP=1", "-U", self.user, "-d", db, "-At"],
+                                    input=sql, text=True, encoding="utf-8", capture_output=True, timeout=45)
+        except (OSError, subprocess.TimeoutExpired):
+            raise SeedError(f"Cannot execute database step: {db}") from None
+        if result.returncode:
+            raise SeedError(f"Database step failed: {db}; inspect locally and retry identical manifest (SQL/account fields redacted)")
+        return result.stdout.strip()
+
+
+def apply(m, hashed_password, runner, allow_fixtures=False):
+    validate(m, allow_fixtures)
+    password_hash(hashed_password)
+    plan_id = m["subscriptionPlanId"]
+    raw = runner.execute("subscription_db", f"SELECT json_build_array(max_courts,max_branches) FROM subscription_plans WHERE id={plan_id} AND is_active AND deleted_at IS NULL;")
+    try:
+        limits = tuple(json.loads(raw.splitlines()[-1]))
+    except (ValueError, IndexError, TypeError):
+        raise SeedError("Active subscription plan is missing") from None
+    if len(limits) != 2 or any(type(v) is not int for v in limits) or limits[0] < 10 or limits[1] < 3:
+        raise SeedError("Subscription plan cannot support 10 courts/3 branches")
+    ids = set(m["courtTypeIds"].values())
+    count = runner.execute("subscription_db", f"SELECT count(*) FROM court_types WHERE id IN ({','.join(map(str,ids))}) AND active AND deleted_at IS NULL;")
+    if count.splitlines()[-1] != str(len(ids)):
+        raise SeedError("Active court type catalog is missing")
+    rows = build_rows(m, hashed_password, limits)
+    for db, tables in rows.items():
+        runner.execute(db, sql_for(db, tables, m, hashed_password, limits))
+    return {table: len(values) for tables in rows.values() for table, values in tables.items()}
