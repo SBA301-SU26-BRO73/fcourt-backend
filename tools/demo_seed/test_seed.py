@@ -89,7 +89,10 @@ class PostgreSQLSeedTest(unittest.TestCase):
         try:
             deadline = time.monotonic() + 40
             while time.monotonic() < deadline:
-                result = subprocess.run(["docker", "exec", cls.container, "pg_isready", "-U", "postgres"], capture_output=True)
+                # The image's initialization server accepts Unix sockets before
+                # restarting. TCP opens only on the final server, so a fast Linux
+                # runner must not create schemas during that temporary phase.
+                result = subprocess.run(["docker", "exec", cls.container, "pg_isready", "-h", "127.0.0.1", "-U", "postgres"], capture_output=True)
                 if result.returncode == 0: break
                 time.sleep(0.2)
             else: raise RuntimeError("PostgreSQL test container did not become ready")
