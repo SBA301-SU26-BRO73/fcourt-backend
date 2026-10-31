@@ -1,0 +1,27 @@
+{
+  "seedKey": "fcourt-demo",
+  "idBase": 1000000,
+  "demoDate": "2026-10-31",
+  "demoOnly": true,
+  "slotPrice": "50000.00",
+  "subscriptionPlanId": 1,
+  "courtTypeIds": {"badminton": 6, "pickleball": 1},
+  "branches": [
+    {"name":"Venue 1","address":"DEMO address - replace with authorized venue","ward":"DEMO ward","city":"Ha Noi","bankName":"DEMO BANK","bankAccountNumber":"DEMO-ACCOUNT-01","bankAccountName":"DEMO OWNER","bankQrImageUrl":"https://res.cloudinary.com/demo/image/upload/replace-qr-1.png"},
+    {"name":"Venue 2","address":"DEMO address - replace with authorized venue","ward":"DEMO ward","city":"Ho Chi Minh City","bankName":"DEMO BANK","bankAccountNumber":"DEMO-ACCOUNT-02","bankAccountName":"DEMO OWNER","bankQrImageUrl":"https://res.cloudinary.com/demo/image/upload/replace-qr-2.png"},
+    {"name":"Venue 3","address":"DEMO address - replace with authorized venue","ward":"DEMO ward","city":"Ho Chi Minh City","bankName":"DEMO BANK","bankAccountNumber":"DEMO-ACCOUNT-03","bankAccountName":"DEMO OWNER","bankQrImageUrl":"https://res.cloudinary.com/demo/image/upload/replace-qr-3.png"}
+  ],
+  "receiptImageUrl": "https://res.cloudinary.com/demo/image/upload/replace-receipt.png",
+  "courtImages": [
+    "https://res.cloudinary.com/demo/image/upload/replace-court-1.jpg",
+    "https://res.cloudinary.com/demo/image/upload/replace-court-2.jpg",
+    "https://res.cloudinary.com/demo/image/upload/replace-court-3.jpg",
+    "https://res.cloudinary.com/demo/image/upload/replace-court-4.jpg",
+    "https://res.cloudinary.com/demo/image/upload/replace-court-5.jpg",
+    "https://res.cloudinary.com/demo/image/upload/replace-court-6.jpg",
+    "https://res.cloudinary.com/demo/image/upload/replace-court-7.jpg",
+    "https://res.cloudinary.com/demo/image/upload/replace-court-8.jpg",
+    "https://res.cloudinary.com/demo/image/upload/replace-court-9.jpg",
+    "https://res.cloudinary.com/demo/image/upload/replace-court-10.jpg"
+  ]
+}
