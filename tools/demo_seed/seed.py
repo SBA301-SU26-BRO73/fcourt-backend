@@ -233,3 +233,33 @@ def apply(m, hashed_password, runner, allow_fixtures=False):
     for db, tables in rows.items():
         runner.execute(db, sql_for(db, tables, m, hashed_password, limits))
     return {table: len(values) for tables in rows.values() for table, values in tables.items()}
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--manifest", required=True, type=Path)
+    parser.add_argument("--container")
+    parser.add_argument("--user", default="postgres")
+    parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--allow-fixture-assets", action="store_true")
+    args = parser.parse_args(argv)
+    try:
+        m = validate(json.loads(args.manifest.read_text(encoding="utf-8")), args.allow_fixture_assets)
+        result = {"seedKey": m["seedKey"], "mode": "dry-run", "assetsVerified": False, "fixtureOnly": m["demoOnly"]}
+        if args.apply:
+            if not args.container:
+                raise SeedError("--apply requires an explicit --container")
+            result["rows"] = apply(m, password_hash(os.environ.get("FCOURT_DEMO_PASSWORD_HASH")), DockerDatabase(args.container, args.user), args.allow_fixture_assets)
+            result["mode"] = "applied"
+        else:
+            result["rows"] = {t: len(v) for tables in build_rows(m, "preview-only").values() for t, v in tables.items()}
+        print(json.dumps(result, sort_keys=True))
+        return 0
+    except (SeedError, OSError, ValueError, KeyError, TypeError) as error:
+        # Never print manifest contents, SQL statements, bank accounts or credentials.
+        print("Demo seed failed: " + (str(error) if isinstance(error, SeedError) else "invalid manifest input"), file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
