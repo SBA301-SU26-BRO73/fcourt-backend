@@ -192,3 +192,16 @@ for all writers. A race after both read checks must still reject at atomic creat
 Staff service only supplies generated clients, validated reads and orchestration,
 not a competing Redis lock protocol or writes to another service. Implementation
 guide: https://grpc.io/docs/languages/java/basics/.
+
+## Weekly schedule — SCRUM-63
+
+The existing bulk booking schedule API accepts inclusive startDate/endDate up to
+7 days. Staff groups the flat court sessions into court/day/slot matrix, retaining
+empty days and sorting court IDs/start times. All response flags share one clock
+instant; no HTTP call per slot and no cached schedule state. Branch remains the
+active staff assignment. Include every active branch court, including empty ones.
+
+lateCheckIn: CONFIRMED and now > start+15m. playing: CHECKED_IN until checkout.
+endingSoon: playing and end-threshold <= now < end; threshold defaults 10m,
+configurable. Interpret date/time in STAFF_TIME_ZONE and midnight end on next day.
+These flags are derived hints, not automatic status changes or automatic checkout.

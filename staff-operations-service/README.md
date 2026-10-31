@@ -188,3 +188,23 @@ The JSON is printable invoice data; Flutter handles presentation in its repo.
 Retries reconcile the original immutable quote/invoice even if current pricing
 has changed; never recalculate already committed CASH receipts. This is an
 additive response change, not a new local payment database.
+
+## Weekly schedule — SCRUM-63
+
+GET /api/staff/schedule?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD requires active
+STAFF. Range is inclusive, 1–7 days; branch is derived from assignment, never
+from a client filter. Returns branchId/startDate/endDate/generatedAt and courts
+containing chronological days and sorted slots, including empty days/courts.
+Each slot has booking/customer fields and flags: lateCheckIn, playing, endingSoon.
+
+CONFIRMED is late strictly after start+15 minutes. CHECKED_IN means playing
+until checkout even if the scheduled end passed; endingSoon is only the final
+configured window before scheduled end. STAFF_ENDING_SOON_MINUTES defaults 10
+(owner-approved), range 1–60. All flags in one response share generatedAt and
+STAFF_TIME_ZONE; final midnight slots end on the following day. Completed,
+cancelled and pending-payment records do not get playing/late flags.
+
+One bulk booking read per request; no per-slot I/O or schedule cache. State is
+the authority snapshot at query time. Test benchmark report is generated at
+target/schedule-benchmark.json; local measurements and limitations are in
+VALIDATION_SCRUM_63.md.
