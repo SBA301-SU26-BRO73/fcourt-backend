@@ -1,0 +1,23 @@
+name: Demo seed verification
+on:
+  pull_request:
+    paths:
+      - 'tools/demo_seed/**'
+      - '.github/workflows/demo-seed.yml'
+      - '**/database/*.sql'
+  push:
+    branches: [dev]
+    paths:
+      - 'tools/demo_seed/**'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tools/demo_seed -p test_seed.py -v
