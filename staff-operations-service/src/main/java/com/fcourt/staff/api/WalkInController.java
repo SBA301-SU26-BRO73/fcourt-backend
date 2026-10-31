@@ -43,6 +43,6 @@ public class WalkInController {
     }
 
     public record WalkInRequest(@Positive long courtId, @NotNull LocalDate date,
-                                @NotNull @Size(min = 1, max = 1) List<@NotNull @Positive Long> slotIds,
+                                @NotNull @Size(min = 1, max = 48) List<@NotNull @Positive Long> slotIds,
                                 @NotNull @Pattern(regexp = "\\+?[0-9]{9,15}") String guestPhone) { }
 }

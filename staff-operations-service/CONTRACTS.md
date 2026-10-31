@@ -160,3 +160,35 @@ Consumers must deduplicate eventId. Completion is already applied by the booking
 authority; consumer processing must not repeat unchecked transitions/releases.
 These proposed cash/occupancy/settlement protocols are contract-tested only;
 actual booking/discovery/facility/payment integration remains pending.
+
+## Multi-slot safety and pricing — SCRUM-61
+
+The owner approved zero default surcharge, server-configured fixed/percentage
+policy. Walk-in create now carries quote: baseAmount, surchargeAmount,
+totalAmount, policyVersion, and items (slotId, startTime, endTime, price).
+Booking must compare canonical facility prices and its authorized policy before
+atomically accepting; reject stale/mismatched quote with 409. Never trust client
+totals or treat a gRPC safety response as a reserved/committed booking.
+
+Walk-in response adds invoice: receiptCode, cashierUserId, baseAmount,
+surchargeAmount, totalAmount, policyVersion, items. These are durable original
+snapshots. Staff verifies actor, item selection, price sums and quoted totals.
+Reconcile receives quote null; compare the original actor/branch/court/date/
+slotIds/contact identity and ignore generated quote/checkedInAt. Return the
+original invoice on replay even if prices/policy changed, preventing double charge
+and blocking a changed contact/selection under a previously committed key.
+
+Versioned proposed gRPC contract is src/main/proto/slot_safety.proto (package
+fcourt.staff.contracts.v1). HoldSafety.Check and BookingSafety.Check each receive
+branch/court/date, all slotIds, actorId and commandKey; authenticate Bearer metadata
+and independently verify staff assignment. Return complete=true only after
+checking the whole requested set, echoed branch/court/date/checkedSlotIds and a
+busySlotIds subset. Hold checks active Redis holds; booking checks live durable
+occupancy. Expired holds must not report busy. Malformed/partial response,
+unimplemented endpoint, network failure or deadline maps to 503; occupied to 409.
+
+Actual authorities must implement the shared final claim/commit/release protocol
+for all writers. A race after both read checks must still reject at atomic create.
+Staff service only supplies generated clients, validated reads and orchestration,
+not a competing Redis lock protocol or writes to another service. Implementation
+guide: https://grpc.io/docs/languages/java/basics/.

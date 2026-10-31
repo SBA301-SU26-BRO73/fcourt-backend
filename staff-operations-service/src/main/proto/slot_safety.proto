@@ -1,0 +1,28 @@
+syntax = "proto3";
+package fcourt.staff.contracts.v1;
+option java_package = "com.fcourt.staff.grpc";
+option java_multiple_files = true;
+
+// Proposed read boundaries. The final booking writer still must claim atomically.
+service HoldSafety {
+  rpc Check(CheckSlotsRequest) returns (CheckSlotsResponse);
+}
+service BookingSafety {
+  rpc Check(CheckSlotsRequest) returns (CheckSlotsResponse);
+}
+message CheckSlotsRequest {
+  int64 court_id = 1;
+  int64 branch_id = 2;
+  string date = 3;
+  repeated int64 slot_ids = 4;
+  int64 actor_id = 5;
+  string command_key = 6;
+}
+message CheckSlotsResponse {
+  int64 court_id = 1;
+  int64 branch_id = 2;
+  string date = 3;
+  repeated int64 checked_slot_ids = 4;
+  bool complete = 5;
+  repeated int64 busy_slot_ids = 6;
+}

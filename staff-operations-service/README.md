@@ -141,8 +141,8 @@ outbox acknowledgement, retained failure and same-ID duplicate after DB rollback
 
 ## Walk-in / checkout — SCRUM-30
 
-POST /api/staff/walk-in accepts courtId, date (today), slotIds (one slot in
-SCRUM-30; multiple contiguous slots are SCRUM-61), guestPhone. Requires STAFF
+POST /api/staff/walk-in accepts courtId, date (today), slotIds (1–48 contiguous
+slots), guestPhone. Requires STAFF
 Bearer + UUID Idempotency-Key. Branch/actor/status/price/payment method are
 server-derived. Returns 201 with authoritative CASH CHECKED_IN booking result.
 
@@ -157,3 +157,34 @@ the authoritative booking command still must guard against races. Remote-success
 reconciliation runs before availability so an already-created booking can recover
 from a local transaction failure. See CONTRACTS.md for required cash/booking and
 read-only reconcile endpoints; live integration is not claimed.
+
+## Safe multi-slot CASH invoices — SCRUM-61
+
+The selection must contain distinct canonical contiguous slots for the one court
+and date; input ordering does not affect price-line ordering. Availability,
+gRPC HoldSafety.Check and BookingSafety.Check are preflight reads. Final booking
+creation MUST atomically coordinate the shared Redis hold/durable booking
+protocol, including online writers. A successful pair of reads never reserves
+the slots by itself.
+
+Protobuf contract: src/main/proto/slot_safety.proto. Configure HOLD_GRPC_TARGET
+(localhost:9087), BOOKING_GRPC_TARGET (localhost:9088), STAFF_GRPC_DEADLINE_MS
+(2000). Both RPCs forward the signed STAFF Bearer metadata and have deadlines;
+partial/malformed/unavailable replies fail closed. Channels use TLS by default;
+STAFF_GRPC_PLAINTEXT=true is available for local fixtures. New walk-in transactions
+are bounded to 45 seconds for the complete dependency chain; do not configure
+timeouts/retry behavior independently of the upstream idempotency protocol.
+
+Owner-approved server pricing: fixed + base × percentage/100, round surcharge
+once to two decimals HALF_UP. WALK_IN_FIXED_SURCHARGE and WALK_IN_SURCHARGE_PERCENT
+both default 0; percentage range 0–100. WALK_IN_PRICING_POLICY defaults counter-v1.
+The canonical quote (base/surcharge/total/policy/price lines) is sent to booking
+authority, which must independently validate and persist it before accepting CASH.
+Amounts must fit numeric(10,2). Client price/fee overrides are rejected.
+
+Response adds invoice with receiptCode, cashierUserId, baseAmount,
+surchargeAmount, totalAmount, policyVersion and sorted item price/time snapshots.
+The JSON is printable invoice data; Flutter handles presentation in its repo.
+Retries reconcile the original immutable quote/invoice even if current pricing
+has changed; never recalculate already committed CASH receipts. This is an
+additive response change, not a new local payment database.

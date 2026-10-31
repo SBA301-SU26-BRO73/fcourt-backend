@@ -34,6 +34,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -67,6 +68,8 @@ class StaffIntegrationTest {
     static final java.util.Queue<String> BOUNDARY_CALLS = new java.util.concurrent.ConcurrentLinkedQueue<>();
     static volatile String slotStatus = "AVAILABLE";
     static volatile boolean foreignCourt;
+    static volatile boolean wrongCashier;
+    static volatile boolean finalClaimConflict;
     static volatile int bookingFailure;
     static volatile boolean wrongBranch;
     static volatile int bookingDateShift;
@@ -76,6 +79,7 @@ class StaffIntegrationTest {
     static volatile boolean malformed;
     static volatile boolean wrongAccount;
     static final HttpServer UPSTREAM = server();
+    static final SlotSafetyFixture SLOT_SAFETY = new SlotSafetyFixture();
     static final String URL = "http://localhost:" + UPSTREAM.getAddress().getPort();
 
     @Container
@@ -93,6 +97,9 @@ class StaffIntegrationTest {
         registry.add("staff.auth.issuer", () -> "fcourt-test");
         registry.add("staff.booking.url", () -> URL);
         registry.add("staff.discovery.url", () -> URL);
+        registry.add("staff.grpc.hold-target", SLOT_SAFETY::target);
+        registry.add("staff.grpc.booking-target", SLOT_SAFETY::target);
+        registry.add("staff.grpc.plaintext", () -> true);
     }
 
     @Autowired TestRestTemplate http;
@@ -112,6 +119,9 @@ class StaffIntegrationTest {
         BOUNDARY_CALLS.clear();
         slotStatus = "AVAILABLE";
         foreignCourt = false;
+        wrongCashier = false;
+        finalClaimConflict = false;
+        SLOT_SAFETY.reset();
         bookingFailure = bookingDateShift = 0;
         wrongBranch = false;
         ACCOUNTS.clear();
@@ -122,7 +132,7 @@ class StaffIntegrationTest {
     }
 
     @AfterAll
-    static void stop() { UPSTREAM.stop(0); }
+    static void stop() { UPSTREAM.stop(0); SLOT_SAFETY.close(); }
 
     @Test
     void completeCrudAndStaffAssignmentAreScopedAndAudited() {
@@ -499,6 +509,60 @@ class StaffIntegrationTest {
                 "slotIds", List.of(37), "guestPhone", "0912345678");
     }
 
+    @Test
+    void multipleContiguousWalkInSlotsProducePrintableCashInvoice() {
+        create(UUID.randomUUID(), body(7));
+        var request = new java.util.HashMap<>(walkInBody());
+        request.put("slotIds", List.of(38, 37));
+        var response = walkIn(UUID.randomUUID(), request);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody().path("amount").asInt()).isEqualTo(200000);
+        assertThat(response.getBody().path("invoice").path("receiptCode").asText()).isEqualTo("INV-WI00000043");
+        assertThat(response.getBody().path("invoice").path("cashierUserId").asInt()).isEqualTo(100);
+        assertThat(response.getBody().path("invoice").path("items").size()).isEqualTo(2);
+        assertThat(SLOT_SAFETY.holdCalls.get()).isEqualTo(1);
+        assertThat(SLOT_SAFETY.bookingCalls.get()).isEqualTo(1);
+    }
+
+    @Test
+    void rejectsNonContiguousOrDuplicateSlotsBeforeCreatingBooking() {
+        create(UUID.randomUUID(), body(7));
+        var request = new java.util.HashMap<>(walkInBody());
+        request.put("slotIds", List.of(37, 39));
+        assertThat(walkIn(UUID.randomUUID(), request).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        request.put("slotIds", List.of(37, 37));
+        assertThat(walkIn(UUID.randomUUID(), request).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(WALK_IN_RESULTS).isEmpty();
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = SlotSafetyFixture.Mode.class, names = {"HOLD_BUSY", "BOOKING_BUSY", "UNAVAILABLE", "MALFORMED"})
+    void grpcSafetyMustSucceedBeforeAnyWalkInMutation(SlotSafetyFixture.Mode mode) {
+        create(UUID.randomUUID(), body(7));
+        SLOT_SAFETY.mode = mode;
+        int expected = mode == SlotSafetyFixture.Mode.HOLD_BUSY || mode == SlotSafetyFixture.Mode.BOOKING_BUSY ? 409 : 503;
+        assertThat(walkIn(UUID.randomUUID(), walkInBody()).getStatusCode().value()).isEqualTo(expected);
+        assertThat(WALK_IN_RESULTS).isEmpty();
+    }
+
+    @Test
+    void invalidCashierSnapshotDoesNotEmitCashSuccess() {
+        create(UUID.randomUUID(), body(7));
+        wrongCashier = true;
+        assertThat(walkIn(UUID.randomUUID(), walkInBody()).getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_outbox", Integer.class)).isZero();
+    }
+
+    @Test
+    void atomicAuthorityCanRejectARaceAfterAllPreflightReadsSucceeded() {
+        create(UUID.randomUUID(), body(7));
+        finalClaimConflict = true;
+        assertThat(walkIn(UUID.randomUUID(), walkInBody()).getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(SLOT_SAFETY.holdCalls.get()).isEqualTo(1);
+        assertThat(SLOT_SAFETY.bookingCalls.get()).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_outbox", Integer.class)).isZero();
+    }
+
     ResponseEntity<JsonNode> create(UUID key, Object body) {
         return call(HttpMethod.POST, "/api/admin/staff", body, token("1", "ADMIN"), key);
     }
@@ -559,8 +623,11 @@ class StaffIntegrationTest {
         if (malformed) { send(exchange, 200, Map.of()); return; }
         if (path.startsWith("/api/public/courts/")) {
             if (exchange.getRequestHeaders().containsKey("Authorization")) { send(exchange, 400, Map.of()); return; }
-            send(exchange, 200, List.of(Map.of("slotId", 37, "startTime", "18:00", "endTime", "18:30", "price", 100000,
-                    "status", WALK_IN_OCCUPIED.get() ? "BOOKED" : slotStatus)));
+            String state = WALK_IN_OCCUPIED.get() ? "BOOKED" : slotStatus;
+            send(exchange, 200, List.of(
+                    Map.of("slotId", 37, "startTime", "18:00", "endTime", "18:30", "price", 100000, "status", state),
+                    Map.of("slotId", 38, "startTime", "18:30", "endTime", "19:00", "price", 100000, "status", state),
+                    Map.of("slotId", 39, "startTime", "20:00", "endTime", "20:30", "price", 100000, "status", state)));
             return;
         }
         try {
@@ -592,15 +659,23 @@ class StaffIntegrationTest {
                 synchronized (WALK_IN_RESULTS) {
                     var canonical = ((com.fasterxml.jackson.databind.node.ObjectNode) body.deepCopy());
                     canonical.remove("checkedInAt");
+                    canonical.remove("quote");
                     if (WALK_IN_REQUESTS.containsKey(key) && !WALK_IN_REQUESTS.get(key).equals(canonical.toString())) {
                         send(exchange, 409, Map.of()); return;
                     }
                     if (WALK_IN_RESULTS.containsKey(key)) { send(exchange, 200, WALK_IN_RESULTS.get(key)); return; }
                     if (path.endsWith("/reconcile")) { send(exchange, 404, Map.of()); return; }
+                    if (finalClaimConflict) { send(exchange, 409, Map.of()); return; }
                     if (!WALK_IN_OCCUPIED.compareAndSet(false, true)) { send(exchange, 409, Map.of()); return; }
+                    JsonNode quote = body.path("quote");
+                    var invoice = Map.of("receiptCode", "INV-WI00000043", "cashierUserId", wrongCashier ? actor + 1 : actor,
+                            "baseAmount", quote.path("baseAmount").decimalValue(), "surchargeAmount", quote.path("surchargeAmount").decimalValue(),
+                            "totalAmount", quote.path("totalAmount").decimalValue(), "policyVersion", quote.path("policyVersion").asText(),
+                            "items", quote.path("items"));
                     var response = Map.<String, Object>of("bookingId", 43, "bookingCode", "WI00000043", "branchId", 7,
                             "courtId", body.path("courtId").asLong(), "date", body.path("date").asText(), "status", "CHECKED_IN",
-                            "paymentMethod", "CASH", "amount", 100000, "checkedInAt", Instant.now().toString());
+                            "paymentMethod", "CASH", "amount", quote.path("totalAmount").decimalValue(), "checkedInAt", Instant.now().toString(),
+                            "invoice", invoice);
                     WALK_IN_RESULTS.put(key, response);
                     WALK_IN_REQUESTS.put(key, canonical.toString());
                     send(exchange, 201, response);
