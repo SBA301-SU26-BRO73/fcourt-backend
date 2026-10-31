@@ -205,3 +205,14 @@ lateCheckIn: CONFIRMED and now > start+15m. playing: CHECKED_IN until checkout.
 endingSoon: playing and end-threshold <= now < end; threshold defaults 10m,
 configurable. Interpret date/time in STAFF_TIME_ZONE and midnight end on next day.
 These flags are derived hints, not automatic status changes or automatic checkout.
+
+## Manual check-in — SCRUM-65
+
+POST /api/internal/bookings/check-in also accepts channel MANUAL. Same branch,
+actor, date/code validation and atomic CONFIRMED -> CHECKED_IN guard as QR.
+Manual code is opaque (example FC-89234), not a booking ID or unrestricted search.
+Resolve within authorized branch; unknown/foreign code returns non-disclosing
+404, wrong date/already used/wrong state 409. Same key/channel/code replays
+the original decision; reusing a key with a different channel/code conflicts.
+Staff logs the successful actor/branch/booking/channel in local transactional
+audit alongside the command/outbox, without storing the code or credentials.

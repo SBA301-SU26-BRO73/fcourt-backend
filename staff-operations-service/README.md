@@ -208,3 +208,17 @@ One bulk booking read per request; no per-slot I/O or schedule cache. State is
 the authority snapshot at query time. Test benchmark report is generated at
 target/schedule-benchmark.json; local measurements and limitations are in
 VALIDATION_SCRUM_63.md.
+
+## Manual check-in — SCRUM-65
+
+POST /api/staff/check-in/manual accepts `{"checkInCode":"FC-89234"}` with
+STAFF Bearer and UUID Idempotency-Key. Uses the same active-assignment, atomic
+booking state/date/code check and retry protocol as QR, with channel MANUAL.
+Unknown code is 404, wrong date/status or already checked-in is 409; invalid
+body is 400. A code in another branch must not reveal that booking.
+
+Flyway V4 records successful QR/manual audit with actor, booking, branch,
+channel, command key, authoritative check-in time and local recorded time.
+Audit, command result and event commit together; rollback requires retrying the
+same key against the idempotent booking authority. No raw code or token is
+stored. QR/manual commands compete for the same atomic booking transition.
