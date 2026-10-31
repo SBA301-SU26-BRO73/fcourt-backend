@@ -1,6 +1,7 @@
 package com.fcourt.staff.integration;
 
 import java.time.Instant;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -33,6 +34,29 @@ public class BookingGateway {
                 .body(request).retrieve().body(CheckInResult.class));
     }
 
+    public WalkInResult walkIn(WalkInCommand request, String key, String token) {
+        return execute(() -> booking.post().uri("/api/internal/bookings/walk-in")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token).header("Idempotency-Key", key)
+                .body(request).retrieve().body(WalkInResult.class));
+    }
+
+    public WalkInResult reconcileWalkIn(WalkInCommand request, String key, String token) {
+        try {
+            return execute(() -> booking.post().uri("/api/internal/bookings/walk-in/reconcile")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token).header("Idempotency-Key", key)
+                    .body(request).retrieve().body(WalkInResult.class));
+        } catch (ResponseStatusException error) {
+            if (error.getStatusCode().value() == 404) return null;
+            throw error;
+        }
+    }
+
+    public CheckoutResult checkout(long id, long branch, long actor, Instant completedAt, String key, String token) {
+        return execute(() -> booking.put().uri("/api/internal/bookings/{id}/checkout", id)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token).header("Idempotency-Key", key)
+                .body(new CheckoutCommand(branch, actor, completedAt)).retrieve().body(CheckoutResult.class));
+    }
+
     private <T> T execute(Call<T> operation) {
         try {
             T value = operation.run();
@@ -58,4 +82,10 @@ public class BookingGateway {
     public record CheckInCommand(long branchId, long actorId, String checkInCode, LocalDate date,
                                  Instant checkedInAt, String channel) { }
     public record CheckInResult(long bookingId, long branchId, LocalDate date, String status, Instant checkedInAt) { }
+    public record WalkInCommand(long branchId, long actorId, long courtId, LocalDate date, List<Long> slotIds,
+                                String guestPhone, String paymentMethod, Instant checkedInAt) { }
+    public record WalkInResult(long bookingId, String bookingCode, long branchId, long courtId, LocalDate date,
+                               String status, String paymentMethod, BigDecimal amount, Instant checkedInAt) { }
+    public record CheckoutCommand(long branchId, long actorId, Instant completedAt) { }
+    public record CheckoutResult(long bookingId, long branchId, String status, Instant completedAt) { }
 }
