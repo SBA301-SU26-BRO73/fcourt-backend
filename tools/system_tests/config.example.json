@@ -1,0 +1,39 @@
+{
+  "scope": "live_gateway",
+  "environment": "staging",
+  "baseUrl": "https://REPLACE_GATEWAY.invalid",
+  "pollTimeoutSeconds": 30,
+  "pollIntervalSeconds": 0.5,
+  "slotPrice": 50000,
+  "receiptFile": "fixture-receipt.png",
+  "credentials": {
+    "superAdmin": {"emailEnv":"FCOURT_E2E_SUPERADMIN_EMAIL","passwordEnv":"FCOURT_E2E_SUPERADMIN_PASSWORD"},
+    "customer": {"emailEnv":"FCOURT_E2E_CUSTOMER_EMAIL","passwordEnv":"FCOURT_E2E_CUSTOMER_PASSWORD"},
+    "customerPhoneEnv": "FCOURT_E2E_CUSTOMER_PHONE",
+    "ownerPasswordEnv": "FCOURT_E2E_OWNER_PASSWORD",
+    "staffPasswordEnv": "FCOURT_E2E_STAFF_PASSWORD"
+  },
+  "ownerRegistration": {"emailDomain":"REPLACE_CONTROLLED_TEST_DOMAIN.invalid","fullName":"E2E owner"},
+  "branch": {"name":"E2E venue","address":"REPLACE_VENUE_ADDRESS","city":"REPLACE_CITY","ward":"REPLACE_WARD","openTime":"06:00","closeTime":"22:00","bankName":"REPLACE_BANK","bankAccountNumber":"REPLACE_ACCOUNT","bankAccountName":"REPLACE_OWNER","bankBin":"REPLACE_BIN"},
+  "court": {"name":"E2E court","courtTypeId":6,"imageUrl":"REPLACE_AUTHORIZED_IMAGE_URL"},
+  "routes": {
+    "registerOwner":{"method":"POST","path":"/api/auth/register"},
+    "login":{"method":"POST","path":"/api/auth/login"},
+    "approveOwner":{"method":"PUT","path":"/api/super-admin/users/{ownerId}/approve"},
+    "createBranch":{"method":"POST","path":"/api/admin/branches"},
+    "createCourt":{"method":"POST","path":"/api/admin/branches/{branchId}/courts"},
+    "createSlot":{"method":"POST","path":"/api/admin/courts/{courtId}/time-slot-templates"},
+    "createStaff":{"method":"POST","path":"/api/admin/staff"},
+    "search":{"method":"GET","path":"/api/public/branches?query={query}"},
+    "slots":{"method":"GET","path":"/api/public/courts/{courtId}/slots?date={date}"},
+    "hold":{"method":"POST","path":"/api/bookings/hold-slots"},
+    "createBooking":{"method":"POST","path":"/api/bookings"},
+    "booking":{"method":"GET","path":"/api/bookings/{bookingId}"},
+    "checkout":{"method":"GET","path":"/api/payments/checkout-info/{bookingId}"},
+    "receipt":{"method":"POST","path":"/api/payments/{bookingId}/upload-receipt"},
+    "confirm":{"method":"PUT","path":"/api/admin/payments/{paymentId}/confirm"},
+    "reject":{"method":"PUT","path":"/api/admin/payments/{paymentId}/reject"},
+    "ticket":{"method":"GET","path":"/api/payments/{bookingId}/ticket"},
+    "verify":{"method":"POST","path":"/api/staff/check-in/verify"}
+  }
+}
