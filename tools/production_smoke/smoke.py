@@ -60,3 +60,71 @@ def validate(config, execute=False):
         if cors.scheme not in {"http","https"} or not cors.hostname or cors.username or cors.password or cors.query or cors.fragment or cors.path not in {"","/"}:
             raise Failure("Configure a valid browser origin")
     return config
+
+
+class Probes:
+    def __init__(self, config, env):
+        self.config = validate(config,True)
+        self.token = None
+        if config.get("tokenEnv"):
+            self.token = env.get(config["tokenEnv"])
+            if not self.token: raise Failure("Missing authorized health-probe token environment variable")
+        self.opener = urllib.request.build_opener(NoRedirect(),urllib.request.HTTPSHandler(context=ssl.create_default_context()))
+
+    def get(self, relative, authenticated=True, origin=False):
+        headers = {"Accept":"application/json"}
+        if authenticated and self.token: headers["Authorization"] = "Bearer "+self.token
+        if origin: headers["Origin"] = self.config["corsOrigin"]
+        request = urllib.request.Request(self.config["baseUrl"].rstrip("/")+path(relative), headers=headers, method="GET")
+        started = time.monotonic()
+        try:
+            try: response = self.opener.open(request, timeout=self.config["timeoutSeconds"])
+            except urllib.error.HTTPError as error: response = error
+            with response:
+                status, response_headers = response.code, response.headers
+                raw = response.read(256*1024+1)
+        except (urllib.error.URLError,TimeoutError,OSError,http.client.HTTPException): raise Failure("TLS/network/timeout failure; private details omitted") from None
+        elapsed = round((time.monotonic()-started)*1000,2)
+        if len(raw)>256*1024: raise Failure("Probe response exceeded bound")
+        return status, response_headers, raw, elapsed
+
+    def health(self, relative):
+        latencies = []
+        for _ in range(self.config["samples"]):
+            status, _, raw, elapsed = self.get(relative)
+            if status != 200: raise Failure("Health route returned HTTP "+str(status))
+            try: body = json.loads(raw)
+            except (ValueError,UnicodeError): raise Failure("Health route returned invalid JSON") from None
+            if not isinstance(body,dict) or body.get("status") != "UP": raise Failure("Service health is not UP")
+            latencies.append(elapsed)
+        ordered = sorted(latencies)
+        p95 = ordered[math.ceil(.95*len(ordered))-1]
+        if p95 > self.config["latencyBudgetMs"]: raise Failure("Observed gateway p95 exceeded configured budget")
+        return {"status":"PASS","samples":len(ordered),"p50Ms":ordered[math.ceil(.5*len(ordered))-1],"p95Ms":p95,"maxMs":max(ordered)}
+
+    def run(self):
+        report = initial(self.config["scope"])
+        for service in sorted(SERVICES):
+            try: result = self.health(self.config["healthPaths"][service])
+            except Failure as error: result = {"status":"FAIL","detail":str(error)}
+            report["checks"][service] = result
+        if self.config.get("protectedPath"):
+            try:
+                status, _, _, _ = self.get(self.config["protectedPath"],authenticated=False)
+                if status != 401: raise Failure("Protected route did not reject unauthenticated GET with 401")
+                result = {"status":"PASS"}
+            except Failure as error: result = {"status":"FAIL","detail":str(error)}
+            report["checks"]["unauthenticated-access"] = result
+        else: report["checks"]["unauthenticated-access"] = {"status":"NOT_RUN","detail":"No protected GET route supplied"}
+        if self.config.get("corsOrigin"):
+            try:
+                status, headers, _, _ = self.get(self.config["healthPaths"]["auth-service"],origin=True)
+                if status != 200 or headers.get("Access-Control-Allow-Origin") != self.config["corsOrigin"]:
+                    raise Failure("Gateway did not return the configured browser origin")
+                result = {"status":"PASS","detail":"GET response only; preflight not exercised"}
+            except Failure as error: result = {"status":"FAIL","detail":str(error)}
+            report["checks"]["cors-get"] = result
+        else: report["checks"]["cors-get"] = {"status":"NOT_RUN","detail":"No browser origin supplied"}
+        report["overall"] = "FAIL" if any(r["status"] == "FAIL" for r in report["checks"].values()) else "PARTIAL"
+        report["readOnlyProbesPassed"] = all(report["checks"][s]["status"] == "PASS" for s in SERVICES)
+        return report
