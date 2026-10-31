@@ -34,4 +34,10 @@ class CheckInController {
     }
 
     record Code(@NotBlank @Size(max = 128) String checkInCode) { }
+
+    @PostMapping("/api/staff/check-in/manual")
+    ResponseEntity<BookingGateway.CheckInResult> manual(@AuthenticationPrincipal Jwt jwt,
+            @RequestHeader("Idempotency-Key") UUID key, @Valid @RequestBody Code request) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.verify(jwt, key, request.checkInCode(), "MANUAL"));
+    }
 }
