@@ -32,6 +32,8 @@ spring:
         request.timeout.ms: 3000
 
 staff:
+  schedule:
+    ending-soon-minutes: ${STAFF_ENDING_SOON_MINUTES:10}
   grpc:
     hold-target: ${HOLD_GRPC_TARGET:localhost:9087}
     booking-target: ${BOOKING_GRPC_TARGET:localhost:9088}
