@@ -164,3 +164,32 @@ def build_rows(m, hashed_password, plan_limits=(15, 3)):
                     booking_date=booking_day, slot_start=begins.time(), slot_end=(begins+timedelta(minutes=30)).time(),
                     price_at_booking=price, created_at=created, updated_at=created)
     return rows
+
+
+def sql_for(db, tables, m, hashed_password, plan_limits):
+    fingerprint = hashlib.sha256(json_text([m, hashed_password, plan_limits]).encode()).hexdigest()
+    base, key = m["idBase"], literal(m["seedKey"])
+    sql = ["BEGIN; SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='30s'; SET LOCAL TIME ZONE 'UTC'; SET LOCAL standard_conforming_strings=on;",
+           "SELECT pg_advisory_xact_lock(hashtextextended('fcourt-demo-bootstrap',0));",
+           "CREATE TABLE IF NOT EXISTS public.fcourt_demo_seed_manifests(seed_key varchar(20) PRIMARY KEY, manifest_hash varchar(64) NOT NULL, id_base bigint UNIQUE NOT NULL, demo_date date NOT NULL);",
+           f"DO $$ DECLARE saved text; BEGIN SELECT manifest_hash INTO saved FROM fcourt_demo_seed_manifests WHERE seed_key={key};",
+           f"IF saved IS NOT NULL AND saved<>{literal(fingerprint)} THEN RAISE EXCEPTION 'Seed manifest changed; use a new key and ID block'; END IF;"]
+    for table in tables:
+        sql.append(f"IF saved IS NULL AND EXISTS(SELECT 1 FROM public.{table} WHERE id BETWEEN {base} AND {base+9999}) THEN RAISE EXCEPTION 'Seed namespace overlaps existing data'; END IF;")
+    sql.extend(["END $$;", f"INSERT INTO fcourt_demo_seed_manifests VALUES({key},{literal(fingerprint)},{base},{literal(m['demoDate'])}) ON CONFLICT(seed_key) DO NOTHING;"])
+    for table, values in tables.items():
+        columns = list(values[0])
+        if any(list(row) != columns for row in values):
+            raise SeedError("Inconsistent generated columns")
+        tuples = ["("+",".join(literal(row[col]) for col in columns)+")" for row in values]
+        identity = "" if table == "vouchers" else " OVERRIDING SYSTEM VALUE"
+        sql.append(f"INSERT INTO public.{table}({','.join(columns)}){identity} VALUES"+",".join(tuples)+" ON CONFLICT(id) DO NOTHING;")
+        expected = []
+        for row in values:
+            semantic = {k: v.astimezone(timezone.utc).isoformat() if isinstance(v, datetime)
+                        else v.isoformat() if isinstance(v, (date, time)) else float(v) if isinstance(v, Decimal) else v
+                        for k, v in row.items()}
+            expected.append(f"({row['id']},{literal(json.dumps(semantic, ensure_ascii=False))}::jsonb)")
+        sql.append(f"SELECT 1/(CASE WHEN (SELECT count(*) FROM (VALUES {','.join(expected)}) e(id,fields) JOIN public.{table} t ON t.id=e.id AND to_jsonb(t) @> e.fields)={len(values)} THEN 1 ELSE 0 END);")
+        sql.append(f"SELECT setval('public.{table}_id_seq',GREATEST((SELECT COALESCE(max(id),1) FROM public.{table}),(SELECT last_value FROM public.{table}_id_seq),{base+9999}),true);")
+    return "\n".join(sql+["COMMIT;"])
