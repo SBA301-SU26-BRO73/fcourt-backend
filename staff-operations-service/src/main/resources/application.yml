@@ -1,0 +1,39 @@
+server:
+  port: ${SERVER_PORT:8090}
+  error:
+    include-message: never
+    include-stacktrace: never
+
+spring:
+  application:
+    name: staff-operations-service
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+  datasource:
+    url: ${STAFF_DATABASE_URL:jdbc:postgresql://localhost:5490/staff_db}
+    username: ${STAFF_DATABASE_USER:postgres}
+    password: ${STAFF_DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 3000
+  flyway:
+    baseline-on-migrate: false
+
+staff:
+  auth:
+    url: ${AUTH_URL:http://localhost:8081}
+    jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+    issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
+    audience: ${AUTH_JWT_AUDIENCE:fcourt}
+  facility:
+    url: ${FACILITY_URL:http://localhost:8083}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

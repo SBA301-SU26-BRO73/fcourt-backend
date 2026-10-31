@@ -1,0 +1,26 @@
+name: Staff operations verification
+on:
+  pull_request:
+    paths:
+      - 'staff-operations-service/**'
+      - '.github/workflows/staff-operations-service.yml'
+  push:
+    branches: [dev]
+    paths:
+      - 'staff-operations-service/**'
+      - '.github/workflows/staff-operations-service.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: staff-operations-service/pom.xml
+      - run: mvn -B -ntp -f staff-operations-service/pom.xml clean verify
