@@ -49,6 +49,7 @@ public class CheckInService {
         if (result.bookingId() <= 0 || result.branchId() != assignment.branchId() || result.date() == null
                 || result.date().isAfter(date) || !"CHECKED_IN".equals(result.status()) || result.checkedInAt() == null
                 || !result.checkedInAt().atZone(zone).toLocalDate().equals(result.date())) throw BookingGateway.unavailable();
+        commands.auditCheckIn(actor, key, result.bookingId(), assignment.branchId(), channel, result.checkedInAt());
         commands.complete(actor, key, "BookingCheckedInEvent", fingerprint, result, result.bookingId(),
                 Map.of("booking", result, "actorId", actor, "channel", channel, "occurredAt", result.checkedInAt()));
         return result;
