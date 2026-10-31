@@ -165,3 +165,38 @@ class Flow:
         self.step("saga-slot-released", lambda: self.poll("cancelled slot release", lambda: request("slots", bindings=bindings),
                   lambda rows: any(s.get("slotId") == selected[1] and s.get("status") == "AVAILABLE" for s in rows)
                   and any(s.get("slotId") == selected[0] and s.get("status") == "BOOKED" for s in rows)))
+
+
+def write_report(report, path):
+    path = Path(path); path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    lines = ["# SCRUM-91 gateway integration", "", "Overall: **"+report["overall"]+"**", "Scope: "+report["scope"], "", "| Step | Result |", "|---|---|"]
+    lines.extend("| "+row["name"]+" | "+row["status"]+" |" for row in report["steps"])
+    lines += ["", "Fixture execution is not live-gateway acceptance. Reports exclude credentials, QR codes, bank details and response bodies."]
+    path.with_suffix(".md").write_text("\n".join(lines)+"\n", encoding="utf-8")
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--config", type=Path, required=True); parser.add_argument("--report", type=Path, default=Path("tools/system_tests/target/report.json"))
+    parser.add_argument("--execute", action="store_true"); parser.add_argument("--allow-test-writes", action="store_true")
+    args = parser.parse_args(argv)
+    report = {"task": "SCRUM-91", "scope": "live_gateway", "overall": "NOT_RUN", "steps": [], "ids": {}, "liveAcceptance": False}
+    try:
+        config = validate_config(json.loads(args.config.read_text(encoding="utf-8")), args.execute)
+        if args.execute:
+            require(args.allow_test_writes, "Explicit --allow-test-writes is required")
+            receipt = args.config.parent/config["receiptFile"]
+            client = Gateway(config, uuid.uuid4().hex[:12], receipt)
+            report = Flow(config, client, os.environ).run()
+        else:
+            report["steps"] = [{"name": "live-gateway-flow-and-saga", "status": "NOT_RUN", "detail": "Execution not requested/configured"}]
+    except (Failure, OSError, ValueError, KeyError, TypeError) as error:
+        report["overall"] = "BLOCKED"
+        report["steps"].append({"name": "preflight", "status": "BLOCKED", "detail": str(error) if isinstance(error, Failure) else "Invalid/missing local configuration"})
+    write_report(report, args.report)
+    print(report["overall"] + ": " + str(args.report))
+    return 0 if report["overall"] == "PASS" else 2
+
+
+if __name__ == "__main__": raise SystemExit(main())
