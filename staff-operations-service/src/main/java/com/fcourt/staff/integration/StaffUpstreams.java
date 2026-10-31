@@ -48,6 +48,14 @@ public class StaffUpstreams {
         validateBranch(branch, branchId);
     }
 
+    public void courtInBranch(long courtId, long branchId, String token) {
+        Court court = execute(() -> facility.get().uri("/api/staff/courts/{id}", courtId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token).retrieve().body(Court.class));
+        if (court == null || court.id() == null || court.id() != courtId || court.branchId() == null) throw unavailable();
+        if (court.branchId() != branchId) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Court belongs to another branch");
+        if (!"ACTIVE".equals(court.status())) throw new ResponseStatusException(HttpStatus.CONFLICT, "Court is not available");
+    }
+
     private void validateBranch(Branch branch, long id) {
         if (branch == null || branch.id() == null || branch.id() != id) throw unavailable();
         if (!"ACTIVE".equals(branch.status())) {
@@ -110,6 +118,7 @@ public class StaffUpstreams {
 
     public record Account(Long id, String email, String fullName, String phone, String role, String status) { }
     public record Branch(Long id, Long adminId, String status) { }
+    public record Court(Long id, Long branchId, String status) { }
     public record CreateAccount(long branchId, String email, String password, String fullName, String phone) {
         @Override public String toString() { return "CreateAccount[credentials=REDACTED]"; }
     }
