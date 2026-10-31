@@ -59,6 +59,14 @@ class StaffIntegrationTest {
     static final Map<String, Map<String, Object>> ACCOUNTS = new ConcurrentHashMap<>();
     static final Map<String, Map<String, Object>> CHECK_IN_RESULTS = new ConcurrentHashMap<>();
     static final AtomicBoolean CHECKED_IN = new AtomicBoolean();
+    static final AtomicBoolean WALK_IN_OCCUPIED = new AtomicBoolean();
+    static final AtomicBoolean COMPLETED = new AtomicBoolean();
+    static final Map<String, Map<String, Object>> WALK_IN_RESULTS = new ConcurrentHashMap<>();
+    static final Map<String, String> WALK_IN_REQUESTS = new ConcurrentHashMap<>();
+    static final Map<String, Map<String, Object>> CHECKOUT_RESULTS = new ConcurrentHashMap<>();
+    static final java.util.Queue<String> BOUNDARY_CALLS = new java.util.concurrent.ConcurrentLinkedQueue<>();
+    static volatile String slotStatus = "AVAILABLE";
+    static volatile boolean foreignCourt;
     static volatile int bookingFailure;
     static volatile boolean wrongBranch;
     static volatile int bookingDateShift;
@@ -84,6 +92,7 @@ class StaffIntegrationTest {
         registry.add("staff.auth.jwk-set-uri", () -> URL + "/jwks");
         registry.add("staff.auth.issuer", () -> "fcourt-test");
         registry.add("staff.booking.url", () -> URL);
+        registry.add("staff.discovery.url", () -> URL);
     }
 
     @Autowired TestRestTemplate http;
@@ -95,6 +104,14 @@ class StaffIntegrationTest {
         jdbc.execute("TRUNCATE staff_booking_commands, staff_outbox");
         CHECK_IN_RESULTS.clear();
         CHECKED_IN.set(false);
+        WALK_IN_OCCUPIED.set(false);
+        COMPLETED.set(false);
+        WALK_IN_RESULTS.clear();
+        WALK_IN_REQUESTS.clear();
+        CHECKOUT_RESULTS.clear();
+        BOUNDARY_CALLS.clear();
+        slotStatus = "AVAILABLE";
+        foreignCourt = false;
         bookingFailure = bookingDateShift = 0;
         wrongBranch = false;
         ACCOUNTS.clear();
@@ -378,6 +395,110 @@ class StaffIntegrationTest {
         return call(HttpMethod.POST, "/api/staff/check-in/verify", Map.of("checkInCode", "FC-89234"), token("100", "STAFF"), key);
     }
 
+    @Test
+    void walkInCreatesCashCheckedInBookingAndCheckoutCompletesIt() {
+        create(UUID.randomUUID(), body(7));
+        UUID key = UUID.randomUUID();
+        var result = walkIn(key, walkInBody());
+        assertThat(result.getStatusCode()).as("Walk-in response: %s; boundaries: %s", result.getBody(), BOUNDARY_CALLS).isEqualTo(HttpStatus.CREATED);
+        assertThat(result.getBody().path("status").asText()).isEqualTo("CHECKED_IN");
+        assertThat(result.getBody().path("paymentMethod").asText()).isEqualTo("CASH");
+        assertThat(result.getBody().path("amount").asInt()).isEqualTo(100000);
+        assertThat(walkIn(key, walkInBody()).getBody()).isEqualTo(result.getBody());
+        UUID checkoutKey = UUID.randomUUID();
+        var checkout = checkout(checkoutKey);
+        assertThat(checkout.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(checkout.getBody().path("status").asText()).isEqualTo("COMPLETED");
+        assertThat(checkout(checkoutKey).getBody()).isEqualTo(checkout.getBody());
+        assertThat(checkout(UUID.randomUUID()).getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_outbox", Integer.class)).isEqualTo(2);
+        assertThat(jdbc.queryForList("SELECT payload FROM staff_outbox").toString())
+                .contains("WalkInBookingCreatedEvent", "BookingCompletedEvent");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"HOLD", "BOOKED", "OUT_OF_SERVICE", "EXPIRED"})
+    void walkInCannotUseUnavailableSlot(String state) {
+        create(UUID.randomUUID(), body(7));
+        slotStatus = state;
+        assertThat(walkIn(UUID.randomUUID(), walkInBody()).getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(WALK_IN_RESULTS).isEmpty();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_outbox", Integer.class)).isZero();
+    }
+
+    @Test
+    void walkInRejectsForeignCourtOtherDateAndClientPricing() {
+        create(UUID.randomUUID(), body(7));
+        foreignCourt = true;
+        assertThat(walkIn(UUID.randomUUID(), walkInBody()).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        foreignCourt = false;
+        var invalid = new java.util.HashMap<>(walkInBody());
+        invalid.put("date", LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).minusDays(1).toString());
+        assertThat(walkIn(UUID.randomUUID(), invalid).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        invalid = new java.util.HashMap<>(walkInBody());
+        invalid.put("amount", 1);
+        assertThat(walkIn(UUID.randomUUID(), invalid).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void walkInRecoversRemoteSuccessEvenWhenAvailabilityNowSaysBooked() {
+        create(UUID.randomUUID(), body(7));
+        UUID key = UUID.randomUUID();
+        jdbc.execute("ALTER TABLE staff_outbox ADD CONSTRAINT reject_walk_in CHECK (booking_id <> 43)");
+        try {
+            assertThat(walkIn(key, walkInBody()).getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+            assertThat(WALK_IN_OCCUPIED.get()).isTrue();
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_booking_commands", Integer.class)).isZero();
+        } finally { jdbc.execute("ALTER TABLE staff_outbox DROP CONSTRAINT reject_walk_in"); }
+        var mismatched = new java.util.HashMap<>(walkInBody());
+        mismatched.put("guestPhone", "0912345679");
+        assertThat(walkIn(key, mismatched).getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(walkIn(key, walkInBody()).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(WALK_IN_RESULTS).hasSize(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_outbox", Integer.class)).isEqualTo(1);
+    }
+
+    @Test
+    void concurrentWalkInsUseAtomicAuthorityAndCreateOnlyOneBooking() throws Exception {
+        create(UUID.randomUUID(), body(7));
+        int successful = 0;
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var requests = java.util.stream.IntStream.range(0, 6)
+                    .mapToObj(ignored -> executor.submit(() -> walkIn(UUID.randomUUID(), walkInBody()))).toList();
+            for (var request : requests) {
+                var status = request.get().getStatusCode();
+                assertThat(status).isIn(HttpStatus.CREATED, HttpStatus.CONFLICT);
+                if (status == HttpStatus.CREATED) successful++;
+            }
+        }
+        assertThat(successful).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_outbox", Integer.class)).isEqualTo(1);
+    }
+
+    @Test
+    void checkoutWrongBranchOrUpstreamFailureDoesNotPublishCompletion() {
+        create(UUID.randomUUID(), body(7));
+        walkIn(UUID.randomUUID(), walkInBody());
+        wrongBranch = true;
+        assertThat(checkout(UUID.randomUUID()).getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_outbox", Integer.class)).isEqualTo(1);
+        bookingFailure = 500;
+        assertThat(checkout(UUID.randomUUID()).getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    ResponseEntity<JsonNode> walkIn(UUID key, Object request) {
+        return call(HttpMethod.POST, "/api/staff/walk-in", request, token("100", "STAFF"), key);
+    }
+
+    ResponseEntity<JsonNode> checkout(UUID key) {
+        return call(HttpMethod.PUT, "/api/staff/bookings/43/checkout", null, token("100", "STAFF"), key);
+    }
+
+    static Map<String, Object> walkInBody() {
+        return Map.of("courtId", 21, "date", LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).toString(),
+                "slotIds", List.of(37), "guestPhone", "0912345678");
+    }
+
     ResponseEntity<JsonNode> create(UUID key, Object body) {
         return call(HttpMethod.POST, "/api/admin/staff", body, token("1", "ADMIN"), key);
     }
@@ -436,6 +557,12 @@ class StaffIntegrationTest {
         }
         if (failure != 0) { send(exchange, failure, Map.of()); return; }
         if (malformed) { send(exchange, 200, Map.of()); return; }
+        if (path.startsWith("/api/public/courts/")) {
+            if (exchange.getRequestHeaders().containsKey("Authorization")) { send(exchange, 400, Map.of()); return; }
+            send(exchange, 200, List.of(Map.of("slotId", 37, "startTime", "18:00", "endTime", "18:30", "price", 100000,
+                    "status", WALK_IN_OCCUPIED.get() ? "BOOKED" : slotStatus)));
+            return;
+        }
         try {
             var jwt = SignedJWT.parse(exchange.getRequestHeaders().getFirst("Authorization").substring(7)).getJWTClaimsSet();
             long actor = Long.parseLong(jwt.getSubject());
@@ -458,6 +585,39 @@ class StaffIntegrationTest {
                     CHECK_IN_RESULTS.put(key, response);
                     send(exchange, 200, response);
                 }
+            } else if (path.equals("/api/internal/bookings/walk-in/reconcile") || path.equals("/api/internal/bookings/walk-in")) {
+                if (bookingFailure != 0) { send(exchange, bookingFailure, Map.of()); return; }
+                JsonNode body = JSON.readTree(exchange.getRequestBody());
+                String key = exchange.getRequestHeaders().getFirst("Idempotency-Key");
+                synchronized (WALK_IN_RESULTS) {
+                    var canonical = ((com.fasterxml.jackson.databind.node.ObjectNode) body.deepCopy());
+                    canonical.remove("checkedInAt");
+                    if (WALK_IN_REQUESTS.containsKey(key) && !WALK_IN_REQUESTS.get(key).equals(canonical.toString())) {
+                        send(exchange, 409, Map.of()); return;
+                    }
+                    if (WALK_IN_RESULTS.containsKey(key)) { send(exchange, 200, WALK_IN_RESULTS.get(key)); return; }
+                    if (path.endsWith("/reconcile")) { send(exchange, 404, Map.of()); return; }
+                    if (!WALK_IN_OCCUPIED.compareAndSet(false, true)) { send(exchange, 409, Map.of()); return; }
+                    var response = Map.<String, Object>of("bookingId", 43, "bookingCode", "WI00000043", "branchId", 7,
+                            "courtId", body.path("courtId").asLong(), "date", body.path("date").asText(), "status", "CHECKED_IN",
+                            "paymentMethod", "CASH", "amount", 100000, "checkedInAt", Instant.now().toString());
+                    WALK_IN_RESULTS.put(key, response);
+                    WALK_IN_REQUESTS.put(key, canonical.toString());
+                    send(exchange, 201, response);
+                }
+            } else if (path.equals("/api/internal/bookings/43/checkout")) {
+                if (bookingFailure != 0) { send(exchange, bookingFailure, Map.of()); return; }
+                String key = exchange.getRequestHeaders().getFirst("Idempotency-Key");
+                synchronized (CHECKOUT_RESULTS) {
+                    if (CHECKOUT_RESULTS.containsKey(key)) { send(exchange, 200, CHECKOUT_RESULTS.get(key)); return; }
+                    if (!WALK_IN_OCCUPIED.get() || !COMPLETED.compareAndSet(false, true)) { send(exchange, 409, Map.of()); return; }
+                    var response = Map.<String, Object>of("bookingId", 43, "branchId", wrongBranch ? 8 : 7,
+                            "status", "COMPLETED", "completedAt", Instant.now().toString());
+                    CHECKOUT_RESULTS.put(key, response);
+                    send(exchange, 200, response);
+                }
+            } else if (path.startsWith("/api/staff/courts/")) {
+                send(exchange, 200, Map.of("id", 21, "branchId", foreignCourt ? 8 : 7, "status", "ACTIVE"));
             } else if (path.equals("/api/auth/me")) {
                 send(exchange, 200, Map.of("id", wrongAccount ? 999 : actor, "role", jwt.getStringListClaim("roles").getFirst(),
                         "status", active ? "ACTIVE" : "INACTIVE"));
@@ -484,6 +644,7 @@ class StaffIntegrationTest {
     }
 
     static void send(HttpExchange exchange, int status, Object value) throws IOException {
+        BOUNDARY_CALLS.add(exchange.getRequestMethod() + " " + exchange.getRequestURI().getPath() + " " + status);
         byte[] body = JSON.writeValueAsString(value).getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().set("Content-Type", "application/json");
         exchange.sendResponseHeaders(status, body.length);
