@@ -120,3 +120,21 @@ Existing legacy DBs require an explicit reviewed V1 baseline before V2.
 
 See REQUEST_REVIEW.md and VALIDATION.md for scope and actual verification.
 No live auth/facility/Flutter acceptance is claimed by stub-based tests.
+
+## Schedule and QR check-in — SCRUM-28
+
+- GET /api/staff/schedule/today resolves active staff assignment and queries the
+  bounded booking schedule in STAFF_TIME_ZONE (Asia/Ho_Chi_Minh by default).
+- POST /api/staff/check-in/verify accepts `{"checkInCode":"<raw QR code>"}`
+  with STAFF Bearer and Idempotency-Key UUID; returns bookingId, branchId, date,
+  CHECKED_IN status and checkedInAt. Code length 1–128, treated as opaque text.
+- Atomic state/date/branch/code verification belongs to the booking command
+  authority. Repeated code with a new key returns 409; same key replays success.
+- Command result and BookingCheckedInEvent outbox commit atomically locally;
+  retry same key after ambiguous remote/local failure. Raw codes are not stored.
+- Configure BOOKING_URL, KAFKA_BOOTSTRAP_SERVERS, STAFF_EVENTS_TOPIC and
+  STAFF_EVENTS_ENABLED. Supply a running Kafka broker for relay delivery.
+
+See CONTRACTS.md for the proposed booking API, consumer groups, at-least-once
+deduplication and integration limits. Tests include actual Kafka/PostgreSQL
+outbox acknowledgement, retained failure and same-ID duplicate after DB rollback.
