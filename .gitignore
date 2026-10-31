@@ -18,3 +18,7 @@ out/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local demo manifests can contain private banking/venue data
+tools/demo_seed/*.local.json
+__pycache__/
