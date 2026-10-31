@@ -111,3 +111,52 @@ state if an older event arrives. Booking has already applied the guarded command
 event consumption must be idempotent, not a second unchecked status transition.
 Retention, alerting for pending outbox age and production broker replication are
 deployment responsibilities. End-to-end consumer processing is not yet verified.
+
+## Walk-in and checkout — SCRUM-30
+
+Facility GET /api/staff/courts/{id} requires STAFF Bearer and returns
+`{"id":21,"branchId":7,"status":"ACTIVE"}`; staff verifies fixed assignment.
+Discovery GET /api/public/courts/{id}/slots?date=YYYY-MM-DD uses the SCRUM-22
+shape (slotId, startTime, endTime, price, status). It carries no caller credential.
+Only AVAILABLE canonical 30-minute slots are accepted. This display check is not
+a reservation; a concurrent online booking can win immediately afterward.
+
+POST /api/internal/bookings/walk-in takes branchId, actorId, courtId, date,
+slotIds, guestPhone, paymentMethod CASH and checkedInAt. Idempotency-Key is
+staff:walk-in:<actorId>:<UUID>. Booking authority independently verifies active
+assignment/court/branch, today's date, authoritative prices and Redis hold plus
+durable booking occupancy. All writers must use the shared atomic reservation
+protocol. It must not create bookings from a mere prior availability GET.
+
+Authority atomically creates booking/slots CHECKED_IN and the durable CASH
+payment obligation/receipt according to its payment integration protocol.
+It must reject held/booked/closed slots with 409, avoid double charge on replay,
+and never expose CHECKED_IN before the authoritative creation protocol commits.
+The current payment schema lacks CASH metadata; adopting this contract requires
+the booking/payment owners' implementation. Staff only orchestrates the boundary.
+
+Return bookingId, bookingCode, branchId, courtId, date, status CHECKED_IN,
+paymentMethod CASH, amount (authoritative BigDecimal) and checkedInAt.
+
+POST /api/internal/bookings/walk-in/reconcile is a read-only command lookup with
+the same body/key/credential. Return the original result if committed, 404 if
+never committed, 409 on metadata mismatch. Ignore generated checkedInAt when
+comparing retry identity. Check all original non-generated fields including
+guestPhone and slotIds, even after local failure. Scope lookup to actor/branch.
+Staff uses this before availability checks so its own committed booking does not
+prevent reconciliation. Old-date replays are allowed; new commands must be today.
+
+PUT /api/internal/bookings/{id}/checkout receives branchId, actorId, completedAt
+and key staff:checkout:<actorId>:<UUID>. Authority checks actor assignment and
+booking branch, atomically compares CHECKED_IN -> COMPLETED, settles any due
+charges as required and releases live occupancy through its own protocol. Same
+key replays original result; new-key wrong state is 409. Response: bookingId,
+branchId, status COMPLETED, completedAt. Never release another booking's hold
+keys or erase booking history to simulate checkout.
+
+Staff records WalkInBookingCreatedEvent / BookingCompletedEvent with booking
+result, actorId and occurredAt in the existing command/outbox transaction.
+Consumers must deduplicate eventId. Completion is already applied by the booking
+authority; consumer processing must not repeat unchecked transitions/releases.
+These proposed cash/occupancy/settlement protocols are contract-tested only;
+actual booking/discovery/facility/payment integration remains pending.
