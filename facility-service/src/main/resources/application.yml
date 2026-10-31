@@ -1,0 +1,59 @@
+server:
+  port: ${SERVER_PORT:8083}
+  error:
+    include-message: never
+    include-stacktrace: never
+
+spring:
+  application:
+    name: facility-service
+  datasource:
+    url: ${FACILITY_DB_URL:jdbc:postgresql://localhost:5432/facility_db}
+    username: ${FACILITY_DB_USER:postgres}
+    password: ${FACILITY_DB_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 3000
+  flyway:
+    # The root docker-compose already applies database/V1+V2 without Flyway history.
+    # Baseline such a database at V2 so only V3+ run; an empty database runs V1..Vn.
+    baseline-on-migrate: true
+    baseline-version: 2
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+        max.block.ms: 5000
+        delivery.timeout.ms: 10000
+        request.timeout.ms: 5000
+
+facility:
+  auth:
+    jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+    issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
+    audience: ${AUTH_JWT_AUDIENCE:fcourt}
+  subscription:
+    # Empty = subscription-service (SCRUM-10) not available: use the default limits below.
+    base-url: ${SUBSCRIPTION_BASE_URL:}
+    default-max-branches: ${SUBSCRIPTION_DEFAULT_MAX_BRANCHES:3}
+    default-max-courts: ${SUBSCRIPTION_DEFAULT_MAX_COURTS:15}
+  events:
+    enabled: ${FACILITY_EVENTS_ENABLED:true}
+    topic: ${BRANCH_UPDATED_TOPIC:facility.branch-updated.v1}
+    topic-partitions: ${BRANCH_UPDATED_TOPIC_PARTITIONS:3}
+    relay-delay-ms: ${FACILITY_OUTBOX_DELAY_MS:1000}
+    # Publish an initial snapshot for branches that never had one (seed/demo rows).
+    bootstrap-snapshots: ${FACILITY_BOOTSTRAP_SNAPSHOTS:true}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
