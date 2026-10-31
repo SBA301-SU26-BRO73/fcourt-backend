@@ -64,7 +64,8 @@ public class CheckInService {
             for (var slot : court.slots()) {
                 if (slot == null || slot.bookingId() <= 0 || slot.date() == null || slot.date().isBefore(start)
                         || slot.date().isAfter(end) || slot.slotStart() == null || slot.slotEnd() == null
-                        || !slot.slotEnd().isAfter(slot.slotStart()) || slot.status() == null
+                        || (!slot.slotEnd().isAfter(slot.slotStart()) && !slot.slotEnd().equals(java.time.LocalTime.MIDNIGHT))
+                        || slot.slotEnd().equals(slot.slotStart()) || slot.status() == null
                         || !Set.of("PENDING_PAYMENT", "AWAITING_CONFIRMATION", "CONFIRMED", "CHECKED_IN", "COMPLETED", "CANCELLED").contains(slot.status())
                         || !slots.add(court.courtId() + ":" + slot.date() + ":" + slot.slotStart())) throw BookingGateway.unavailable();
             }
