@@ -160,13 +160,13 @@ class PostgreSQLSeedTest(unittest.TestCase):
         seed.apply(m, PUBLIC_DEMO_HASH, self.db, allow_fixtures=True)
         self.assertEqual(self.db.execute("booking_db", "SELECT count(*) FROM bookings WHERE id BETWEEN 1200000 AND 1209999 AND (branch_id IS NULL OR branch_name IS NULL OR court_name IS NULL OR payment_status IS NULL);"), "0")
         self.assertEqual(self.db.execute("booking_db", "SELECT count(*) FROM bookings WHERE id BETWEEN 1200000 AND 1209999 AND customer_id IS NOT NULL AND customer_name IS NULL;"), "0")
-        self.assertEqual(self.db.execute("booking_db", "SELECT payment_status FROM bookings WHERE id=700025;"), "REJECTED")
+        self.assertEqual(self.db.execute("booking_db", "SELECT payment_status FROM bookings WHERE id=1200025;"), "REJECTED")
         self.assertEqual(self.db.execute("booking_db", "SELECT qr_image_url FROM bookings WHERE id=1200000;"), "/api/payments/1200000/ticket/qr")
         self.assertEqual(self.db.execute("payment_db", "SELECT count(*) FROM payments WHERE id BETWEEN 1200000 AND 1209999 AND booking_id=id;"), "30")
         self.assertEqual(self.db.execute("payment_db", "SELECT count(*) FROM payments WHERE id BETWEEN 1200000 AND 1209999 AND bill_image_url IS NOT NULL AND submitted_at IS NULL;"), "0")
 
     def test_missing_read_model_schema_fails_before_writing_any_seed_rows(self):
-        m = self.manifest("test-missing-read-model", 1300000)
+        m = self.manifest("test-no-readmodel", 1300000)
         self.db.execute("booking_db", "ALTER TABLE bookings RENAME COLUMN branch_name TO hidden_branch_name;")
         try:
             with self.assertRaisesRegex(seed.SeedError, "V2 migration"):
