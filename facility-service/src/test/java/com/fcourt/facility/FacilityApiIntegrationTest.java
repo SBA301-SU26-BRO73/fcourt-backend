@@ -243,6 +243,47 @@ class FacilityApiIntegrationTest {
         assertThat(latest.has("bankAccountNumber")).isFalse();
     }
 
+    @Test
+    void branchNamesAreUniqueAndSlotDurationIsKeptUntilTemplatesExist() throws Exception {
+        long owner = 9303;
+        long other = 9304;
+        String hourly = branchBody("Unique Hall", "06:00", "22:00").replace("{\"name\"", "{\"slotDurationMinutes\":60,\"name\"");
+        long branchId = id(postJson("/api/admin/branches", hourly, owner).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.slotDurationMinutes").value(60)));
+
+        postJson("/api/admin/branches", branchBody("Unique Hall", "06:00", "22:00"), other)
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail").value("Branch name already exists"));
+        postJson("/api/admin/branches", branchBody("  Unique Hall ", "06:00", "22:00"), other)
+                .andExpect(status().isBadRequest());
+        postJson("/api/admin/branches", branchBody("Other Hall", "06:00", "22:00"), other).andExpect(status().isCreated());
+
+        String branchUrl = "/api/admin/branches/" + branchId;
+        mvc.perform(put(branchUrl).with(as(owner, "ADMIN")).contentType(MediaType.APPLICATION_JSON)
+                        .content(branchBody("Unique Hall", "05:00", "23:00")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.slotDurationMinutes").value(60));
+        mvc.perform(put(branchUrl).with(as(owner, "ADMIN")).contentType(MediaType.APPLICATION_JSON)
+                        .content(branchBody("Other Hall", "05:00", "23:00")))
+                .andExpect(status().isBadRequest());
+
+        long courtId = id(postJson(branchUrl + "/courts", courtBody("Court A", "100000"), owner)
+                .andExpect(status().isCreated()));
+        String apply = "/api/admin/courts/" + courtId + "/apply-template";
+        postJson(apply, "{\"price\":0,\"daysOfWeek\":[1]}", owner).andExpect(status().isBadRequest());
+        postJson(apply, "{\"priceMultiplier\":9999,\"daysOfWeek\":[1]}", owner).andExpect(status().isBadRequest());
+        postJson(apply, "{\"startTime\":\"08:00\",\"endTime\":\"09:00\",\"daysOfWeek\":[1]}", owner)
+                .andExpect(status().isOk());
+
+        mvc.perform(put(branchUrl).with(as(owner, "ADMIN")).contentType(MediaType.APPLICATION_JSON)
+                        .content(hourly.replace("\"slotDurationMinutes\":60", "\"slotDurationMinutes\":30")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail", containsString("slot duration")));
+        mvc.perform(put(branchUrl).with(as(owner, "ADMIN")).contentType(MediaType.APPLICATION_JSON).content(hourly))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.slotDurationMinutes").value(60));
+
+        mvc.perform(delete(branchUrl).with(as(owner, "ADMIN"))).andExpect(status().isNoContent());
+        postJson("/api/admin/branches", branchBody("Unique Hall", "06:00", "22:00"), other).andExpect(status().isCreated());
+    }
+
     /** Reads the topic until the snapshot with the expected version of the branch arrives. */
     private JsonNode awaitLatestSnapshot(long branchId, long expectedVersion) throws Exception {
         Map<String, Object> props = KafkaTestUtils.consumerProps("facility-test-" + branchId, "false", broker);

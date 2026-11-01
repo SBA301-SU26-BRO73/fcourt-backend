@@ -54,6 +54,21 @@ public class BranchStore {
         return count == null ? 0 : count;
     }
 
+    public boolean nameTaken(String name, Long exceptBranchId) {
+        Integer count = jdbc.queryForObject("""
+                SELECT count(*) FROM branches WHERE deleted_at IS NULL AND btrim(name) = btrim(?)
+                    AND (?::bigint IS NULL OR id <> ?::bigint)
+                """, Integer.class, name, exceptBranchId, exceptBranchId);
+        return count != null && count > 0;
+    }
+
+    public boolean hasLiveTemplates(long branchId) {
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS (SELECT 1 FROM time_slot_templates t JOIN courts c ON c.id = t.court_id
+                    WHERE c.branch_id = ? AND t.is_active AND t.deleted_at IS NULL)
+                """, Boolean.class, branchId));
+    }
+
     public long insert(long adminId, BranchRequest r) {
         Long id = jdbc.queryForObject("""
                 INSERT INTO branches (admin_id, name, address, ward, district, city, latitude, longitude, phone,
@@ -71,14 +86,16 @@ public class BranchStore {
     public void update(long id, BranchRequest r) {
         jdbc.update("""
                 UPDATE branches SET name = ?, address = ?, ward = ?, district = ?, city = ?, latitude = ?,
-                    longitude = ?, phone = ?, open_time = ?, close_time = ?, slot_duration_minutes = ?, bank_name = ?,
+                    longitude = ?, phone = ?, open_time = ?, close_time = ?, bank_name = ?,
                     bank_bin = ?, bank_account_number = ?, bank_account_name = ?, status = COALESCE(?, status),
+                    slot_duration_minutes = COALESCE(?, slot_duration_minutes),
                     updated_at = now()
                 WHERE id = ?
                 """, r.name().trim(), r.address().trim(), blankToNull(r.ward()), blankToNull(r.district()),
                 r.city().trim(), coordinate(r.latitude()), coordinate(r.longitude()), blankToNull(r.phone()),
-                Time.valueOf(r.openTime()), Time.valueOf(r.closeTime()), r.slotDurationOrDefault(),
-                r.bankName().trim(), r.bankBin(), r.bankAccountNumber(), r.bankAccountName().trim(), r.status(), id);
+                Time.valueOf(r.openTime()), Time.valueOf(r.closeTime()),
+                r.bankName().trim(), r.bankBin(), r.bankAccountNumber(), r.bankAccountName().trim(), r.status(),
+                r.slotDurationMinutes(), id);
     }
 
     public void softDelete(long id) {
