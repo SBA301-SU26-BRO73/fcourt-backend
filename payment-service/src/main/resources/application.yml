@@ -7,6 +7,12 @@ spring:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5489/payment_db}
     username: ${DATABASE_USER:postgres}
     password: ${DATABASE_PASSWORD:postgres}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6399}
+      connect-timeout: 200ms
+      timeout: 200ms
   servlet:
     multipart:
       max-file-size: 5MB

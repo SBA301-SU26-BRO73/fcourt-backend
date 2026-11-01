@@ -14,7 +14,8 @@ import org.springframework.stereotype.Repository;
 class PaymentStore {
     final JdbcTemplate jdbc;
     final ObjectMapper json;
-    PaymentStore(JdbcTemplate jdbc, ObjectMapper json) { this.jdbc = jdbc; this.json = json; }
+    private final org.springframework.context.ApplicationEventPublisher events;
+    PaymentStore(JdbcTemplate jdbc, ObjectMapper json,org.springframework.context.ApplicationEventPublisher events) { this.jdbc = jdbc; this.json = json;this.events=events; }
 
     JdbcTemplate jdbc() { return jdbc; }
 
@@ -44,6 +45,7 @@ class PaymentStore {
                 VALUES (?,?,?,?::jsonb)
                 """, eventId, payment.bookingId(), type, encode(Map.of(
                     "eventId", eventId, "type", type, "payment", payment)));
+        events.publishEvent(new PaymentStatusChanged(payment.bookingId()));
     }
     String encode(Object value) {
         try { return json.writeValueAsString(value); }
