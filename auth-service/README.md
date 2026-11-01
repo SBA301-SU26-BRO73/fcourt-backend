@@ -66,7 +66,8 @@ Rules:
 - Customers register `ACTIVE` and get a session straight away. Court owners (`ADMIN`) register
   `PENDING_APPROVAL`, their files go to Cloudinary and into `user_documents` (`LEGAL` / `COURT_IMAGE`), and
   they cannot sign in until a super admin approves them. Documents: JPEG, PNG, WebP or PDF, 5 MB each; a failed
-  upload rolls the whole registration back.
+  upload rolls the whole registration back, and files already uploaded are then deleted from Cloudinary
+  (best effort: a failed delete is only logged).
 - Login gives the same 401 for an unknown email and a wrong password (and spends the same hashing time).
 - 5 wrong passwords for one email within 15 minutes lock that email for 15 minutes: login answers 429 with
   `Retry-After`, even with the right password. Unknown emails are counted the same way, so a 429 does not

@@ -245,6 +245,26 @@ class AuthApiIntegrationTest {
     }
 
     @Test
+    void aRolledBackRegistrationDeletesTheFilesItAlreadyUploaded() throws Exception {
+        String email = uniqueEmail();
+        when(storage.store(any(), org.mockito.ArgumentMatchers.startsWith("legal/")))
+                .thenReturn("https://res.cloudinary.com/demo/image/upload/v1/fcourt/legal/licence.pdf");
+        when(storage.store(any(), org.mockito.ArgumentMatchers.startsWith("court/")))
+                .thenThrow(com.fcourt.auth.common.ApiException.unavailable("Document storage is unavailable"));
+
+        mvc.perform(multipart("/api/auth/register/court-owner")
+                        .file(new MockMultipartFile("legalDocuments", "licence.pdf", "application/pdf", new byte[]{1}))
+                        .file(new MockMultipartFile("courtImages", "front.jpg", "image/jpeg", new byte[]{1}))
+                        .param("fullName", "Chu San").param("email", email)
+                        .param("phone", uniquePhone()).param("password", PASSWORD))
+                .andExpect(status().isServiceUnavailable());
+
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM users WHERE email = ?", Integer.class, email)).isZero();
+        org.mockito.Mockito.verify(storage)
+                .delete("https://res.cloudinary.com/demo/image/upload/v1/fcourt/legal/licence.pdf");
+    }
+
+    @Test
     void repeatedWrongPasswordsLockTheEmailTemporarilyEvenForTheRightPassword() throws Exception {
         String email = uniqueEmail();
         register(email, uniquePhone());
