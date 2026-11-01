@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -136,6 +137,10 @@ class FacilityApiIntegrationTest {
         mvc.perform(get("/api/staff/branches/{id}", branchId).with(as(55, "STAFF")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("ACTIVE"));
         mvc.perform(get("/api/staff/branches/{id}", branchId).with(as(owner, "ADMIN"))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/staff/branches/{id}/courts", branchId).with(as(55, "STAFF")))
+                .andExpect(status().isOk()).andExpect(content().json("[]"));
+        mvc.perform(get("/api/staff/branches/{id}/courts", branchId)).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/staff/branches/{id}/courts", branchId).with(as(owner, "ADMIN"))).andExpect(status().isForbidden());
         mvc.perform(get("/api/admin/branches")).andExpect(status().isUnauthorized());
     }
 
@@ -241,6 +246,45 @@ class FacilityApiIntegrationTest {
         assertThat(first.get("maxPrice").decimalValue()).isEqualByComparingTo("90000");
         assertThat(latest.get("courts").get(1).get("minPrice").isNull()).isTrue();
         assertThat(latest.has("bankAccountNumber")).isFalse();
+    }
+
+    @Test
+    void staffCourtProjectionListsLiveCourtsOfActiveBranchOnly() throws Exception {
+        long owner = 9305;
+        long branchId = id(postJson("/api/admin/branches", branchBody("Board Hall", "06:00", "22:00"), owner)
+                .andExpect(status().isCreated()));
+        String branchUrl = "/api/admin/branches/" + branchId;
+        long courtA = id(postJson(branchUrl + "/courts", courtBody("Court A", "100000"), owner).andExpect(status().isCreated()));
+        long courtB = id(postJson(branchUrl + "/courts", courtBody("Court B", "100000"), owner).andExpect(status().isCreated()));
+        long courtC = id(postJson(branchUrl + "/courts", courtBody("Court C", "100000"), owner).andExpect(status().isCreated()));
+        mvc.perform(patch("/api/admin/courts/{id}/status", courtB).with(as(owner, "ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"MAINTENANCE\"}"))
+                .andExpect(status().isOk());
+        mvc.perform(delete("/api/admin/courts/{id}", courtC).with(as(owner, "ADMIN"))).andExpect(status().isNoContent());
+
+        String staffUrl = "/api/staff/branches/" + branchId + "/courts";
+        mvc.perform(get(staffUrl).with(as(55, "STAFF")))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", containsString("no-store")))
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].id").value(courtA))
+                .andExpect(jsonPath("$[0].branchId").value(branchId))
+                .andExpect(jsonPath("$[0].name").value("Court A"))
+                .andExpect(jsonPath("$[0].status").value("ACTIVE"))
+                .andExpect(jsonPath("$[0].defaultPricePerHour").doesNotExist())
+                .andExpect(jsonPath("$[1].id").value(courtB))
+                .andExpect(jsonPath("$[1].status").value("MAINTENANCE"));
+        mvc.perform(get("/api/staff/branches/{id}/courts", branchId + 100_000).with(as(55, "STAFF")))
+                .andExpect(status().isNotFound());
+
+        mvc.perform(put(branchUrl).with(as(owner, "ADMIN")).contentType(MediaType.APPLICATION_JSON)
+                        .content(branchBody("Board Hall", "06:00", "22:00")
+                                .replace("\"bankBin\"", "\"status\":\"INACTIVE\",\"bankBin\"")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("INACTIVE"));
+        mvc.perform(get(staffUrl).with(as(55, "STAFF"))).andExpect(status().isConflict());
+
+        mvc.perform(delete(branchUrl).with(as(owner, "ADMIN"))).andExpect(status().isNoContent());
+        mvc.perform(get(staffUrl).with(as(55, "STAFF"))).andExpect(status().isNotFound());
     }
 
     @Test
