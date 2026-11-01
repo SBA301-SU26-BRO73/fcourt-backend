@@ -38,7 +38,7 @@ class ReceiptService {
         return payment;
     }
     PaymentRecord upload(long id, String auth, String hold, MultipartFile file) {
-        authorize(id,auth,hold);
+        var booking=authorize(id,auth,hold);
         var previous=store.find(id);
         if (previous != null && "CANCELLED".equals(previous.status())) throw new ResponseStatusException(HttpStatus.GONE,"Checkout expired");
         if (previous != null && previous.submittedAt()!=null) return previous; // Lost HTTP response: retry is safe and never replaces a bill.
@@ -55,6 +55,8 @@ class ReceiptService {
                 throw new ResponseStatusException(HttpStatus.GONE,"Hold expired during upload");
             }
             var saved=store.submit(info,url);
+            if(booking.customerPhone()!=null && booking.customerPhone().matches("\\+?[0-9]{9,15}"))
+                store.jdbc().update("UPDATE payments SET customer_phone=? WHERE booking_id=?",booking.customerPhone(),id);
             store.event("PaymentSubmittedEvent",saved);
             return saved;
         });
