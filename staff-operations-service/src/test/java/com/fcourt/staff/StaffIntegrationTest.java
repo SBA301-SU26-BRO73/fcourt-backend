@@ -842,7 +842,8 @@ class StaffIntegrationTest {
             } else if (path.startsWith("/api/admin/branches/") || path.startsWith("/api/staff/branches/")) {
                 long branch = Long.parseLong(path.substring(path.lastIndexOf('/') + 1));
                 send(exchange, 200, Map.of("id", branch, "adminId", branch == 7 ? 1 : 2,
-                        "status", branchActive ? "ACTIVE" : "INACTIVE"));
+                        "status", branchActive ? "ACTIVE" : "INACTIVE", "name", "Fixture venue",
+                        "address", "Fixture address", "bankBin", "000000"));
             } else if (path.equals("/api/internal/staff-accounts")) {
                 CREATES.incrementAndGet();
                 JsonNode body = JSON.readTree(exchange.getRequestBody());
