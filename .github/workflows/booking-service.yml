@@ -1,10 +1,10 @@
 name: booking-service
 on:
   pull_request:
-    branches: [dev, "feature/**"]
+    branches: [dev, "feature/**", "feat/**"]
     paths: ["booking-service/**", ".github/workflows/booking-service.yml"]
   push:
-    branches: ["feature/**"]
+    branches: ["feature/**", "feat/**"]
     paths: ["booking-service/**", ".github/workflows/booking-service.yml"]
 permissions:
   contents: read
