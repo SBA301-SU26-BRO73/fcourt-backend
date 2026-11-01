@@ -87,6 +87,10 @@ public class SecurityConfiguration {
                                 .hasRole(superAdmin)
                         .requestMatchers(HttpMethod.DELETE, "/api/court-types/*", "/api/subscription-plans/*")
                                 .hasRole(superAdmin)
+                        // PayOS calls this without a token; the request is authenticated by its signature.
+                        .requestMatchers(HttpMethod.POST, "/api/subscriptions/payment-webhook").permitAll()
+                        .requestMatchers("/api/subscriptions/**")
+                                .hasAnyRole(Role.ADMIN.name(), superAdmin)
                         .anyRequest().denyAll())
                 .oauth2ResourceServer(oauth -> oauth
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(converter))

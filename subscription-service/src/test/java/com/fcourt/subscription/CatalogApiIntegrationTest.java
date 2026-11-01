@@ -15,25 +15,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.crypto.RSASSASigner;
-import com.nimbusds.jose.jwk.JWKSet;
-import com.nimbusds.jose.jwk.RSAKey;
-import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
-import com.sun.net.httpserver.HttpServer;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.util.Date;
-import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -42,50 +25,20 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-import org.testcontainers.containers.PostgreSQLContainer;
 
 /** Catalogue API end to end through the real security chain (RS256 + JWKS) and Postgres/Flyway. Needs Docker. */
 @SpringBootTest
 @AutoConfigureMockMvc
-class CatalogApiIntegrationTest {
-    static final String ISSUER = "http://issuer.test";
+class CatalogApiIntegrationTest extends IntegrationSupport {
     static final long SUPER_ADMIN = 16;
     static final long CUSTOMER = 6;
     static final long OWNER = 1;
 
-    // Singleton container: it must outlive the cached Spring context, so Ryuk stops it at JVM exit.
-    static final PostgreSQLContainer<?> DATABASE = new PostgreSQLContainer<>("postgres:16-alpine");
-
-    static {
-        DATABASE.start();
-    }
-
-    static final RSAKey KEY = rsaKey();
-    static final HttpServer JWKS = jwksServer();
-
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
     @Autowired ObjectMapper json;
-
-    @DynamicPropertySource
-    static void properties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", DATABASE::getJdbcUrl);
-        registry.add("spring.datasource.username", DATABASE::getUsername);
-        registry.add("spring.datasource.password", DATABASE::getPassword);
-        registry.add("auth.jwt.jwk-set-uri",
-                () -> "http://localhost:" + JWKS.getAddress().getPort() + "/.well-known/jwks.json");
-        registry.add("auth.jwt.issuer", () -> ISSUER);
-        registry.add("auth.jwt.audience", () -> "fcourt");
-    }
-
-    @AfterAll
-    static void stopJwks() {
-        JWKS.stop(0);
-    }
 
     @Test
     void courtTypesCanBeReadWithoutAToken() throws Exception {
@@ -318,44 +271,5 @@ class CatalogApiIntegrationTest {
 
     static String unique(String prefix) {
         return prefix + "-" + UUID.randomUUID();
-    }
-
-    static String bearer(long userId, String role) throws JOSEException {
-        return "Bearer " + token(userId, role, "fcourt");
-    }
-
-    static String token(long userId, String role, String audience) throws JOSEException {
-        Instant now = Instant.now();
-        var claims = new JWTClaimsSet.Builder().issuer(ISSUER).audience(audience).subject(Long.toString(userId))
-                .issueTime(Date.from(now)).expirationTime(Date.from(now.plusSeconds(300)))
-                .claim("roles", List.of(role)).build();
-        var jwt = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(KEY.getKeyID()).build(), claims);
-        jwt.sign(new RSASSASigner(KEY));
-        return jwt.serialize();
-    }
-
-    static RSAKey rsaKey() {
-        try {
-            return new RSAKeyGenerator(2048).keyID("test-key").generate();
-        } catch (JOSEException error) {
-            throw new IllegalStateException(error);
-        }
-    }
-
-    static HttpServer jwksServer() {
-        try {
-            var server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
-            byte[] body = new JWKSet(KEY.toPublicJWK()).toString().getBytes(StandardCharsets.UTF_8);
-            server.createContext("/.well-known/jwks.json", exchange -> {
-                exchange.getResponseHeaders().add("Content-Type", "application/json");
-                exchange.sendResponseHeaders(200, body.length);
-                exchange.getResponseBody().write(body);
-                exchange.close();
-            });
-            server.start();
-            return server;
-        } catch (IOException error) {
-            throw new IllegalStateException(error);
-        }
     }
 }

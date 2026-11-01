@@ -10,6 +10,7 @@ import com.fcourt.subscription.plan.PlanRepository.PlanValues;
 import java.time.Clock;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,6 +46,24 @@ public class PlanService {
     @Transactional(readOnly = true)
     public SubscriptionPlanResponse get(long id) {
         return withFeatures(List.of(plans.find(id).orElseThrow(PlanService::notFound))).getFirst();
+    }
+
+    /** A plan a customer may buy: not deleted and active. */
+    @Transactional(readOnly = true)
+    public Optional<SubscriptionPlanResponse> findOnSale(long id) {
+        return plans.find(id).filter(PlanRecord::active).map(plan -> withFeatures(List.of(plan)).getFirst());
+    }
+
+    /** The cheapest plan on sale, used as the starter plan of a court owner without a subscription. */
+    @Transactional(readOnly = true)
+    public Optional<SubscriptionPlanResponse> cheapestOnSale() {
+        return withFeatures(plans.findActive()).stream().findFirst();
+    }
+
+    /** Describes a plan even if it was deleted since it was bought. */
+    @Transactional(readOnly = true)
+    public SubscriptionPlanResponse describe(long id) {
+        return withFeatures(List.of(plans.findIncludingDeleted(id).orElseThrow(PlanService::notFound))).getFirst();
     }
 
     @Transactional

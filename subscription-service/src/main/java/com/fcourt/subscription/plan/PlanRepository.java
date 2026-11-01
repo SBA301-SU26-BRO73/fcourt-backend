@@ -57,6 +57,14 @@ class PlanRepository {
         return jdbc.query(COLUMNS + " AND id = ?", this::plan, id).stream().findFirst();
     }
 
+    /** Deleted plans too: a subscription keeps pointing at the plan it bought. */
+    Optional<PlanRecord> findIncludingDeleted(long id) {
+        return jdbc.query("""
+                SELECT id, name, tagline, monthly_price, yearly_price, max_courts, max_branches, is_active,
+                       color, popular, created_at, updated_at
+                FROM subscription_plans WHERE id = ?""", this::plan, id).stream().findFirst();
+    }
+
     /**
      * Case-insensitive, like the {@code lower(name)} unique index. {@code exceptId} lets an update keep its
      * own name (or change only its case); pass 0 when creating.
