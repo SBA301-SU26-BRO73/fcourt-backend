@@ -17,6 +17,8 @@ import org.springframework.web.server.ResponseStatusException;
 @Component
 public class BookingGateway {
     private final RestClient booking;
+    @Value("${STAFF_BOOKING_SERVICE_TOKEN:}")
+    private String staffServiceToken="";
 
     public BookingGateway(RestClient.Builder builder, @Value("${staff.booking.url}") String url) {
         booking = builder.clone().baseUrl(url).build();
@@ -32,6 +34,19 @@ public class BookingGateway {
         return execute(() -> booking.post().uri("/api/internal/bookings/check-in/preview")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .body(request).retrieve().body(TicketPreview.class));
+    }
+
+    public OfflineRoster offlineTickets(long branch, LocalDate date, String token) {
+        return execute(() -> booking.get().uri(uri -> uri.path("/api/internal/branches/{id}/offline-tickets")
+                .queryParam("date",date).build(branch)).header(HttpHeaders.AUTHORIZATION,"Bearer "+token)
+                .retrieve().body(OfflineRoster.class));
+    }
+    public CheckInResult offlineCheckIn(OfflineCommand request,String key,String token) {
+        if(staffServiceToken.getBytes(java.nio.charset.StandardCharsets.UTF_8).length<32)throw unavailable();
+        return execute(() -> booking.post().uri("/api/internal/bookings/offline-check-in")
+                .header(HttpHeaders.AUTHORIZATION,"Bearer "+token).header("Idempotency-Key",key)
+                .header("X-Staff-Service-Token",staffServiceToken)
+                .body(request).retrieve().body(CheckInResult.class));
     }
 
     public CheckInResult checkIn(CheckInCommand request, String key, String token) {
@@ -97,6 +112,7 @@ public class BookingGateway {
     public record PreviewCommand(long branchId, long actorId, String checkInCode, LocalDate date) {
         @Override public String toString() { return "PreviewCommand[code=REDACTED]"; }
     }
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown=true)
     public record TicketPreview(long bookingId, long branchId, long courtId, String courtName,
             LocalDate date, LocalTime slotStart, LocalTime slotEnd, String status,
             String customerName, String guestPhone) { }
@@ -114,4 +130,11 @@ public class BookingGateway {
     public record CheckoutCommand(long branchId, long actorId, Instant completedAt) { }
     public record CheckoutResult(long bookingId, long branchId, String status, Instant completedAt) { }
     public record CheckoutPreview(long bookingId, long branchId, BigDecimal surchargeAmount, BigDecimal totalAmount) { }
+    public record OfflineRoster(long branchId,List<OfflineTicket> tickets) { }
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown=true)
+    public record OfflineTicket(long bookingId,String courtName,String customerName,String checkInCode,
+                                LocalDate date,LocalTime slotStart,LocalTime slotEnd,String status) {
+        @Override public String toString() { return "OfflineTicket[REDACTED]"; }
+    }
+    public record OfflineCommand(long branchId,long actorId,long bookingId,LocalDate date,Instant checkedInAt) { }
 }
