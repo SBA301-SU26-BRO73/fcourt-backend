@@ -46,6 +46,10 @@ public class StaffService {
         upstream.activeBranch(assigned.branchId(), jwt.getTokenValue());
         return assigned;
     }
+    public StaffView managedUser(Jwt jwt,long userId,long branchId) {
+        admin(jwt);upstream.ownedBranch(branchId,actor(jwt),jwt.getTokenValue());
+        return store.managedUser(userId,branchId);
+    }
 
     @Transactional(timeout = 15)
     public StaffView create(Jwt jwt, UUID key, Create request) {

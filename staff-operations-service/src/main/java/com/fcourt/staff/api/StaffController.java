@@ -66,4 +66,9 @@ class StaffController {
     ResponseEntity<StaffView> assignment(@AuthenticationPrincipal Jwt jwt) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.assigned(jwt));
     }
+    @GetMapping("/api/admin/staff/accounts/{userId}")
+    ResponseEntity<StaffView> managed(@AuthenticationPrincipal Jwt jwt,@PathVariable @Positive long userId,
+            @RequestParam @Positive long branchId) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.managedUser(jwt,userId,branchId));
+    }
 }
