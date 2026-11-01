@@ -21,7 +21,8 @@ public final class TemplateDtos {
             LocalTime startTime,
             LocalTime endTime,
             Integer durationMinutes,
-            @DecimalMin("0") @Digits(integer = 8, fraction = 2) BigDecimal price,
+            @DecimalMin(value = "0", inclusive = false, message = "must be greater than 0")
+            @Digits(integer = 8, fraction = 2) BigDecimal price,
             @DecimalMin(value = "0", inclusive = false, message = "must be greater than 0")
             @Digits(integer = 4, fraction = 4) BigDecimal priceMultiplier,
             List<@NotNull @Min(0) @Max(6) Integer> daysOfWeek) {
@@ -38,7 +39,8 @@ public final class TemplateDtos {
             @NotNull @Min(0) @Max(6) Integer dayOfWeek,
             @NotNull LocalTime startTime,
             @NotNull LocalTime endTime,
-            @NotNull @DecimalMin("0") @Digits(integer = 8, fraction = 2) BigDecimal price) { }
+            @NotNull @DecimalMin(value = "0", inclusive = false, message = "must be greater than 0")
+            @Digits(integer = 8, fraction = 2) BigDecimal price) { }
 
     public record PreviewSlot(@JsonFormat(pattern = "HH:mm") LocalTime startTime,
                               @JsonFormat(pattern = "HH:mm") LocalTime endTime,

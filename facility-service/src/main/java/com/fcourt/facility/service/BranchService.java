@@ -6,6 +6,7 @@ import com.fcourt.facility.events.BranchEventWriter;
 import com.fcourt.facility.integration.SubscriptionLimitClient;
 import com.fcourt.facility.persistence.BranchStore;
 import java.util.List;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -39,11 +40,12 @@ public class BranchService {
         var limits = subscriptions.limits(adminId, bearer); // remote call kept outside the DB transaction
         long id = tx.execute(status -> {
             branches.lockOwner(adminId);
+            requireUniqueName(request.name(), null);
             if (branches.countOwned(adminId) >= limits.maxBranches()) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                         "Branch limit of your subscription plan reached (" + limits.maxBranches() + ")");
             }
-            long created = branches.insert(adminId, request);
+            long created = insertOrDuplicate(adminId, request);
             events.branchChanged(created);
             return created;
         });
@@ -53,7 +55,13 @@ public class BranchService {
     public BranchResponse update(long adminId, long branchId, BranchRequest request) {
         tx.executeWithoutResult(status -> {
             if (!branches.lockOwned(branchId, adminId)) throw notFound();
-            branches.update(branchId, request);
+            requireUniqueName(request.name(), branchId);
+            requireSlotDurationChangeAllowed(branchId, request.slotDurationMinutes());
+            try {
+                branches.update(branchId, request);
+            } catch (DuplicateKeyException race) {
+                throw duplicateName(race);
+            }
             events.branchChanged(branchId);
         });
         return get(adminId, branchId);
@@ -76,7 +84,31 @@ public class BranchService {
         return new BranchResponse.Status(branch.id(), branch.status());
     }
 
-    static ResponseStatusException notFound() {
+    private void requireUniqueName(String name, Long exceptBranchId) {
+    if (branches.nameTaken(name, exceptBranchId)) throw duplicateName(null);
+}
+
+private long insertOrDuplicate(long adminId, BranchRequest request) {
+    try {
+        return branches.insert(adminId, request);
+    } catch (DuplicateKeyException race) {
+        throw duplicateName(race);
+    }
+}
+
+private void requireSlotDurationChangeAllowed(long branchId, Integer requested) {
+    if (requested != null && requested != branches.find(branchId).orElseThrow(BranchService::notFound).slotDurationMinutes()
+            && branches.hasLiveTemplates(branchId)) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Cannot change slot duration after time slots have been created");
+    }
+}
+
+private static ResponseStatusException duplicateName(Throwable cause) {
+    return new ResponseStatusException(HttpStatus.BAD_REQUEST, "Branch name already exists", cause);
+}
+
+static ResponseStatusException notFound() {
         return new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found");
     }
 }
