@@ -34,7 +34,7 @@ fcourt-backend/
 | `payment-service` | `payment_db` | `payments`, `refund_requests` | _chưa điền_ |
 | `staff-operations-service` | `staff_db` | `staff` | _chưa điền_ |
 | `pos-retail-service` | `pos_retail_db` | `products`, `orders`, `order_items` | _chưa điền_ |
-| `notification-service` | `notification_db` | chưa có, owner tự thiết kế | _chưa điền_ |
+| `notification-service` | `notification_db` | `processed_events` (Flyway trong service, xem `notification-service/README.md`) | _chưa điền_ |
 
 ## Chạy database local
 
