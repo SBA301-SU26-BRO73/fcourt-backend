@@ -36,7 +36,7 @@ class PaymentSecurity {
             return ((Collection<?>)roles).stream().filter("ADMIN"::equals)
                     .<org.springframework.security.core.GrantedAuthority>map(role -> new SimpleGrantedAuthority("ROLE_ADMIN")).toList();
         });
-        return http.securityMatcher("/api/admin/payments/**").csrf(csrf -> csrf.disable())
+        return http.securityMatcher("/api/admin/payments/**","/api/admin/refunds/**").csrf(csrf -> csrf.disable())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(a -> a.anyRequest().hasRole("ADMIN"))
                 .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(converter)))
