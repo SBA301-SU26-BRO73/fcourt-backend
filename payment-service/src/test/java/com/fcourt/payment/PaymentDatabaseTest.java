@@ -309,7 +309,7 @@ class PaymentDatabaseTest {
                 .isEqualByComparingTo("160000.00");
         assertThat(jdbc.queryForObject("SELECT status FROM payments", String.class)).isEqualTo("PENDING");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM refund_requests", Long.class)).isZero();
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success", Long.class)).isEqualTo(4);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success", Long.class)).isEqualTo(5);
     }
     @Autowired CustomerPayments customerPayments;
     @Test
@@ -363,6 +363,47 @@ class PaymentDatabaseTest {
         var service=new CustomerPayments(jdbc,org.mockito.Mockito.mock(org.springframework.security.oauth2.jwt.JwtDecoder.class),builder.build(),tx);
         org.assertj.core.api.Assertions.assertThatThrownBy(()->service.history(admin(),0,20)).hasMessageContaining("503");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM payment_customer_sync",Long.class)).isZero();
+    }
+
+    @Autowired BranchLedger ledger;
+    void ledgerSeed() throws Exception {
+        submitted();
+        jdbc.update("UPDATE payments SET status='CONFIRMED',customer_phone='0901234567',submitted_at='2026-11-01T00:00:00Z' WHERE booking_id=42");
+        for(int i=1;i<=3;i++)jdbc.update("INSERT INTO payments(branch_id,amount,booking_id,checkout,submitted_at,status) SELECT ?,?,booking_id+?,checkout,'2026-11-01T01:00:00Z'::timestamptz,? FROM payments WHERE booking_id=42",i==3?8:7,100000*i,i,i==1?"PENDING":"REJECTED");
+    }
+    @Test
+    void branchLedgerTotalsCoverAllFilteredRowsAndIgnoreOtherBranches() throws Exception {
+        ledgerSeed();
+        var page=ledger.history(7,null,null,"ALL","",0,1,admin());
+        assertThat(page.total()).isEqualTo(3);assertThat(page.items()).hasSize(1);
+        assertThat(page.summary().received()).isEqualByComparingTo("160000");
+        assertThat(page.summary().pending()).isEqualByComparingTo("100000");
+        assertThat(page.summary().rejectedCount()).isEqualTo(1);
+        assertThat(ledger.history(7,null,null,"SUCCESS","090123",0,20,admin()).total()).isEqualTo(1);
+        assertThat(ledger.history(7,null,null,"ALL","PAY-",0,20,admin()).total()).isEqualTo(3);
+        assertThat(ledger.history(7,null,null,"ALL","%",0,20,admin()).total()).isZero();
+    }
+    @Test
+    void branchLedgerHonorsVietnamDateRangeAndChecksOwnership() throws Exception {
+        ledgerSeed();
+        var day=java.time.LocalDate.of(2026,11,1);
+        assertThat(ledger.history(7,day,day,"ALL","",0,20,admin()).total()).isEqualTo(3);
+        assertThat(ledger.history(7,day.minusDays(1),day.minusDays(1),"ALL","",0,20,admin()).total()).isZero();
+        org.mockito.Mockito.doThrow(new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN)).when(ownership).require(org.mockito.ArgumentMatchers.eq(8L),org.mockito.ArgumentMatchers.any());
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->ledger.history(8,null,null,"ALL","",0,20,admin())).hasMessageContaining("403");
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->ledger.history(7,day,day.minusDays(1),"ALL","",0,20,admin())).hasMessageContaining("400");
+    }
+    @Test
+    void branchLedgerRouteRejectsCustomerAndReturnsTotalHeaders() throws Exception {
+        ledgerSeed();
+        securedMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/admin/payments/transactions?branchId=7")
+            .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+        securedMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/admin/payments/transactions?branchId=7&size=1")
+            .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt().authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN"))))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("X-Total-Received","160000.00"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.summary.rejectedCount").value(1));
     }
 
 }

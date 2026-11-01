@@ -169,3 +169,27 @@ Validation: Java 21 Maven clean verify, PostgreSQL 16 and four migrations. Added
 coverage checks auth/header spoofing, customer isolation, exact amount/status mapping,
 pagination, ownership conflict, legacy owner resolution and fail-closed upstream
 outage. Live account/booking/payment acceptance remains an integration check.
+
+## Branch ledger — SCRUM-70
+
+GET `/api/admin/payments/transactions?branchId=7&page=0&size=20` requires ADMIN and
+verified facility branch ownership before reading. Filters: inclusive fromDate/toDate
+in Asia/Ho_Chi_Minh, status ALL/SUCCESS/PENDING/REJECTED, search up to 100 characters.
+Search covers snapshotted customerName/customerPhone, bookingCode and PAY-id. Literal
+SQL wildcard characters are escaped and all values are bound. Missing source phone
+snapshots stay nullable, not inferred from account details. Receipt submission captures
+optional customerPhone from the trusted booking authority when it supplies that field.
+Legacy phone snapshots require owner-assisted migration; they are not fabricated.
+
+Response adds `summary:{received,pending,rejectedCount}` to the transaction page.
+Summary spans all matching rows, independently of page size. Header equivalents:
+X-Total-Received, X-Total-Pending, X-Rejected-Count. Received counts confirmed receipts
+only; rejected/unsubmitted payments never count as revenue. This is receipt reporting,
+not evidence of bank settlement. Count/items/sums share one PostgreSQL statement and
+therefore one snapshot. Header/response Cache-Control is no-store.
+
+Flyway V5 adds the optional phone snapshot and branch/submission index. New PostgreSQL
+checks cover cross-branch exclusion/ownership denial, pagination-independent sums,
+status/phone/order search, literal wildcard escaping, Vietnam dates/range validation,
+ADMIN role and total headers. Java 21 Maven verify runs 38 tests with five migrations.
+Refund/cash/net reporting is added separately in SCRUM-98.

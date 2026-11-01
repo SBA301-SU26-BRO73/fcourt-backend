@@ -36,7 +36,7 @@ class CustomerPayments {
             throw new ResponseStatusException(HttpStatus.CONFLICT,"Payment ownership mismatch");
     }
     record Transaction(long id,String transactionCode,long bookingId,String bookingCode,String branchName,String courtName,
-            BigDecimal amount,String method,String status,Instant occurredAt,String receiptImageUrl) {}
+            BigDecimal amount,String method,String status,Instant occurredAt,String receiptImageUrl,String customerName,String customerPhone) {}
     record Page(List<Transaction> items,int page,int size,long total) {}
     Page history(Jwt jwt,int page,int size){
         long customer=actor(jwt);
@@ -63,7 +63,7 @@ class CustomerPayments {
         return new Transaction(id,"PAY-"+id,((Number)r.get("booking_id")).longValue(),checkout.path("bookingCode").asText(),
             checkout.path("branchName").asText(),checkout.path("courtName").asText(),(BigDecimal)r.get("amount"),"VIETQR",
             switch(r.get("status").toString()){case "CONFIRMED"->"SUCCESS";case "PENDING"->"PENDING";default->"REJECTED";},
-            ((java.sql.Timestamp)r.get("submitted_at")).toInstant(),(String)r.get("bill_image_url"));
+            ((java.sql.Timestamp)r.get("submitted_at")).toInstant(),(String)r.get("bill_image_url"),checkout.path("customerName").asText(),(String)r.get("customer_phone"));
     }
     void reconcile(Jwt jwt,long customer){
         if(Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM payment_customer_sync WHERE customer_id=?)",Boolean.class,customer)))return;
