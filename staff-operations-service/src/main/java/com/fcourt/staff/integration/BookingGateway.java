@@ -28,6 +28,12 @@ public class BookingGateway {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token).retrieve().body(Schedule.class));
     }
 
+    public TicketPreview preview(PreviewCommand request, String token) {
+        return execute(() -> booking.post().uri("/api/internal/bookings/check-in/preview")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .body(request).retrieve().body(TicketPreview.class));
+    }
+
     public CheckInResult checkIn(CheckInCommand request, String key, String token) {
         return execute(() -> booking.post().uri("/api/internal/bookings/check-in")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token).header("Idempotency-Key", key)
@@ -82,6 +88,12 @@ public class BookingGateway {
     public record CheckInCommand(long branchId, long actorId, String checkInCode, LocalDate date,
                                  Instant checkedInAt, String channel) { }
     public record CheckInResult(long bookingId, long branchId, LocalDate date, String status, Instant checkedInAt) { }
+    public record PreviewCommand(long branchId, long actorId, String checkInCode, LocalDate date) {
+        @Override public String toString() { return "PreviewCommand[code=REDACTED]"; }
+    }
+    public record TicketPreview(long bookingId, long branchId, long courtId, String courtName,
+            LocalDate date, LocalTime slotStart, LocalTime slotEnd, String status,
+            String customerName, String guestPhone) { }
     public record WalkInCommand(long branchId, long actorId, long courtId, LocalDate date, List<Long> slotIds,
                                 String guestPhone, String paymentMethod, Instant checkedInAt, CashQuote quote) { }
     public record WalkInResult(long bookingId, String bookingCode, long branchId, long courtId, LocalDate date,
