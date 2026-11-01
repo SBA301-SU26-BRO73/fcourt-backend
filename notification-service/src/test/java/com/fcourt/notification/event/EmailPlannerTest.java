@@ -37,7 +37,39 @@ class EmailPlannerTest {
         assertThat(send.email().subject()).isEqualTo("Hồ sơ chủ sân FCOURT đã được duyệt");
         assertThat(send.email().template()).isEqualTo("owner-approved");
         assertThat(send.email().model()).containsEntry("name", "Chu San");
-        assertThat(send.businessKey()).isEqualTo("owner-approved:17");
+        assertThat(send.businessKey()).isEqualTo("owner-approved:17:2026-11-01T03:00:00Z");
+    }
+
+    @Test
+    void aSecondApprovalOfTheSameOwnerIsMailedAgain() {
+        var first = (Send) planner.plan(event(ownerApproval("2026-11-01T03:00:00Z")));
+        var second = (Send) planner.plan(event(ownerApproval("2026-12-24T08:15:30.123456Z")));
+
+        assertThat(second.businessKey()).isNotEqualTo(first.businessKey())
+                .isEqualTo("owner-approved:17:2026-12-24T08:15:30.123456Z");
+    }
+
+    @Test
+    void anOwnerApprovalWithoutApprovedAtIsDedupedByEventIdAlone() {
+        var send = (Send) planner.plan(event("""
+                {"eventId":"%s","type":"OwnerApprovedEvent","version":1,
+                 "data":{"userId":17,"email":"owner@demo.com","fullName":"Chu San"}}"""));
+
+        assertThat(send.businessKey()).isNull();
+    }
+
+    @Test
+    void anOwnerApprovalWithAMalformedApprovedAtIsPoison() {
+        var event = event(ownerApproval("yesterday"));
+
+        assertThatThrownBy(() -> planner.plan(event)).isInstanceOf(PoisonEventException.class);
+    }
+
+    static String ownerApproval(String approvedAt) {
+        return """
+                {"eventId":"%s","type":"OwnerApprovedEvent","version":1,
+                 "data":{"userId":17,"approvedBy":16,"approvedAt":"APPROVED_AT",
+                         "email":"owner@demo.com","fullName":"Chu San"}}""".replace("APPROVED_AT", approvedAt);
     }
 
     @Test
@@ -46,7 +78,7 @@ class EmailPlannerTest {
                 {"eventId":"%s","type":"OwnerApprovedEvent","version":1,
                  "data":{"userId":17,"approvedBy":16,"approvedAt":"2026-11-01T03:00:00Z"}}"""));
 
-        assertThat(plan).isEqualTo(new NoRecipient("owner-approved:17"));
+        assertThat(plan).isEqualTo(new NoRecipient());
     }
 
     @Test
@@ -146,7 +178,7 @@ class EmailPlannerTest {
         var plan = planner.plan(event(confirmedPayment("customer@demo.com").replace(
                 "\"recipient\":{\"email\":\"customer@demo.com\"}", "\"recipient\":null")));
 
-        assertThat(plan).isEqualTo(new NoRecipient("booking-confirmed:42"));
+        assertThat(plan).isEqualTo(new NoRecipient());
     }
 
     @ParameterizedTest
@@ -155,7 +187,7 @@ class EmailPlannerTest {
     void anythingButOneWellFormedAddressIsRefusedWhichBlocksHeaderInjection(String address) {
         var plan = planner.plan(event(confirmedPayment(address)));
 
-        assertThat(plan).isEqualTo(new NoRecipient("booking-confirmed:42"));
+        assertThat(plan).isEqualTo(new NoRecipient());
     }
 
     @Test

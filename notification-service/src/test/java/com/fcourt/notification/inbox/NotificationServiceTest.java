@@ -67,14 +67,13 @@ class NotificationServiceTest {
     }
 
     @Test
-    void anEventWithoutARecipientIsRecordedAsSkippedAndNothingIsSent() {
-        when(planner.plan(any())).thenReturn(new EmailPlan.NoRecipient("booking-confirmed:42"));
-        when(processed.claim(EVENT_ID, "OwnerApprovedEvent", "booking-confirmed:42", Outcome.SKIPPED_NO_RECIPIENT))
-                .thenReturn(true);
+    void anEventWithoutARecipientIsRecordedAsSkippedWithoutUsingUpTheBusinessKey() {
+        when(planner.plan(any())).thenReturn(new EmailPlan.NoRecipient());
+        when(processed.claim(EVENT_ID, "OwnerApprovedEvent", null, Outcome.SKIPPED_NO_RECIPIENT)).thenReturn(true);
 
         service.handle(PAYLOAD);
 
-        verify(processed).claim(EVENT_ID, "OwnerApprovedEvent", "booking-confirmed:42", Outcome.SKIPPED_NO_RECIPIENT);
+        verify(processed).claim(EVENT_ID, "OwnerApprovedEvent", null, Outcome.SKIPPED_NO_RECIPIENT);
         verifyNoInteractions(sender);
     }
 

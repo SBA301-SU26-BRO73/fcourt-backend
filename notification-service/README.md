@@ -77,8 +77,11 @@ malformed value in a field that is used (date, time, expiry) is a poison record,
 - **Idempotency.** Each handled event is recorded in `processed_events` by its `eventId`, so a redelivered
   event never sends a second email. `business_key` additionally dedupes different events about the same
   fact: `booking-confirmed:<bookingId>`, `booking-cancelled:<bookingId>` (customer cancellation, payment
-  expiry and payment rejection share it) and `owner-approved:<userId>`. Password reset has no business key,
-  every request is mailed. No address is stored in the table.
+  expiry and payment rejection share it) and `owner-approved:<userId>:<approvedAt>` (each approval is its
+  own fact, so an owner approved again is mailed again; without `approvedAt` the `eventId` alone dedupes).
+  Password reset has no business key, every request is mailed. A `SKIPPED_NO_RECIPIENT` row is recorded by
+  `eventId` only and never takes the business key, so a later event about the same booking that does carry a
+  recipient is still mailed. No address is stored in the table.
 - **At-least-once.** The claim and the SMTP send share one database transaction. If the mail server refuses
   the message, the claim rolls back and the retry sends again. If the mail was accepted but the commit then
   fails, the recipient can get it twice.
@@ -87,7 +90,9 @@ malformed value in a field that is used (date, time, expiry) is a poison record,
   `<topic>.DLT` and skipped, so one bad record never blocks the topic. Unreadable records (invalid JSON,
   missing `eventId` or `type`, malformed date or time, reset event without token) are poison: no retries,
   straight to the DLT. Nothing replays the DLT automatically, someone has to look at it. DLT records keep
-  the original payload, including password reset tokens, so restrict access to those topics.
+  the original payload except every `"token"` value, which is replaced by `[REDACTED]` (a dead lettered
+  reset is not replayable; the user requests a new link). Names and addresses remain, so restrict access to
+  those topics.
 - **Logging.** Logs hold the event id, type and outcome only, never the recipient, the body or a reset token.
 - A new deployment starts from the earliest offset of its consumer group, so it mails events published
   before it was running (an old `OwnerApprovedEvent` without `email` is recorded as skipped). A

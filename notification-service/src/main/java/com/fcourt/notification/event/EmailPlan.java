@@ -15,8 +15,12 @@ public sealed interface EmailPlan {
     record Expired() implements EmailPlan {
     }
 
-    /** A mail is due but the event carries no usable recipient address. */
-    record NoRecipient(String businessKey) implements EmailPlan {
+    /**
+     * A mail is due but the event carries no usable recipient address. It deliberately has no business key:
+     * a skipped event must not use up the key, so a later event about the same booking that does carry a
+     * recipient is still mailed.
+     */
+    record NoRecipient() implements EmailPlan {
     }
 
     /**

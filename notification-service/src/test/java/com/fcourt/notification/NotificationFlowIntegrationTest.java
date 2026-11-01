@@ -123,6 +123,39 @@ class NotificationFlowIntegrationTest {
     }
 
     @Test
+    void aSkippedEventDoesNotStopALaterEventAboutTheSameBookingFromBeingMailed() {
+        UUID skipped = UUID.randomUUID();
+        UUID mailed = UUID.randomUUID();
+        long bookingId = 700_000 + (int) (Math.random() * 100_000);
+        String email = unique("customer");
+
+        kafka.send(PAYMENT, "k", cancellation(skipped, bookingId, null));
+        kafka.send(PAYMENT, "k", cancellation(mailed, bookingId, email));
+
+        verify(sender, timeout(30_000)).send(argThat(sent -> sent.to().equals(email)));
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            assertThat(outcome(skipped)).isEqualTo("SKIPPED_NO_RECIPIENT");
+            assertThat(outcome(mailed)).isEqualTo("SENT");
+        });
+    }
+
+    @Test
+    void aDeadLetteredPasswordResetDoesNotExposeTheToken() {
+        UUID eventId = UUID.randomUUID();
+        String token = "secret-" + UUID.randomUUID();
+        String payload = """
+                {"eventId":"%s","type":"PasswordResetRequestedEvent","version":1,
+                 "data":{"userId":7,"email":"%s","token":"%s","expiresAt":"not-a-time"}}"""
+                .formatted(eventId, unique("customer"), token);
+
+        kafka.send(AUTH, "7", payload);
+
+        assertThat(deadLetters(AUTH + ".DLT", eventId.toString()))
+                .isEqualTo(payload.replace(token, "[REDACTED]"))
+                .doesNotContain(token);
+    }
+
+    @Test
     void aFailingMailServerIsRetriedAndTheEventIsClaimedOnlyOnceItWasSent() {
         UUID eventId = UUID.randomUUID();
         String email = unique("owner");

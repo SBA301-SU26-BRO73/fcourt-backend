@@ -71,7 +71,12 @@ public class EmailPlanner {
 
     private EmailPlan ownerApproved(EventEnvelope event) {
         JsonNode data = event.root().path("data");
-        String key = "owner-approved:" + requiredId(data.path("userId"), "data.userId", event);
+        long userId = requiredId(data.path("userId"), "data.userId", event);
+        // Keyed by the approval itself, not only the owner: an owner approved again (after being
+        // deactivated) is mailed again. Without approvedAt the eventId alone dedupes redelivery.
+        JsonNode approvedAt = data.path("approvedAt");
+        String key = approvedAt.isMissingNode() || approvedAt.isNull()
+                ? null : "owner-approved:" + userId + ":" + instant(approvedAt, event);
         return build(address(data.path("email")), key, "Hồ sơ chủ sân FCOURT đã được duyệt", "owner-approved",
                 Map.of("name", name(data.path("fullName"))));
     }
@@ -158,7 +163,7 @@ public class EmailPlanner {
     private EmailPlan build(String to, String businessKey, String subject, String template,
                             Map<String, String> model) {
         if (to == null) {
-            return new EmailPlan.NoRecipient(businessKey);
+            return new EmailPlan.NoRecipient();
         }
         return new EmailPlan.Send(new OutgoingEmail(to, singleLine(subject), template, model), businessKey);
     }
@@ -263,7 +268,7 @@ public class EmailPlanner {
         try {
             return Instant.parse(node.asText());
         } catch (DateTimeParseException error) {
-            throw new PoisonEventException(event.type() + " has a malformed expiresAt");
+            throw new PoisonEventException(event.type() + " has a malformed timestamp");
         }
     }
 

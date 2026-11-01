@@ -44,7 +44,8 @@ public class NotificationService {
             case EmailPlan.Expired expired -> log.info("Event {} of type {} expired before it was handled; no email sent",
                     event.eventId(), event.type());
             case EmailPlan.NoRecipient none -> {
-                if (processed.claim(event.eventId(), event.type(), none.businessKey(), Outcome.SKIPPED_NO_RECIPIENT)) {
+                // Recorded by eventId only, so the business key stays free for a later event with a recipient.
+                if (processed.claim(event.eventId(), event.type(), null, Outcome.SKIPPED_NO_RECIPIENT)) {
                     log.warn("Event {} of type {} has no usable recipient; no email sent", event.eventId(),
                             event.type());
                 }
