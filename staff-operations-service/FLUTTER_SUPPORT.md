@@ -1,61 +1,43 @@
-# Flutter staff support
+﻿# Flutter API support
 
-## SCRUM-27 reactivation
+## Delivered contracts
 
-`POST /api/admin/staff/{id}/reactivate`, no body, Bearer ADMIN and UUID
-`Idempotency-Key`. Returns the existing StaffView; preserves branch, identity,
-profile and work shifts. Replays are audited once, and altered-command keys
-conflict. Owner/active-account/branch checks precede any write.
+ADMIN reactivation requires owned branch, stable UUID and validated IAM ACTIVE
+response before restoring the local assignment. GET managed-account lookup lets
+IAM independently verify ownership. Auth authority is delivered in a separate
+support PR; role and active assignment checks remain server-owned.
 
-IAM boundary: `POST /api/internal/staff-accounts/{userId}/reactivate`, body
-`{"branchId":7}`, same stable `staff:<actorId>:<UUID>` key and forwarded caller.
-IAM must independently verify ownership and reactivate the managed STAFF account,
-return its ACTIVE account projection, and guarantee durable replay. This is an
-additional integration dependency, not an implemented IAM endpoint in this branch.
-Missing/malformed/unauthorized IAM responses fail closed; local restoration only
-follows validated IAM success. Retry the same key after ambiguous failures.
+STAFF preview is read-only. Booking support resolves exact QR or printed manual
+code and guards admission with a durable command ledger and atomic row update.
+The signed offline roster includes SHA-256 code hashes, actor, branch, booking,
+date and admission window; no raw QR appears in the Flutter snapshot.
 
-## Verification
+Offline replay validates the signed permit, original occurrence time, current
+staff assignment and 24-hour reconciliation limit. Stable commands produce one
+booking transition and one staff audit/outbox record. New-key duplicates conflict.
+Booking requires the dedicated X-Staff-Service-Token as well as the STAFF JWT;
+this prevents direct callers from bypassing permit verification in staff service.
 
-## SCRUM-29 read-only preview
+## Server configuration
 
-`POST /api/staff/check-in/preview`, body `{"checkInCode":"opaque code"}`,
-STAFF Bearer; no idempotency header because it must not mutate state. Returns
-bookingId/branchId/courtId/courtName/date/slotStart/slotEnd/status/customerName/
-guestPhone. Only today's CONFIRMED ticket can be previewed. Explicit confirmation
-continues to use the existing verify command, which rechecks authoritative state.
+STAFF_OFFLINE_SIGNING_KEY and STAFF_BOOKING_SERVICE_TOKEN require at least 32
+bytes. The service token must match booking configuration. Keep all values only
+in server secret storage. STAFF_OFFLINE_PREVIOUS_SIGNING_KEYS accepts up to three
+comma-separated previous signing keys for pending permits during rotation.
+Deploy Flyway migrations and the corresponding auth/booking support branches.
 
-Booking boundary: `POST /api/internal/bookings/check-in/preview`, body branchId,
-actorId, checkInCode, date and forwarded STAFF Bearer. Authority must verify the
-active assignment/branch and resolve the exact code without state mutation or
-logging it; unknown/foreign code returns 404, used/wrong-date ticket 409.
-This branch supplies the staff endpoint/adapter; the authority implementation
-remains a named integration dependency. Preview never guarantees later admission.
+## Evidence and limits
 
-Full staff verify passes with 117 tests (no failures/skips), including a read-only
-preview assertion, branch mismatch and role rejection. This adds no booking DB
-access or cached admission authority.
+2026-11-01: staff Maven verify passes 121 tests with real PostgreSQL/Kafka and
+JaCoCo service coverage gate. Auth passes 22 tests; booking passes 11 tests.
+Run `python tools/flutter_support_e2e.py` on Windows with Docker, Java 21 and
+built service jars. Its disposable three-database smoke verifies live service
+reactivation, preview, signed roster, replay, tamper rejection and manual/QR
+mutual exclusion. Facility and JWKS are local fixtures; this is not deployed
+acceptance. The harness cleans its own processes and container.
 
-## SCRUM-31 counter contact and checkout projection
-
-Walk-in accepts optional guestName (1–150 characters), included in replay identity
-and forwarded unchanged to the booking authority with the canonical quote. Missing
-names are omitted from serialization to preserve legacy unnamed command identity.
-The authority must also fingerprint and persist the name, including reconciliation.
-
-`GET /api/staff/bookings/{id}/checkout-preview` returns bookingId, branchId,
-surchargeAmount and totalAmount from the booking authority, scoped by live staff
-assignment. Negative/inconsistent amounts or foreign results fail closed. Upstream
-GET `/api/internal/bookings/{id}/checkout-preview?branchId=...&actorId=...` must
-authorize forwarded STAFF and compute authoritative fees. It is a read projection,
-not a payment commitment or a price lock; checkout still performs its atomic guard.
-
-Full staff verify now passes 119 tests, zero failures/errors/skips, coverage gate
-passes. Added guest-name fingerprint and read-only scoped fee tests. Actual
-authority implementation/live acceptance is still required.
-
-2026-11-01: `mvn -f staff-operations-service/pom.xml verify` passes, including
-real PostgreSQL and Kafka containers, HTTP/JWT fixtures and JaCoCo's >=80% service
-coverage gate. Reactivation tests cover owner/role rejection, active assignment,
-idempotent replay, one audit row and unavailable identity. Actual IAM/facility
-integration and Android acceptance are not established by these fixtures.
+Walk-in guestName is fingerprinted and forwarded; the owning creation authority
+must persist it. Checkout preview is a guarded projection adapter; authoritative
+fee computation and actual settlement remain upstream dependencies. Existing IAM
+create/edit/disable contracts and real gateway routing also require integration
+acceptance. Android camera/background/reconnect timing remains device work.
