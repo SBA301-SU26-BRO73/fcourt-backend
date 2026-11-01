@@ -41,7 +41,8 @@ class AdminRefundService {
                 throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"Invalid proof storage response");
         }
         long booking=((Number)first.get("booking_id")).longValue();
-        return tx.execute(s->{
+        RefundView saved;
+        try{saved=tx.execute(s->{
             store.jdbc().queryForObject("SELECT pg_advisory_xact_lock(?)",Object.class,booking);
             var row=store.jdbc().queryForMap("SELECT * FROM refund_requests WHERE id=? FOR UPDATE",id);
             String state=row.get("status").toString();
@@ -62,6 +63,11 @@ class AdminRefundService {
                     store.encode(Map.of("eventId",eventId,"type","RefundCompletedEvent","refund",Map.of("id",id,"bookingId",booking,"branchId",row.get("branch_id"),"customerId",row.get("customer_id"),"amount",result.amount(),"status",result.status(),"transferProofUrl",result.transferProofUrl()))));
             }
             return result;
-        });
+        });}catch(RuntimeException e){
+            if(proofUrl!=null)storage.delete(proofUrl);
+            throw e;
+        }
+        if(proofUrl!=null&&!proofUrl.equals(saved.transferProofUrl()))storage.delete(proofUrl);
+        return saved;
     }
 }
