@@ -50,3 +50,29 @@ against Testcontainers PostgreSQL 16: two Flyway migrations, unauthorized/spoofe
 identity, ownership/guest access, pagination/filter bounds, ticket-event persistence,
 duplicate delivery, late-event ordering and amount-mismatch rollback.
 The executable jar is built by verify. No production/full-flow acceptance is claimed.
+
+## Cancellation — SCRUM-55
+
+Owner JWT only: GET `/api/bookings/{id}/cancellation-policy` returns allowed/reason,
+startsAt/cancelBefore, cutoffHours, refundAmount/refundPercent and currency VND.
+POST `/api/bookings/{id}/cancel` with `{reason}` (1–500 trimmed characters) rechecks
+ownership/state/deadline under a row lock. Eligible states are pending payment,
+awaiting confirmation and confirmed; checked-in/completed bookings cannot cancel.
+Exactly at the cutoff is allowed; requests after it return 400. Missing slot times
+fail closed. `booking.cancel-cutoff-hours` defaults to 12; `booking.refund-percent`
+defaults to 100, bounds 0..100. Values require product agreement before production.
+Only confirmed payments produce a potential refund, rounded down to whole VND.
+This records entitlement; it does not transfer money. Refund requests follow SCRUM-94.
+
+Flyway V3 stores reason/cancel timestamp/refund amount and deactivates slot reservations
+using a partial unique index, retaining all historical slots. Cancellation and the
+outbox event commit atomically; repeated/concurrent cancellation emits one event.
+Payment confirmation remains CONFIRMED when a paid booking is cancelled.
+
+Outbox sends at-least-once to `fcourt.booking.events` keyed by booking ID:
+`{eventId,type:"BookingCancelledEvent",booking:{id,bookingId,branchId,customerId,
+bookingCode,status,reason,paymentId,paymentStatus,refundAmount,slots}}`.
+Slots contain courtId/date/startTime/endTime. Consumers must deduplicate eventId.
+Facility releases availability; payment opens refund eligibility. Consumer deployment
+and actual slot-release/refund acceptance are pending with those owners. Kafka outage
+keeps durable records unpublished; the relay retries without duplicating HTTP effects.
