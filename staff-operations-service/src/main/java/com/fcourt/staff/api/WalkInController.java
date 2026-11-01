@@ -18,6 +18,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -36,6 +37,11 @@ public class WalkInController {
         return ResponseEntity.status(HttpStatus.CREATED).cacheControl(CacheControl.noStore()).body(service.create(jwt, key, request));
     }
 
+    @GetMapping("/api/staff/bookings/{id}/checkout-preview")
+    ResponseEntity<BookingGateway.CheckoutPreview> preview(@AuthenticationPrincipal Jwt jwt, @PathVariable @Positive long id) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.checkoutPreview(jwt, id));
+    }
+
     @PutMapping("/api/staff/bookings/{id}/checkout")
     ResponseEntity<BookingGateway.CheckoutResult> checkout(@AuthenticationPrincipal Jwt jwt,
             @PathVariable @Positive long id, @RequestHeader("Idempotency-Key") UUID key) {
@@ -44,5 +50,7 @@ public class WalkInController {
 
     public record WalkInRequest(@Positive long courtId, @NotNull LocalDate date,
                                 @NotNull @Size(min = 1, max = 48) List<@NotNull @Positive Long> slotIds,
-                                @NotNull @Pattern(regexp = "\\+?[0-9]{9,15}") String guestPhone) { }
+                                @NotNull @Pattern(regexp = "\\+?[0-9]{9,15}") String guestPhone,
+                                @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+                                @Size(min = 1, max = 150) String guestName) { }
 }

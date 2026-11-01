@@ -63,6 +63,12 @@ public class BookingGateway {
                 .body(new CheckoutCommand(branch, actor, completedAt)).retrieve().body(CheckoutResult.class));
     }
 
+    public CheckoutPreview checkoutPreview(long id, long branch, long actor, String token) {
+        return execute(() -> booking.get().uri(uri -> uri.path("/api/internal/bookings/{id}/checkout-preview")
+                .queryParam("branchId", branch).queryParam("actorId", actor).build(id))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token).retrieve().body(CheckoutPreview.class));
+    }
+
     private <T> T execute(Call<T> operation) {
         try {
             T value = operation.run();
@@ -95,7 +101,9 @@ public class BookingGateway {
             LocalDate date, LocalTime slotStart, LocalTime slotEnd, String status,
             String customerName, String guestPhone) { }
     public record WalkInCommand(long branchId, long actorId, long courtId, LocalDate date, List<Long> slotIds,
-                                String guestPhone, String paymentMethod, Instant checkedInAt, CashQuote quote) { }
+                                String guestPhone, String paymentMethod, Instant checkedInAt, CashQuote quote,
+                                @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+                                String guestName) { }
     public record WalkInResult(long bookingId, String bookingCode, long branchId, long courtId, LocalDate date,
                                String status, String paymentMethod, BigDecimal amount, Instant checkedInAt, CashInvoice invoice) { }
     public record ChargedSlot(long slotId, LocalTime startTime, LocalTime endTime, BigDecimal price) { }
@@ -105,4 +113,5 @@ public class BookingGateway {
                               BigDecimal surchargeAmount, BigDecimal totalAmount, String policyVersion, List<ChargedSlot> items) { }
     public record CheckoutCommand(long branchId, long actorId, Instant completedAt) { }
     public record CheckoutResult(long bookingId, long branchId, String status, Instant completedAt) { }
+    public record CheckoutPreview(long bookingId, long branchId, BigDecimal surchargeAmount, BigDecimal totalAmount) { }
 }
