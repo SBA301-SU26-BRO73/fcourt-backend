@@ -8,6 +8,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.Map;
 import java.util.UUID;
+import java.time.Instant;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -46,6 +47,13 @@ public class BookingCommandStore {
         UUID eventId = UUID.nameUUIDFromBytes(("staff:" + actor + ":" + key).getBytes(StandardCharsets.UTF_8));
         String payload = encode(Map.of("eventId", eventId, "type", kind, "version", 1, "data", eventData));
         jdbc.update("INSERT INTO staff_outbox(event_id, booking_id, payload) VALUES (?, ?, ?)", eventId, bookingId, payload);
+    }
+
+    public void auditCheckIn(long actor, UUID key, long bookingId, long branchId, String channel, Instant occurredAt) {
+        jdbc.update("""
+                INSERT INTO staff_check_in_audit(actor_id, booking_id, branch_id, channel, command_key, checked_in_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """, actor, bookingId, branchId, channel, key, java.sql.Timestamp.from(occurredAt));
     }
 
     private String encode(Object value) {

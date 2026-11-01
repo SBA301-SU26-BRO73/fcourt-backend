@@ -59,6 +59,7 @@ class StaffIntegrationTest {
     static final AtomicInteger CREATES = new AtomicInteger();
     static final Map<String, Map<String, Object>> ACCOUNTS = new ConcurrentHashMap<>();
     static final Map<String, Map<String, Object>> CHECK_IN_RESULTS = new ConcurrentHashMap<>();
+    static final Map<String, String> CHECK_IN_REQUESTS = new ConcurrentHashMap<>();
     static final AtomicBoolean CHECKED_IN = new AtomicBoolean();
     static final AtomicBoolean WALK_IN_OCCUPIED = new AtomicBoolean();
     static final AtomicBoolean COMPLETED = new AtomicBoolean();
@@ -109,8 +110,9 @@ class StaffIntegrationTest {
     @BeforeEach
     void reset() {
         jdbc.execute("TRUNCATE staff RESTART IDENTITY CASCADE");
-        jdbc.execute("TRUNCATE staff_booking_commands, staff_outbox");
+        jdbc.execute("TRUNCATE staff_booking_commands, staff_outbox, staff_check_in_audit");
         CHECK_IN_RESULTS.clear();
+        CHECK_IN_REQUESTS.clear();
         CHECKED_IN.set(false);
         WALK_IN_OCCUPIED.set(false);
         COMPLETED.set(false);
@@ -617,6 +619,62 @@ class StaffIntegrationTest {
         assertThat(p95).as("Warmed HTTP p95, 10 courts x 7 days x 32 slots").isLessThan(250.0);
     }
 
+    @Test
+    void manualCheckInIsIdempotentAndAuditsActorWithoutRetainingCode() {
+        create(UUID.randomUUID(), body(7));
+        UUID key = UUID.randomUUID();
+        var response = manual(key, "FC-89234");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(manual(key, "FC-89234").getBody()).isEqualTo(response.getBody());
+        var audit = jdbc.queryForMap("SELECT actor_id, branch_id, booking_id, channel FROM staff_check_in_audit");
+        assertThat(audit.get("actor_id")).isEqualTo(100L);
+        assertThat(audit.get("branch_id")).isEqualTo(7L);
+        assertThat(audit.get("booking_id")).isEqualTo(42L);
+        assertThat(audit.get("channel")).isEqualTo("MANUAL");
+        assertThat(jdbc.queryForObject("SELECT result::text FROM staff_booking_commands", String.class)).doesNotContain("FC-89234");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_outbox", Integer.class)).isEqualTo(1);
+    }
+
+    @Test
+    void manualRejectsUnknownCodeWrongDateStateAndInvalidInput() {
+        create(UUID.randomUUID(), body(7));
+        assertThat(manual(UUID.randomUUID(), "UNKNOWN").getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(manual(UUID.randomUUID(), " ").getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        bookingFailure = 409;
+        assertThat(manual(UUID.randomUUID(), "FC-89234").getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_check_in_audit", Integer.class)).isZero();
+    }
+
+    @Test
+    void qrAndManualCompeteForTheSameAtomicCheckIn() throws Exception {
+        create(UUID.randomUUID(), body(7));
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var qr = executor.submit(() -> checkIn(UUID.randomUUID()));
+            var manual = executor.submit(() -> manual(UUID.randomUUID(), "FC-89234"));
+            assertThat(List.of(qr.get().getStatusCode().value(), manual.get().getStatusCode().value()))
+                    .containsExactlyInAnyOrder(200, 409);
+        }
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_check_in_audit", Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_outbox", Integer.class)).isEqualTo(1);
+    }
+
+    @Test
+    void manualAuditFailureRollsBackLocallyAndSameCommandRecovers() {
+        create(UUID.randomUUID(), body(7));
+        UUID key = UUID.randomUUID();
+        jdbc.execute("ALTER TABLE staff_check_in_audit ADD CONSTRAINT reject_audit CHECK (booking_id <> 42)");
+        try {
+            assertThat(manual(key, "FC-89234").getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_outbox", Integer.class)).isZero();
+        } finally { jdbc.execute("ALTER TABLE staff_check_in_audit DROP CONSTRAINT reject_audit"); }
+        assertThat(manual(key, "FC-89234").getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_check_in_audit", Integer.class)).isEqualTo(1);
+    }
+
+    ResponseEntity<JsonNode> manual(UUID key, String code) {
+        return call(HttpMethod.POST, "/api/staff/check-in/manual", Map.of("checkInCode", code), token("100", "STAFF"), key);
+    }
+
     ResponseEntity<JsonNode> create(UUID key, Object body) {
         return call(HttpMethod.POST, "/api/admin/staff", body, token("1", "ADMIN"), key);
     }
@@ -722,12 +780,19 @@ class StaffIntegrationTest {
                 JsonNode body = JSON.readTree(exchange.getRequestBody());
                 String key = exchange.getRequestHeaders().getFirst("Idempotency-Key");
                 synchronized (CHECK_IN_RESULTS) {
+                    var canonical = (com.fasterxml.jackson.databind.node.ObjectNode) body.deepCopy();
+                    canonical.remove(List.of("date", "checkedInAt"));
+                    if (CHECK_IN_REQUESTS.containsKey(key) && !CHECK_IN_REQUESTS.get(key).equals(canonical.toString())) {
+                        send(exchange, 409, Map.of()); return;
+                    }
                     if (CHECK_IN_RESULTS.containsKey(key)) { send(exchange, 200, CHECK_IN_RESULTS.get(key)); return; }
+                    if (!body.path("checkInCode").asText().equals("FC-89234")) { send(exchange, 404, Map.of()); return; }
                     if (!CHECKED_IN.compareAndSet(false, true)) { send(exchange, 409, Map.of()); return; }
                     var response = Map.<String, Object>of("bookingId", 42, "branchId", wrongBranch ? 8 : 7,
                             "date", LocalDate.parse(body.path("date").asText()).plusDays(bookingDateShift).toString(),
                             "status", "CHECKED_IN", "checkedInAt", Instant.now().toString());
                     CHECK_IN_RESULTS.put(key, response);
+                    CHECK_IN_REQUESTS.put(key, canonical.toString());
                     send(exchange, 200, response);
                 }
             } else if (path.equals("/api/internal/bookings/walk-in/reconcile") || path.equals("/api/internal/bookings/walk-in")) {
