@@ -74,6 +74,6 @@ public class CheckInService {
 
     /** A slot may end exactly at midnight (e.g. 23:30-00:00), which sorts before its start. */
     private static boolean validRange(LocalTime start, LocalTime end) {
-        return end.isAfter(start) || LocalTime.MIDNIGHT.equals(end);
+        return end.isAfter(start) || (LocalTime.MIDNIGHT.equals(end) && !start.equals(end));
     }
 }

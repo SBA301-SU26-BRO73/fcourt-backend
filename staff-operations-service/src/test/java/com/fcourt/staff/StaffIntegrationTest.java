@@ -70,6 +70,7 @@ class StaffIntegrationTest {
     static volatile boolean foreignCourt;
     static volatile boolean wrongCashier;
     static volatile boolean finalClaimConflict;
+    static volatile boolean bulkSchedule;
     static volatile int bookingFailure;
     static volatile boolean wrongBranch;
     static volatile int bookingDateShift;
@@ -121,6 +122,7 @@ class StaffIntegrationTest {
         foreignCourt = false;
         wrongCashier = false;
         finalClaimConflict = false;
+        bulkSchedule = false;
         SLOT_SAFETY.reset();
         bookingFailure = bookingDateShift = 0;
         wrongBranch = false;
@@ -563,6 +565,58 @@ class StaffIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_outbox", Integer.class)).isZero();
     }
 
+    @Test
+    void weeklyMatrixIncludesEmptyDaysAndUsesStaffBranch() {
+        create(UUID.randomUUID(), body(7));
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        var response = call(HttpMethod.GET, "/api/staff/schedule?startDate=" + today.minusDays(1)
+                + "&endDate=" + today.plusDays(5) + "&branchId=8", null, token("100", "STAFF"), null);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().path("branchId").asInt()).isEqualTo(7);
+        var days = response.getBody().path("courts").get(0).path("days");
+        assertThat(days.size()).isEqualTo(7);
+        assertThat(days.get(0).path("slots").size()).isZero();
+        assertThat(days.get(1).path("slots").size()).isEqualTo(1);
+        assertThat(days.get(1).path("slots").get(0).path("flags").has("lateCheckIn")).isTrue();
+        assertThat(response.getHeaders().getCacheControl()).contains("no-store");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"startDate=2030-01-02&endDate=2030-01-01", "startDate=2030-01-01&endDate=2030-01-08",
+            "startDate=bad&endDate=2030-01-01", "startDate=2030-01-01"})
+    void invalidWeekRangeIsRejected(String query) {
+        assertThat(call(HttpMethod.GET, "/api/staff/schedule?" + query, null, token("100", "STAFF"), null).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void benchmarkTenCourtsSevenDaysThroughAuthenticatedHttp() throws Exception {
+        create(UUID.randomUUID(), body(7));
+        bulkSchedule = true;
+        LocalDate start = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        String uri = "/api/staff/schedule?startDate=" + start + "&endDate=" + start.plusDays(6);
+        String bearer = token("100", "STAFF");
+        for (int i = 0; i < 15; i++) {
+            assertThat(call(HttpMethod.GET, uri, null, bearer, null).getStatusCode()).isEqualTo(HttpStatus.OK);
+        }
+        List<Double> timings = new java.util.ArrayList<>();
+        for (int i = 0; i < 30; i++) {
+            long begin = System.nanoTime();
+            var response = call(HttpMethod.GET, uri, null, bearer, null);
+            timings.add((System.nanoTime() - begin) / 1_000_000.0);
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(response.getBody().path("courts").size()).isEqualTo(10);
+            assertThat(response.getBody().path("courts").get(0).path("days").size()).isEqualTo(7);
+        }
+        timings.sort(Double::compareTo);
+        double p95 = timings.get((int) Math.ceil(timings.size() * 0.95) - 1);
+        var report = Map.of("courts", 10, "days", 7, "slots", 2240, "warmup", 15, "samples", 30,
+                "p50Ms", timings.get(15), "p95Ms", p95, "maxMs", timings.getLast(),
+                "java", System.getProperty("java.version"), "processors", Runtime.getRuntime().availableProcessors());
+        java.nio.file.Files.writeString(java.nio.file.Path.of("target/schedule-benchmark.json"), JSON.writeValueAsString(report));
+        assertThat(p95).as("Warmed HTTP p95, 10 courts x 7 days x 32 slots").isLessThan(250.0);
+    }
+
     ResponseEntity<JsonNode> create(UUID key, Object body) {
         return call(HttpMethod.POST, "/api/admin/staff", body, token("1", "ADMIN"), key);
     }
@@ -635,6 +689,30 @@ class StaffIntegrationTest {
             long actor = Long.parseLong(jwt.getSubject());
             if (path.startsWith("/api/internal/branches/")) {
                 if (bookingFailure != 0) { send(exchange, bookingFailure, Map.of()); return; }
+                if (bulkSchedule) {
+                    Map<String, String> query = new java.util.HashMap<>();
+                    for (String item : exchange.getRequestURI().getQuery().split("&")) {
+                        var parts = item.split("=", 2);
+                        query.put(parts[0], java.net.URLDecoder.decode(parts[1], StandardCharsets.UTF_8));
+                    }
+                    LocalDate start = LocalDate.parse(query.get("startDate"));
+                    LocalDate end = LocalDate.parse(query.get("endDate"));
+                    var courts = new java.util.ArrayList<Map<String, Object>>();
+                    for (int court = 1; court <= 10; court++) {
+                        var slots = new java.util.ArrayList<Map<String, Object>>();
+                        for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
+                            for (int slot = 0; slot < 32; slot++) {
+                                var begins = java.time.LocalTime.of(6, 0).plusMinutes(slot * 30L);
+                                slots.add(Map.of("bookingId", court * 100000 + date.getDayOfYear() * 100 + slot,
+                                        "date", date.toString(), "slotStart", begins.toString(), "slotEnd", begins.plusMinutes(30).toString(),
+                                        "status", "CONFIRMED", "customerName", "Demo guest"));
+                            }
+                        }
+                        courts.add(Map.of("courtId", court, "courtName", "Court " + court, "slots", slots));
+                    }
+                    send(exchange, 200, Map.of("branchId", 7, "courts", courts));
+                    return;
+                }
                 send(exchange, 200, Map.of("branchId", wrongBranch ? 8 : 7, "courts", List.of(Map.of(
                         "courtId", 21, "courtName", "Court 1", "slots", List.of(Map.of("bookingId", 42,
                         "date", LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(bookingDateShift).toString(),
