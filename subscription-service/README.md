@@ -118,7 +118,8 @@ PayOS simply sees `EXPIRED` later). `checkoutUrl` and `qrCode` are only present 
 
 #### Webhook
 
-PayOS signs `data` with HMAC-SHA256 over its fields sorted by name (`key=value` joined with `&`) using the checksum key. The
+PayOS signs `data` with HMAC-SHA256 over its fields sorted by name (`key=value` joined with `&`; null, `"null"` and
+`"undefined"` as empty, arrays as JSON with sorted keys, as in the PayOS SDKs) using the checksum key. The
 endpoint verifies the signature, then the order code and that `amount` equals the checkout amount, then marks the payment `PAID`
 and activates the subscription in one transaction. A repeated delivery does nothing, even when two arrive at the same time.
 A verified `code 00` is honoured even if our own 15 minute timer already ran out, because PayOS only sends it after the money

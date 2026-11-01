@@ -1,6 +1,7 @@
 package com.fcourt.subscription.payos;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
@@ -44,11 +45,35 @@ public final class PayosSignature {
         return MessageDigest.isEqual(expected, received);
     }
 
+    /**
+     * Same rules as the PayOS SDKs: null and the strings {@code "null"} / {@code "undefined"} become empty,
+     * an array is its JSON with the keys of every object sorted, anything else is its text.
+     */
     private static String canonical(JsonNode value) {
         if (value == null || value.isNull()) {
             return "";
         }
-        return value.isContainerNode() ? value.toString() : value.asText();
+        if (value.isArray()) {
+            return sortedKeys(value).toString();
+        }
+        String text = value.isObject() ? value.toString() : value.asText();
+        return "null".equals(text) || "undefined".equals(text) ? "" : text;
+    }
+
+    private static JsonNode sortedKeys(JsonNode node) {
+        if (node.isObject()) {
+            var sorted = JsonNodeFactory.instance.objectNode();
+            new TreeMap<String, JsonNode>(node.properties().stream()
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)))
+                    .forEach((key, child) -> sorted.set(key, sortedKeys(child)));
+            return sorted;
+        }
+        if (node.isArray()) {
+            var array = JsonNodeFactory.instance.arrayNode();
+            node.forEach(child -> array.add(sortedKeys(child)));
+            return array;
+        }
+        return node;
     }
 
     static String hmac(String secret, String payload) {

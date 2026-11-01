@@ -38,6 +38,26 @@ class PayosSignatureTest {
     }
 
     @Test
+    void theNullAndUndefinedStringsSignAsEmptyLikeThePayosSdks() throws Exception {
+        JsonNode data = JSON.readTree("""
+                {"orderCode":123,"counterAccountName":"null","virtualAccountName":"undefined","reference":"FT123"}""");
+        String signature = PayosSignature.hmac(KEY,
+                "counterAccountName=&orderCode=123&reference=FT123&virtualAccountName=");
+
+        assertThat(PayosSignature.verifyWebhook(KEY, data, signature)).isTrue();
+    }
+
+    @Test
+    void anArrayIsSignedAsJsonWithTheKeysOfEachObjectSorted() throws Exception {
+        JsonNode data = JSON.readTree("""
+                {"orderCode":123,"items":[{"quantity":1,"name":"Pro","price":299000}]}""");
+        String signature = PayosSignature.hmac(KEY,
+                "items=[{\"name\":\"Pro\",\"price\":299000,\"quantity\":1}]&orderCode=123");
+
+        assertThat(PayosSignature.verifyWebhook(KEY, data, signature)).isTrue();
+    }
+
+    @Test
     void fieldOrderInTheJsonDoesNotMatterAndTheHexCaseIsIgnored() throws Exception {
         JsonNode shuffled = JSON.readTree("{\"reference\":\"FT123\",\"orderCode\":123,\"amount\":50000}");
         String signature = PayosSignature.hmac(KEY, "amount=50000&orderCode=123&reference=FT123");
