@@ -145,6 +145,51 @@ class CounterHoldsTest {
     }
 
     @Test
+    void grpcRejectsMalformedDateAsInvalidArgument() throws Exception {
+        var server = new CounterSafetyServer(identity, holds, "127.0.0.1", 0, "", "");
+        server.start();
+        var channel =
+                ManagedChannelBuilder.forAddress("127.0.0.1", server.port()).usePlaintext().build();
+        try {
+            var headers = new Metadata();
+            headers.put(
+                    Metadata.Key.of("authorization", Metadata.ASCII_STRING_MARSHALLER),
+                    "Bearer token");
+            var request =
+                    CheckSlotsRequest.newBuilder()
+                            .setActorId(100)
+                            .setBranchId(7)
+                            .setCourtId(21)
+                            .setDate("not-a-date")
+                            .addAllSlotIds(List.of(1L))
+                            .setCommandKey(key())
+                            .build();
+            var stub =
+                    HoldSafetyGrpc.newBlockingStub(channel)
+                            .withInterceptors(MetadataUtils.newAttachHeadersInterceptor(headers))
+                            .withDeadlineAfter(3, TimeUnit.SECONDS);
+            assertThatThrownBy(() -> stub.check(request))
+                    .isInstanceOfSatisfying(
+                            StatusRuntimeException.class,
+                            e ->
+                                    assertThat(e.getStatus().getCode())
+                                            .isEqualTo(Status.Code.INVALID_ARGUMENT));
+        } finally {
+            channel.shutdownNow();
+            server.stop();
+        }
+    }
+
+    @Test
+    void counterRequestRejectsNullSlotId() {
+        var invalid =
+                new CounterHolds.Request(7, 100, 21, day, Arrays.asList(1L, null), key());
+        try (var factory = jakarta.validation.Validation.buildDefaultValidatorFactory()) {
+            assertThat(factory.getValidator().validate(invalid)).isNotEmpty();
+        }
+    }
+
+    @Test
     void grpcRequiresBearerAndReportsRedisHolds() throws Exception {
         holds.reserve("Bearer token", "fixture-booking-hold-secret-not-production", request(key()));
         var server = new CounterSafetyServer(identity, holds, "127.0.0.1", 0, "", "");

@@ -143,7 +143,7 @@ return expiry
             @Positive long actorId,
             @Positive long courtId,
             @NotNull LocalDate date,
-            @NotEmpty @Size(max = 48) List<@Positive Long> slotIds,
+            @NotEmpty @Size(max = 48) List<@NotNull @Positive Long> slotIds,
             @NotBlank @Size(max = 128) String commandKey) {}
 
     record Lease(
