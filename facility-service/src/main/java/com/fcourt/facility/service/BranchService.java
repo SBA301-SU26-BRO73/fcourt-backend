@@ -40,11 +40,12 @@ public class BranchService {
         var limits = subscriptions.limits(adminId, bearer); // remote call kept outside the DB transaction
         long id = tx.execute(status -> {
             branches.lockOwner(adminId);
+            requireUniqueName(request.name(), null);
             if (branches.countOwned(adminId) >= limits.maxBranches()) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                         "Branch limit of your subscription plan reached (" + limits.maxBranches() + ")");
             }
-            long created = branches.insert(adminId, request);
+            long created = insertOrDuplicate(adminId, request);
             events.branchChanged(created);
             return created;
         });
@@ -54,7 +55,13 @@ public class BranchService {
     public BranchResponse update(long adminId, long branchId, BranchRequest request) {
         tx.executeWithoutResult(status -> {
             if (!branches.lockOwned(branchId, adminId)) throw notFound();
-            branches.update(branchId, request);
+            requireUniqueName(request.name(), branchId);
+            requireSlotDurationChangeAllowed(branchId, request.slotDurationMinutes());
+            try {
+                branches.update(branchId, request);
+            } catch (DuplicateKeyException race) {
+                throw duplicateName(race);
+            }
             events.branchChanged(branchId);
         });
         return get(adminId, branchId);
