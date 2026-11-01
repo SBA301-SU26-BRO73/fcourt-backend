@@ -136,6 +136,10 @@ class FacilityApiIntegrationTest {
         mvc.perform(get("/api/staff/branches/{id}", branchId).with(as(55, "STAFF")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("ACTIVE"));
         mvc.perform(get("/api/staff/branches/{id}", branchId).with(as(owner, "ADMIN"))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/staff/branches/{id}/courts", branchId).with(as(55, "STAFF")))
+                .andExpect(status().isOk()).andExpect(content().json("[]"));
+        mvc.perform(get("/api/staff/branches/{id}/courts", branchId)).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/staff/branches/{id}/courts", branchId).with(as(owner, "ADMIN"))).andExpect(status().isForbidden());
         mvc.perform(get("/api/admin/branches")).andExpect(status().isUnauthorized());
     }
 
