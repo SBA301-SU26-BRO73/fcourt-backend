@@ -60,7 +60,7 @@ class ReceiptService {
                     throw new ResponseStatusException(HttpStatus.GONE,"Hold expired during upload");
                 }
                 var saved=store.submit(info,url);
-                if(booking.customerPhone()!=null && booking.customerPhone().matches("\+?[0-9]{9,15}"))
+                if(booking.customerPhone()!=null && booking.customerPhone().matches("\\+?[0-9]{9,15}"))
                     store.jdbc().update("UPDATE payments SET customer_phone=? WHERE booking_id=?",booking.customerPhone(),id);
                 store.event("PaymentSubmittedEvent",saved);
                 claim(id,customer);
