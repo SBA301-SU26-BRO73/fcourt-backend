@@ -223,3 +223,29 @@ fallback and minimal DTO. A 200-sample local warm guest service+Redis microbench
 reports p50 0.87ms, p95 2.51ms (target/status-cache-benchmark.json). It excludes HTTP,
 TLS, JWT verification, cold reads and production contention; production <30ms/high-load
 acceptance remains unverified and needs deployment load testing.
+
+## Customer refunds — SCRUM-94
+
+POST `/api/refunds/request` requires owner JWT and body bookingId, bankName, bankBin,
+bankAccountNumber, bankAccountName, reason. Bank BIN must be a six-digit domestic
+970xxx identifier; account 6–20 digits, name 2–150 characters, reason 1–500. These are
+format checks, not bank account ownership verification. No client amount is accepted.
+The booking authority must confirm owner access, CANCELLED status and stored refundAmount
+from SCRUM-55; local payment must be CONFIRMED with matching branch/total and sufficient
+amount. Refund entitlement must be positive whole VND. Missing policy returns 503.
+
+GET `/api/refunds/booking/{bookingId}` returns `{bookingId,amount,eligible,request}`
+for the form/timeline. Existing requests are scoped to captured owner ID; unauthorized
+callers cannot see banking details. Both responses use no-store. Guests need an
+explicit account/ownership integration; phone numbers do not grant refund access.
+
+Flyway V7 adds owner/branch/BIN/notes, changes refund lifecycle to PENDING/APPROVED/
+REJECTED/COMPLETED, and maps legacy CONFIRMED to COMPLETED. Requests use the same booking
+advisory lock as payment decisions plus unique booking_id. Exact repeated requests
+return the existing record; a different bank account conflicts instead of mutating it.
+No funds are transferred by creating a request. Admin proof/settlement is SCRUM-96.
+
+Java 21 verify passes 46 tests with PostgreSQL+Redis/seven migrations. New checks cover
+server-derived amount, duplicated/concurrent requests, owner isolation, ineligible
+states/unpaid/over-refund rejection, authentication and malformed bank fields.
+Live cancellation/booking/auth integration remains required before acceptance.
