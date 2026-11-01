@@ -53,6 +53,11 @@ auth:
   cloudinary-url: ${AUTH_CLOUDINARY_URL:}
   password-reset:
     ttl: ${AUTH_PASSWORD_RESET_TTL:30m}
+  # Wrong passwords per email (login) or per user (change password) before a temporary 429 lock.
+  attempts:
+    max-failures: ${AUTH_ATTEMPTS_MAX_FAILURES:5}
+    window: ${AUTH_ATTEMPTS_WINDOW:15m}
+    lock: ${AUTH_ATTEMPTS_LOCK:15m}
   events:
     enabled: ${AUTH_EVENTS_ENABLED:true}
     topic: ${AUTH_EVENTS_TOPIC:fcourt.auth.events}

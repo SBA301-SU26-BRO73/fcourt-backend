@@ -26,6 +26,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -37,6 +38,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 class AuthServiceTest {
     static final Instant NOW = Instant.parse("2026-11-01T10:00:00Z");
@@ -48,6 +51,7 @@ class AuthServiceTest {
     SessionService sessions;
     DocumentStorage storage;
     PasswordEncoder encoder;
+    FailedAttemptThrottle throttle;
     AuthService service;
 
     @BeforeEach
@@ -56,7 +60,15 @@ class AuthServiceTest {
         sessions = mock(SessionService.class);
         storage = mock(DocumentStorage.class);
         encoder = spy(new BCryptPasswordEncoder(4));
-        service = new AuthService(accounts, sessions, encoder, storage, Clock.fixed(NOW, ZoneOffset.UTC));
+        throttle = mock(FailedAttemptThrottle.class);
+        service = new AuthService(accounts, sessions, encoder, storage, throttle, Clock.fixed(NOW, ZoneOffset.UTC));
+        // registerCourtOwner is @Transactional and registers a rollback hook; emulate the transaction here.
+        TransactionSynchronizationManager.initSynchronization();
+    }
+
+    @AfterEach
+    void clearSynchronization() {
+        TransactionSynchronizationManager.clear();
     }
 
     @Test
@@ -187,6 +199,62 @@ class AuthServiceTest {
     }
 
     @Test
+    void filesUploadedBeforeARollbackAreDeletedFromStorage() {
+        when(accounts.insert(any(), any(), any(), any(), any(), any(), any())).thenReturn(9L);
+        when(accounts.findById(9)).thenReturn(Optional.of(account(9, "owner@demo.com", "ADMIN", "PENDING_APPROVAL")));
+        when(storage.store(any(), eq("legal/9"))).thenReturn("https://res.cloudinary.com/legal.pdf");
+        when(storage.store(any(), eq("court/9"))).thenThrow(ApiException.unavailable("Document storage is unavailable"));
+
+        assertThatThrownBy(() -> service.registerCourtOwner(owner(
+                List.of(file("licence.pdf", "application/pdf", 10)), List.of(file("front.jpg", "image/jpeg", 10)))))
+                .satisfies(error -> assertApi(error, HttpStatus.SERVICE_UNAVAILABLE, "Document storage is unavailable"));
+        verify(storage, never()).delete(anyString());
+
+        completeTransaction(TransactionSynchronization.STATUS_ROLLED_BACK);
+        verify(storage).delete("https://res.cloudinary.com/legal.pdf");
+    }
+
+    @Test
+    void filesOfACommittedRegistrationAreKept() {
+        when(accounts.insert(any(), any(), any(), any(), any(), any(), any())).thenReturn(9L);
+        when(accounts.findById(9)).thenReturn(Optional.of(account(9, "owner@demo.com", "ADMIN", "PENDING_APPROVAL")));
+        when(storage.store(any(), anyString())).thenReturn("https://res.cloudinary.com/legal.pdf");
+
+        service.registerCourtOwner(owner(List.of(file("licence.pdf", "application/pdf", 10)), null));
+
+        completeTransaction(TransactionSynchronization.STATUS_COMMITTED);
+        verify(storage, never()).delete(anyString());
+    }
+
+    @Test
+    void lockedLoginAnswers429BeforeThePasswordIsChecked() {
+        org.mockito.Mockito.doThrow(new com.fcourt.auth.common.RetryLaterException(FailedAttemptThrottle.LOCKED,
+                java.time.Duration.ofMinutes(10))).when(throttle).checkAllowed("login:customer@demo.com");
+
+        assertThatThrownBy(() -> service.login(new LoginRequest(" Customer@Demo.com", PASSWORD)))
+                .satisfies(error -> assertApi(error, HttpStatus.TOO_MANY_REQUESTS, FailedAttemptThrottle.LOCKED));
+        verifyNoInteractions(accounts, sessions);
+        verify(encoder, never()).matches(anyString(), anyString());
+    }
+
+    @Test
+    void failedLoginsAreCountedPerEmailKnownOrNotAndASuccessClearsTheCount() {
+        var active = accountWithPassword(7, "customer@demo.com", "CUSTOMER", "ACTIVE");
+        when(accounts.findByEmail("customer@demo.com")).thenReturn(Optional.of(active));
+        when(accounts.findByEmail("ghost@demo.com")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.login(new LoginRequest("customer@demo.com", "wrong-password")))
+                .isInstanceOf(ApiException.class);
+        assertThatThrownBy(() -> service.login(new LoginRequest("ghost@demo.com", PASSWORD)))
+                .isInstanceOf(ApiException.class);
+        service.login(new LoginRequest("customer@demo.com", PASSWORD));
+
+        verify(throttle).recordFailure("login:customer@demo.com");
+        verify(throttle).recordFailure("login:ghost@demo.com");
+        verify(throttle).recordSuccess("login:customer@demo.com");
+    }
+
+    @Test
     void loginOpensASessionForAnActiveAccountWithTheRightPassword() {
         var active = accountWithPassword(7, "customer@demo.com", "CUSTOMER", "ACTIVE");
         var session = authResponse();
@@ -284,6 +352,10 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> service.updateProfile(7, new UpdateProfileRequest("Name", "0911222333")))
                 .satisfies(error -> assertApi(error, HttpStatus.CONFLICT, "Phone number is already registered"));
+    }
+
+    static void completeTransaction(int status) {
+        TransactionSynchronizationManager.getSynchronizations().forEach(sync -> sync.afterCompletion(status));
     }
 
     static void assertApi(Throwable error, HttpStatus status, String detail) {

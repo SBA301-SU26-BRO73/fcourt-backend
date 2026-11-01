@@ -13,6 +13,7 @@ import com.fcourt.auth.user.UserRole;
 import com.fcourt.auth.user.UserStatus;
 import java.io.IOException;
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -20,6 +21,8 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -39,16 +42,18 @@ public class AuthService {
     private final SessionService sessions;
     private final PasswordEncoder passwordEncoder;
     private final DocumentStorage storage;
+    private final FailedAttemptThrottle throttle;
     private final Clock clock;
     /** Verified against when the email is unknown, so login timing does not reveal which emails exist. */
     private final String timingEqualiserHash;
 
     AuthService(AccountRepository accounts, SessionService sessions, PasswordEncoder passwordEncoder,
-                DocumentStorage storage, Clock clock) {
+                DocumentStorage storage, FailedAttemptThrottle throttle, Clock clock) {
         this.accounts = accounts;
         this.sessions = sessions;
         this.passwordEncoder = passwordEncoder;
         this.storage = storage;
+        this.throttle = throttle;
         this.clock = clock;
         this.timingEqualiserHash = passwordEncoder.encode("timing-equaliser");
     }
@@ -69,19 +74,29 @@ public class AuthService {
 
         var account = createAccount(request.email(), request.password(), request.fullName(), request.phone(),
                 UserRole.ADMIN, UserStatus.PENDING_APPROVAL);
-        saveDocuments(account.id(), legal, LEGAL, "legal/" + account.id());
-        saveDocuments(account.id(), images, COURT_IMAGE, "court/" + account.id());
+        List<String> uploaded = deleteUploadsIfRolledBack();
+        saveDocuments(account.id(), legal, LEGAL, "legal/" + account.id(), uploaded);
+        saveDocuments(account.id(), images, COURT_IMAGE, "court/" + account.id(), uploaded);
         return new RegistrationResponse(account.id(), account.status(),
                 "Registration submitted. You can sign in once a super admin approves it.");
     }
 
+    /**
+     * Counts failures per email, known or not, so the 429 cannot be used to find registered emails.
+     * Not transactional: the failure count must commit although the login fails.
+     */
     public AuthResponse login(LoginRequest request) {
-        var account = accounts.findByEmail(normaliseEmail(request.email())).orElse(null);
+        String email = normaliseEmail(request.email());
+        String attemptKey = FailedAttemptThrottle.loginKey(email);
+        throttle.checkAllowed(attemptKey);
+        var account = accounts.findByEmail(email).orElse(null);
         boolean matches = passwordEncoder.matches(request.password(),
                 account == null ? timingEqualiserHash : account.passwordHash());
         if (account == null || !matches) {
+            throttle.recordFailure(attemptKey);
             throw ApiException.unauthorized("Invalid email or password");
         }
+        throttle.recordSuccess(attemptKey);
         // Status is only revealed after the password proved who is asking.
         AccountPolicy.requireActive(account);
         return sessions.open(account);
@@ -155,7 +170,25 @@ public class AuthService {
         }
     }
 
-    private void saveDocuments(long userId, List<MultipartFile> files, String docType, String folder) {
+    /**
+     * Files reach Cloudinary before the registration commits. If the transaction rolls back (a later upload
+     * or insert fails, or the commit itself), the files already stored are deleted again, best effort.
+     */
+    private List<String> deleteUploadsIfRolledBack() {
+        List<String> uploaded = new ArrayList<>();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status != STATUS_COMMITTED) {
+                    uploaded.forEach(storage::delete);
+                }
+            }
+        });
+        return uploaded;
+    }
+
+    private void saveDocuments(long userId, List<MultipartFile> files, String docType, String folder,
+                               List<String> uploaded) {
         for (MultipartFile file : files) {
             byte[] content;
             try {
@@ -163,7 +196,9 @@ public class AuthService {
             } catch (IOException error) {
                 throw ApiException.badRequest("Uploaded file could not be read");
             }
-            accounts.insertDocument(userId, storage.store(content, folder), docType, clock.instant());
+            String url = storage.store(content, folder);
+            uploaded.add(url);
+            accounts.insertDocument(userId, url, docType, clock.instant());
         }
     }
 

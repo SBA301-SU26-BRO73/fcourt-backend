@@ -22,7 +22,12 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ApiException.class)
     ResponseEntity<ProblemDetail> business(ApiException error, WebRequest request) {
-        return ResponseEntity.status(error.status()).body(problem(error.status(), error.getMessage(), request));
+        var response = ResponseEntity.status(error.status());
+        if (error instanceof RetryLaterException retryLater) {
+            response.header(HttpHeaders.RETRY_AFTER,
+                    Long.toString(Math.max(1, retryLater.retryAfter().toSeconds())));
+        }
+        return response.body(problem(error.status(), error.getMessage(), request));
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)

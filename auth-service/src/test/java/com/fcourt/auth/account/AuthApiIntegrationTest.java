@@ -361,6 +361,63 @@ class AuthApiIntegrationTest {
     }
 
     @Test
+    void aRolledBackRegistrationDeletesTheFilesItAlreadyUploaded() throws Exception {
+        String email = uniqueEmail();
+        when(storage.store(any(), org.mockito.ArgumentMatchers.startsWith("legal/")))
+                .thenReturn("https://res.cloudinary.com/demo/image/upload/v1/fcourt/legal/licence.pdf");
+        when(storage.store(any(), org.mockito.ArgumentMatchers.startsWith("court/")))
+                .thenThrow(com.fcourt.auth.common.ApiException.unavailable("Document storage is unavailable"));
+
+        mvc.perform(multipart("/api/auth/register/court-owner")
+                        .file(new MockMultipartFile("legalDocuments", "licence.pdf", "application/pdf", new byte[]{1}))
+                        .file(new MockMultipartFile("courtImages", "front.jpg", "image/jpeg", new byte[]{1}))
+                        .param("fullName", "Chu San").param("email", email)
+                        .param("phone", uniquePhone()).param("password", PASSWORD))
+                .andExpect(status().isServiceUnavailable());
+
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM users WHERE email = ?", Integer.class, email)).isZero();
+        org.mockito.Mockito.verify(storage)
+                .delete("https://res.cloudinary.com/demo/image/upload/v1/fcourt/legal/licence.pdf");
+    }
+
+    @Test
+    void repeatedWrongPasswordsLockTheEmailTemporarilyEvenForTheRightPassword() throws Exception {
+        String email = uniqueEmail();
+        register(email, uniquePhone());
+        for (int attempt = 0; attempt < 5; attempt++) {
+            mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                            .content(credentials(email, "wrong-password")))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(credentials(email, PASSWORD)))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .exists("Retry-After"));
+        // Once the lock is over the right password works again and clears the count.
+        jdbc.update("UPDATE failed_attempts SET locked_until = now() - interval '1 second' WHERE attempt_key = ?",
+                "login:" + email);
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(credentials(email, PASSWORD)))
+                .andExpect(status().isOk());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM failed_attempts WHERE attempt_key = ?", Integer.class,
+                "login:" + email)).isZero();
+    }
+
+    @Test
+    void anUnknownEmailIsThrottledTheSameWaySo429RevealsNothing() throws Exception {
+        String email = uniqueEmail();
+        for (int attempt = 0; attempt < 5; attempt++) {
+            mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                            .content(credentials(email, "wrong-password")))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content(credentials(email, "wrong-password")))
+                .andExpect(status().isTooManyRequests());
+    }
+
+    @Test
     void jwksEndpointIsPublicAndExposesNoPrivateKeyMaterial() throws Exception {
         mvc.perform(get("/.well-known/jwks.json"))
                 .andExpect(status().isOk())

@@ -133,6 +133,19 @@ class AuthControllerTest {
     }
 
     @Test
+    void aThrottledLoginAnswers429WithRetryAfter() throws Exception {
+        when(auth.login(any())).thenThrow(new com.fcourt.auth.common.RetryLaterException(
+                FailedAttemptThrottle.LOCKED, java.time.Duration.ofSeconds(600)));
+
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"customer@demo.com\",\"password\":\"nope\"}"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .string("Retry-After", "600"))
+                .andExpect(jsonPath("$.detail").value(FailedAttemptThrottle.LOCKED));
+    }
+
+    @Test
     void loginRequiresEmailAndPassword() throws Exception {
         mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isBadRequest())

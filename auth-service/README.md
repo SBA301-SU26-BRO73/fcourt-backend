@@ -70,8 +70,13 @@ Rules:
 - Customers register `ACTIVE` and get a session straight away. Court owners (`ADMIN`) register
   `PENDING_APPROVAL`, their files go to Cloudinary and into `user_documents` (`LEGAL` / `COURT_IMAGE`), and
   they cannot sign in until a super admin approves them. Documents: JPEG, PNG, WebP or PDF, 5 MB each; a failed
-  upload rolls the whole registration back.
+  upload rolls the whole registration back, and files already uploaded are then deleted from Cloudinary
+  (best effort: a failed delete is only logged).
 - Login gives the same 401 for an unknown email and a wrong password (and spends the same hashing time).
+- 5 wrong passwords for one email within 15 minutes lock that email for 15 minutes: login answers 429 with
+  `Retry-After`, even with the right password. Unknown emails are counted the same way, so a 429 does not
+  reveal whether an email exists. A correct password clears the count. Settings: `auth.attempts.*`. The lock
+  is temporary on purpose; anyone can trigger it for an email, so it may delay the owner by 15 minutes.
   Only after the password is correct does it refuse `PENDING_APPROVAL`, `REJECTED`, `LOCKED` and `INACTIVE`
   accounts with 403 and a reason.
 - Access tokens are RS256 with `iss`, `aud`, numeric `sub`, `roles` and a 15 minute lifetime. Refresh tokens
@@ -150,7 +155,8 @@ restricted to the notification service.
 
 - Leave `AUTH_JWK_SET_URI` at its default so the service validates its own tokens against its own JWKS.
 - Everything not listed in `SecurityConfiguration` is `denyAll`: add new routes there.
-- `V5` creates `refresh_tokens` and `V6` creates `password_reset_tokens`; start new migrations at `V7`.
-  `UserRole` / `UserStatus` in `com.fcourt.auth.user` are shared.
+- `V5` creates `refresh_tokens`, `V6` creates `failed_attempts` and `V7` creates `password_reset_tokens`;
+  start new migrations at `V8`. `UserRole` / `UserStatus` in `com.fcourt.auth.user` are shared.
 - `SessionService.closeAll(userId)` revokes every session of a user.
-- Expired and revoked `refresh_tokens` rows and used or expired `password_reset_tokens` rows are not purged yet.
+- Expired and revoked `refresh_tokens` rows, used or expired `password_reset_tokens` rows and old
+  `failed_attempts` rows are not purged yet.
