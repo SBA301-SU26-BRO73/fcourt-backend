@@ -598,7 +598,7 @@ class StaffIntegrationTest {
     }
 
     ResponseEntity<JsonNode> checkout(UUID key) {
-        return call(HttpMethod.PUT, "/api/staff/bookings/43/checkout", null, token("100", "STAFF"), key);
+        return call(HttpMethod.PUT, "/api/staff/bookings/43/checkout", Map.of("expectedSurcharge",0,"expectedTotal",20000), token("100", "STAFF"), key);
     }
 
     static Map<String, Object> walkInBody() {
