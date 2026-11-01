@@ -49,8 +49,9 @@ public class CourtSlotServiceImpl implements CourtSlotService {
         }
         var ids = slots.stream().map(Slot::slotId).toList();
         Set<Long> booked = new HashSet<>(occupancy.bookedSlotIds());
-        if (booked.contains(null) || booked.size() != occupancy.bookedSlotIds().size()
-                || !new HashSet<>(ids).containsAll(booked)) throw SlotSourceClient.unavailable();
+        if (booked.contains(null) || booked.size() != occupancy.bookedSlotIds().size()) {
+            throw SlotSourceClient.unavailable();
+        }
         Set<Long> held = holds.heldSlots(courtId, date, ids);
         // Capture after I/O so slots that expire during the calls cannot remain available.
         LocalDateTime now = LocalDateTime.now(clock);
