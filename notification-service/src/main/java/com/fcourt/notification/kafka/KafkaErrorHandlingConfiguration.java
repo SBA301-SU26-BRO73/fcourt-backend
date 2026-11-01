@@ -1,7 +1,6 @@
 package com.fcourt.notification.kafka;
 
 import com.fcourt.notification.event.PoisonEventException;
-import java.util.Arrays;
 import java.util.List;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.common.TopicPartition;
@@ -39,13 +38,12 @@ class KafkaErrorHandlingConfiguration {
 
     /** Creates the dead letter topics next to the consumed ones. */
     @Bean
-    KafkaAdmin.NewTopics deadLetterTopics(@Value("${notification.topics}") String topics) {
-        return new KafkaAdmin.NewTopics(deadLetterTopicsFor(topics).toArray(NewTopic[]::new));
+    KafkaAdmin.NewTopics deadLetterTopics(NotificationTopics topics) {
+        return new KafkaAdmin.NewTopics(deadLetterTopicsFor(topics.names()).toArray(NewTopic[]::new));
     }
 
-    static List<NewTopic> deadLetterTopicsFor(String topics) {
-        return Arrays.stream(topics.split(","))
-                .map(String::strip)
+    static List<NewTopic> deadLetterTopicsFor(List<String> topics) {
+        return topics.stream()
                 .map(topic -> TopicBuilder.name(topic + DLT_SUFFIX).partitions(1).replicas(1).build())
                 .toList();
     }

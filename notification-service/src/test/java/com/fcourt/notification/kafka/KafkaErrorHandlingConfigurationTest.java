@@ -13,8 +13,8 @@ class KafkaErrorHandlingConfigurationTest {
 
     @Test
     void everyConsumedTopicGetsADeadLetterTopic() {
-        var topics = KafkaErrorHandlingConfiguration.deadLetterTopicsFor(
-                "fcourt.auth.events, fcourt.payment.events,fcourt.booking.events");
+        var topics = KafkaErrorHandlingConfiguration.deadLetterTopicsFor(new NotificationTopics(
+                "fcourt.auth.events, fcourt.payment.events,fcourt.booking.events").names());
 
         assertThat(topics).extracting(NewTopic::name).containsExactly(
                 "fcourt.auth.events.DLT", "fcourt.payment.events.DLT", "fcourt.booking.events.DLT");

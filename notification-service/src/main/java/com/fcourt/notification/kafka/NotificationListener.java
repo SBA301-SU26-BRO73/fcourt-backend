@@ -16,7 +16,7 @@ class NotificationListener {
         this.notifications = notifications;
     }
 
-    @KafkaListener(topics = "#{'${notification.topics}'.split(',')}")
+    @KafkaListener(topics = "#{@notificationTopics.names()}")
     void onEvent(ConsumerRecord<String, String> record) {
         notifications.handle(record.value());
     }
