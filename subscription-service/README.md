@@ -99,8 +99,10 @@ subscription, not a plan priced 0.
 `billingCycle`: `MONTHLY` or `YEARLY` (case-insensitive). Poll the payment with `GET .../payments/{orderCode}` after the
 owner returns from PayOS: `status` becomes `PAID` once the webhook has been processed.
 
-`SubscriptionResponse`: `{id, adminId, plan: SubscriptionPlanResponse, maxCourts, maxBranches, startDate, endDate, active}`.
-`active` is true until `endDate` has passed. `currentBranchCount` / `currentCourtCount` of the old monolith are gone: they live in
+`SubscriptionResponse`: `{id, adminId, plan: SubscriptionPlanResponse, maxCourts, maxBranches, startDate, endDate, active,
+starter, upcoming:[{id, plan, maxCourts, maxBranches, startDate, endDate}]}`. Both dates are inclusive and `active` is true
+while today is between them. `starter` marks the free starter subscription; `upcoming` lists paid periods already bought
+that start after this one. `currentBranchCount` / `currentCourtCount` of the old monolith are gone: they live in
 facility-service now.
 
 `PaymentResponse`: `{id, orderCode, planId, planName, billingCycle, amount (VND), status, checkoutUrl, qrCode, expiredAt, paidAt,
@@ -114,8 +116,13 @@ PayOS simply sees `EXPIRED` later). `checkoutUrl` and `qrCode` are only present 
 - The checkout link lives 15 minutes. A `PENDING` payment past its deadline reads as `EXPIRED`.
 - The first time an owner without any subscription calls `my-subscription` they get a one year starter subscription on the
   cheapest plan on sale. If every plan has lapsed, the latest one is returned with `active: false`.
-- Paying for the plan the owner already has extends it from its current end date (no paid days are lost) and refreshes the
-  plan limits. Paying for a different plan ends the live subscriptions yesterday and starts the new one today.
+- Paid periods never overlap and are never cut short, so no paid day is lost:
+  - Paying for the same plan as the last paid period extends that period from its end date and refreshes the plan limits.
+  - Paying for a different plan while paid time is running (or already queued) queues the new plan: it starts the day
+    after the last paid period ends and shows in `upcoming` until then. There is no proration or refund.
+  - Without paid time the new period starts today.
+- The free starter is replaced by the first purchase: it ends yesterday, or, if it only started today, it is withdrawn
+  (soft deleted), so no subscription ever ends before it starts (also a database CHECK).
 - A month or year is a calendar month or year (31 January plus one month is 28 February).
 
 #### Webhook
@@ -152,3 +159,4 @@ out of range values are clamped (`page >= 0`, `1 <= size <= 100`) instead of rej
 - `subscriptions` and `subscription_payments` (unique `order_code`) are used by the purchase flow.
 - `admin_id` is the auth-service user id from the token's `sub`; there is no foreign key across services.
 - `V3`: name uniqueness on `lower(name)` (partial unique indexes rebuilt) and a CHECK that a plan price is null or positive.
+- `V4`: `subscriptions.starter` (existing rows count as paid), CHECK `end_date >= start_date`, index on `admin_id`.

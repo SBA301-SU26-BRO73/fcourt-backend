@@ -1,6 +1,7 @@
 package com.fcourt.subscription.billing;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -161,9 +163,14 @@ class BillingApiIntegrationTest extends IntegrationSupport {
                 .andExpect(jsonPath("$.active").value(true));
         assertThat(jdbc.queryForObject("SELECT count(*) FROM subscriptions WHERE admin_id = ? AND plan_id = 2",
                 Integer.class, owner)).isEqualTo(1);
-        // The starter was ended yesterday, so exactly one subscription is live.
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM subscriptions WHERE admin_id = ? AND end_date >= ?",
-                Integer.class, owner, today())).isEqualTo(1);
+        // The starter only began today, so it is withdrawn (kept as a deleted row) and exactly one subscription
+        // is live; no row ends before it starts.
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM subscriptions WHERE admin_id = ? AND end_date >= ? "
+                + "AND deleted_at IS NULL", Integer.class, owner, today())).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT deleted_at IS NOT NULL FROM subscriptions WHERE admin_id = ? "
+                + "AND starter", Boolean.class, owner)).isTrue();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM subscriptions WHERE admin_id = ? AND end_date < start_date",
+                Integer.class, owner)).isZero();
         assertThat(jdbc.queryForObject("SELECT payos_reference FROM subscription_payments WHERE order_code = ?",
                 String.class, orderCode)).isEqualTo("FT" + orderCode);
     }
@@ -181,6 +188,34 @@ class BillingApiIntegrationTest extends IntegrationSupport {
                 .value(today().plusMonths(1).plusYears(1).toString()));
         assertThat(jdbc.queryForObject("SELECT count(*) FROM subscriptions WHERE admin_id = ?", Integer.class, owner))
                 .isEqualTo(1);
+    }
+
+    @Test
+    void switchingFromAPaidPlanQueuesTheNewPlanAfterThePaidPeriod() throws Exception {
+        long owner = OWNERS.incrementAndGet();
+        long first = checkout(owner, 2, "MONTHLY").get("orderCode").asLong();
+        webhook(WebhookFixtures.paid(CHECKSUM, first, 1_499_000)).andExpect(status().isOk());
+        long second = checkout(owner, 3, "MONTHLY").get("orderCode").asLong();
+
+        webhook(WebhookFixtures.paid(CHECKSUM, second, 299_000)).andExpect(status().isOk());
+
+        LocalDate paidUntil = today().plusMonths(1);
+        mySubscription(owner)
+                .andExpect(jsonPath("$.plan.id").value(2))
+                .andExpect(jsonPath("$.endDate").value(paidUntil.toString()))
+                .andExpect(jsonPath("$.starter").value(false))
+                .andExpect(jsonPath("$.upcoming[0].plan.id").value(3))
+                .andExpect(jsonPath("$.upcoming[0].startDate").value(paidUntil.plusDays(1).toString()))
+                .andExpect(jsonPath("$.upcoming[0].endDate").value(paidUntil.plusDays(1).plusMonths(1).toString()));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM subscriptions WHERE admin_id = ? AND end_date < start_date",
+                Integer.class, owner)).isZero();
+    }
+
+    @Test
+    void theDatabaseRefusesASubscriptionThatEndsBeforeItStarts() {
+        assertThatThrownBy(() -> jdbc.update("INSERT INTO subscriptions (admin_id, plan_id, max_courts, max_branches, "
+                + "start_date, end_date) VALUES (?, 3, 5, 1, ?, ?)", OWNERS.incrementAndGet(), today(),
+                today().minusDays(1))).isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test

@@ -60,14 +60,18 @@ class BillingControllerTest {
     @Test
     void mySubscriptionIsLookedUpForTheSubjectOfTheToken() throws Exception {
         when(subscriptions.current(7)).thenReturn(new SubscriptionResponse(1, 7, plan(), 15, 3,
-                LocalDate.of(2026, 11, 1), LocalDate.of(2026, 12, 1), true));
+                LocalDate.of(2026, 11, 1), LocalDate.of(2026, 12, 1), true, false,
+                java.util.List.of(new BillingDtos.UpcomingSubscription(2, plan(), 15, 3, LocalDate.of(2026, 12, 2),
+                        LocalDate.of(2027, 1, 2)))));
 
         mvc.perform(get("/api/subscriptions/my-subscription").principal(token(7, "ROLE_ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.adminId").value(7))
                 .andExpect(jsonPath("$.plan.name").value("Pro"))
                 .andExpect(jsonPath("$.endDate").value("2026-12-01"))
-                .andExpect(jsonPath("$.active").value(true));
+                .andExpect(jsonPath("$.active").value(true))
+                .andExpect(jsonPath("$.starter").value(false))
+                .andExpect(jsonPath("$.upcoming[0].startDate").value("2026-12-02"));
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.fcourt.subscription.billing;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.inOrder;
@@ -55,7 +56,7 @@ class SubscriptionServiceTest {
         assertThat(response.plan().id()).isEqualTo(3);
         assertThat(response.active()).isTrue();
         assertThat(response.endDate()).isEqualTo(TODAY.plusDays(25));
-        verify(subscriptions, never()).insert(anyLong(), anyLong(), anyInt(), anyInt(), any(), any(), any());
+        verify(subscriptions, never()).insert(anyLong(), anyLong(), anyInt(), anyInt(), any(), any(), anyBoolean(), any());
     }
 
     @Test
@@ -68,48 +69,50 @@ class SubscriptionServiceTest {
     @Test
     void whenNothingIsLiveTheLatestLapsedOneIsReturnedAsInactive() {
         when(subscriptions.findLive(ADMIN, TODAY)).thenReturn(Optional.empty());
-        when(subscriptions.findLatest(ADMIN)).thenReturn(Optional.of(record(2, 3, TODAY.minusDays(60), TODAY.minusDays(1))));
+        when(subscriptions.findLatest(ADMIN, TODAY)).thenReturn(Optional.of(record(2, 3, TODAY.minusDays(60), TODAY.minusDays(1))));
 
         var response = service.current(ADMIN);
 
         assertThat(response.active()).isFalse();
         assertThat(response.id()).isEqualTo(2);
-        verify(subscriptions, never()).insert(anyLong(), anyLong(), anyInt(), anyInt(), any(), any(), any());
+        verify(subscriptions, never()).insert(anyLong(), anyLong(), anyInt(), anyInt(), any(), any(), anyBoolean(), any());
     }
 
     @Test
     void anOwnerWithoutASubscriptionGetsAOneYearStarterOnTheCheapestPlan() {
         when(subscriptions.findLive(ADMIN, TODAY)).thenReturn(Optional.empty());
-        when(subscriptions.findLatest(ADMIN)).thenReturn(Optional.empty());
+        when(subscriptions.findLatest(ADMIN, TODAY)).thenReturn(Optional.empty());
         when(plans.cheapestOnSale()).thenReturn(Optional.of(plan(3, "Basic")));
-        when(subscriptions.insert(ADMIN, 3, 5, 1, TODAY, TODAY.plusYears(1), NOW)).thenReturn(11L);
+        when(subscriptions.insert(ADMIN, 3, 5, 1, TODAY, TODAY.plusYears(1), true, NOW)).thenReturn(11L);
 
         var response = service.current(ADMIN);
 
         var order = inOrder(subscriptions);
         order.verify(subscriptions).lockOwner(ADMIN);
-        order.verify(subscriptions).insert(ADMIN, 3, 5, 1, TODAY, TODAY.plusYears(1), NOW);
+        order.verify(subscriptions).insert(ADMIN, 3, 5, 1, TODAY, TODAY.plusYears(1), true, NOW);
         assertThat(response.id()).isEqualTo(11);
         assertThat(response.active()).isTrue();
         assertThat(response.maxCourts()).isEqualTo(5);
+        assertThat(response.starter()).isTrue();
+        assertThat(response.upcoming()).isEmpty();
     }
 
     @Test
     void theStarterIsNotCreatedTwiceWhenAConcurrentRequestWonTheLock() {
         var created = record(12, 3, TODAY, TODAY.plusYears(1));
         when(subscriptions.findLive(ADMIN, TODAY)).thenReturn(Optional.empty(), Optional.of(created));
-        when(subscriptions.findLatest(ADMIN)).thenReturn(Optional.empty());
+        when(subscriptions.findLatest(ADMIN, TODAY)).thenReturn(Optional.empty());
 
         var response = service.current(ADMIN);
 
         assertThat(response.id()).isEqualTo(12);
-        verify(subscriptions, never()).insert(anyLong(), anyLong(), anyInt(), anyInt(), any(), any(), any());
+        verify(subscriptions, never()).insert(anyLong(), anyLong(), anyInt(), anyInt(), any(), any(), anyBoolean(), any());
     }
 
     @Test
     void withoutAnyPlanOnSaleThereIsNothingToStartWith() {
         when(subscriptions.findLive(ADMIN, TODAY)).thenReturn(Optional.empty());
-        when(subscriptions.findLatest(ADMIN)).thenReturn(Optional.empty());
+        when(subscriptions.findLatest(ADMIN, TODAY)).thenReturn(Optional.empty());
         when(plans.cheapestOnSale()).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.current(ADMIN)).isInstanceOfSatisfying(ApiException.class, error -> {
@@ -119,20 +122,37 @@ class SubscriptionServiceTest {
     }
 
     @Test
+    void currentListsThePaidPeriodsQueuedBehindTheLiveOne() {
+        var live = record(1, 2, TODAY.minusDays(20), TODAY.plusDays(10));
+        when(subscriptions.findLive(ADMIN, TODAY)).thenReturn(Optional.of(live));
+        when(subscriptions.findNotEnded(ADMIN, TODAY)).thenReturn(List.of(live,
+                record(2, 3, TODAY.plusDays(11), TODAY.plusDays(11).plusMonths(1))));
+
+        var response = service.current(ADMIN);
+
+        assertThat(response.starter()).isFalse();
+        assertThat(response.upcoming()).singleElement().satisfies(next -> {
+            assertThat(next.id()).isEqualTo(2);
+            assertThat(next.plan().id()).isEqualTo(3);
+            assertThat(next.startDate()).isEqualTo(TODAY.plusDays(11));
+        });
+    }
+
+    @Test
     void renewingThePlanYouHaveExtendsFromItsEndDateSoNoPaidDaysAreLost() {
-        when(subscriptions.findLive(ADMIN, TODAY)).thenReturn(Optional.of(record(1, 2, TODAY.minusDays(20), TODAY.plusDays(10))));
+        when(subscriptions.findNotEnded(ADMIN, TODAY)).thenReturn(List.of(record(1, 2, TODAY.minusDays(20), TODAY.plusDays(10))));
 
         service.activate(ADMIN, plan(2, "Pro"), BillingCycle.MONTHLY);
 
         var order = inOrder(subscriptions);
         order.verify(subscriptions).lockOwner(ADMIN);
         order.verify(subscriptions).renew(1, TODAY.plusDays(10).plusMonths(1), 5, 1, NOW);
-        verify(subscriptions, never()).insert(anyLong(), anyLong(), anyInt(), anyInt(), any(), any(), any());
+        verify(subscriptions, never()).insert(anyLong(), anyLong(), anyInt(), anyInt(), any(), any(), anyBoolean(), any());
     }
 
     @Test
-    void renewingOnTheLastDayCountsFromTodayAndAYearlyCycleAddsAYear() {
-        when(subscriptions.findLive(ADMIN, TODAY)).thenReturn(Optional.of(record(1, 2, TODAY.minusDays(30), TODAY)));
+    void renewingOnTheLastDayCountsFromThatDayAndAYearlyCycleAddsAYear() {
+        when(subscriptions.findNotEnded(ADMIN, TODAY)).thenReturn(List.of(record(1, 2, TODAY.minusDays(30), TODAY)));
 
         service.activate(ADMIN, plan(2, "Pro"), BillingCycle.YEARLY);
 
@@ -141,7 +161,7 @@ class SubscriptionServiceTest {
 
     @Test
     void renewalPicksUpTheCurrentLimitsOfThePlan() {
-        when(subscriptions.findLive(ADMIN, TODAY)).thenReturn(Optional.of(record(1, 2, TODAY.minusDays(20), TODAY.plusDays(10))));
+        when(subscriptions.findNotEnded(ADMIN, TODAY)).thenReturn(List.of(record(1, 2, TODAY.minusDays(20), TODAY.plusDays(10))));
 
         service.activate(ADMIN, new SubscriptionPlanResponse(2, "Pro", null, 1L, 1L, 40, 8, true, null, false,
                 List.of(), null, null), BillingCycle.MONTHLY);
@@ -150,32 +170,70 @@ class SubscriptionServiceTest {
     }
 
     @Test
-    void switchingPlanEndsTheLiveOnesYesterdayAndStartsTheNewOneToday() {
-        when(subscriptions.findLive(ADMIN, TODAY)).thenReturn(Optional.of(record(1, 3, TODAY.minusDays(20), TODAY.plusDays(10))));
-        when(subscriptions.findAllLive(ADMIN, TODAY)).thenReturn(List.of(
-                record(1, 3, TODAY.minusDays(20), TODAY.plusDays(10)), record(2, 3, TODAY, TODAY.plusDays(40))));
+    void switchingFromAPaidPlanQueuesTheNewPlanAfterItSoNoPaidDayIsLostOrOverlapped() {
+        when(subscriptions.findNotEnded(ADMIN, TODAY)).thenReturn(List.of(record(1, 3, TODAY.minusDays(20), TODAY.plusDays(10))));
 
         service.activate(ADMIN, plan(2, "Pro"), BillingCycle.YEARLY);
 
-        verify(subscriptions).end(1, TODAY.minusDays(1), NOW);
-        verify(subscriptions).end(2, TODAY.minusDays(1), NOW);
-        verify(subscriptions).insert(ADMIN, 2, 5, 1, TODAY, TODAY.plusYears(1), NOW);
+        LocalDate start = TODAY.plusDays(11);
+        verify(subscriptions).insert(ADMIN, 2, 5, 1, start, start.plusYears(1), false, NOW);
+        verify(subscriptions, never()).end(anyLong(), any(), any());
+        verify(subscriptions, never()).softDelete(anyLong(), any());
         verify(subscriptions, never()).renew(anyLong(), any(), anyInt(), anyInt(), any());
     }
 
     @Test
-    void anOwnerWhoseSubscriptionLapsedStartsFreshFromToday() {
-        when(subscriptions.findLive(ADMIN, TODAY)).thenReturn(Optional.empty());
-        when(subscriptions.findAllLive(ADMIN, TODAY)).thenReturn(List.of());
+    void aNewPeriodQueuesBehindTheLastPaidOneAndExtendsItWhenItIsTheSamePlan() {
+        var queued = record(2, 2, TODAY.plusDays(11), TODAY.plusDays(11).plusMonths(1));
+        when(subscriptions.findNotEnded(ADMIN, TODAY)).thenReturn(List.of(
+                record(1, 3, TODAY.minusDays(20), TODAY.plusDays(10)), queued));
+
+        service.activate(ADMIN, plan(2, "Pro"), BillingCycle.MONTHLY);
+        verify(subscriptions).renew(2, queued.endDate().plusMonths(1), 5, 1, NOW);
+
+        service.activate(ADMIN, plan(3, "Basic"), BillingCycle.MONTHLY);
+        LocalDate start = queued.endDate().plusDays(1);
+        verify(subscriptions).insert(ADMIN, 3, 5, 1, start, start.plusMonths(1), false, NOW);
+    }
+
+    @Test
+    void buyingReplacesAStarterThatRanBeforeTodayByEndingItYesterday() {
+        when(subscriptions.findNotEnded(ADMIN, TODAY)).thenReturn(List.of(starter(1, 3, TODAY.minusDays(20))));
+
+        service.activate(ADMIN, plan(3, "Basic"), BillingCycle.MONTHLY);
+
+        verify(subscriptions).end(1, TODAY.minusDays(1), NOW);
+        verify(subscriptions).insert(ADMIN, 3, 5, 1, TODAY, TODAY.plusMonths(1), false, NOW);
+        verify(subscriptions, never()).renew(anyLong(), any(), anyInt(), anyInt(), any());
+    }
+
+    @Test
+    void aStarterThatOnlyStartedTodayIsWithdrawnSoNoEndDateFallsBeforeItsStart() {
+        when(subscriptions.findNotEnded(ADMIN, TODAY)).thenReturn(List.of(starter(1, 3, TODAY)));
 
         service.activate(ADMIN, plan(2, "Pro"), BillingCycle.MONTHLY);
 
-        verify(subscriptions).insert(ADMIN, 2, 5, 1, TODAY, TODAY.plusMonths(1), NOW);
+        verify(subscriptions).softDelete(1, NOW);
+        verify(subscriptions, never()).end(anyLong(), any(), any());
+        verify(subscriptions).insert(ADMIN, 2, 5, 1, TODAY, TODAY.plusMonths(1), false, NOW);
+    }
+
+    @Test
+    void anOwnerWhoseSubscriptionLapsedStartsFreshFromToday() {
+        when(subscriptions.findNotEnded(ADMIN, TODAY)).thenReturn(List.of());
+
+        service.activate(ADMIN, plan(2, "Pro"), BillingCycle.MONTHLY);
+
+        verify(subscriptions).insert(ADMIN, 2, 5, 1, TODAY, TODAY.plusMonths(1), false, NOW);
         verify(subscriptions, never()).end(anyLong(), any(), any());
     }
 
     static SubscriptionRecord record(long id, long planId, LocalDate start, LocalDate end) {
-        return new SubscriptionRecord(id, ADMIN, planId, 5, 1, start, end);
+        return new SubscriptionRecord(id, ADMIN, planId, 5, 1, start, end, false);
+    }
+
+    static SubscriptionRecord starter(long id, long planId, LocalDate start) {
+        return new SubscriptionRecord(id, ADMIN, planId, 5, 1, start, start.plusYears(1), true);
     }
 
     static SubscriptionPlanResponse plan(long id, String name) {

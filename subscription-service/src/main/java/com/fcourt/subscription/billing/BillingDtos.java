@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 /** Request/response shapes of the subscription purchase API (see README, subscription-service). */
 public final class BillingDtos {
@@ -17,9 +18,19 @@ public final class BillingDtos {
             @NotBlank(message = "billingCycle is required") String billingCycle) {
     }
 
-    /** The current (or latest) subscription of a court owner. {@code active} means it has not ended yet. */
+    /**
+     * The current (or latest) subscription of a court owner. {@code active} means today is within its dates;
+     * {@code starter} marks the free subscription given before any purchase; {@code upcoming} lists paid
+     * periods already bought that start after this one, in order.
+     */
     public record SubscriptionResponse(long id, long adminId, SubscriptionPlanResponse plan, int maxCourts,
-                                       int maxBranches, LocalDate startDate, LocalDate endDate, boolean active) {
+                                       int maxBranches, LocalDate startDate, LocalDate endDate, boolean active,
+                                       boolean starter, List<UpcomingSubscription> upcoming) {
+    }
+
+    /** A paid period queued behind the current one. */
+    public record UpcomingSubscription(long id, SubscriptionPlanResponse plan, int maxCourts, int maxBranches,
+                                       LocalDate startDate, LocalDate endDate) {
     }
 
     /**
