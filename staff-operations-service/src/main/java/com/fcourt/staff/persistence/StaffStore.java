@@ -38,6 +38,11 @@ public class StaffStore {
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No active staff assignment");
         return withShifts(rows).getFirst();
     }
+    public StaffView managedUser(long userId,long branchId) {
+        var rows=jdbc.query("SELECT * FROM staff WHERE user_id=? AND (?=0 OR branch_id=?)",this::map,userId,branchId,branchId);
+        if(rows.isEmpty())throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Managed staff not found");
+        return withShifts(rows).getFirst();
+    }
 
     public long insert(Account account, long branchId) {
         return jdbc.queryForObject("""
@@ -53,6 +58,10 @@ public class StaffStore {
 
     public void disable(long id) {
         jdbc.update("UPDATE staff SET deleted_at = now(), updated_at = now() WHERE id = ? AND deleted_at IS NULL", id);
+    }
+
+    public void reactivate(long id) {
+        jdbc.update("UPDATE staff SET deleted_at = NULL, updated_at = now() WHERE id = ?", id);
     }
 
     public void replaceShifts(long id, List<Shift> shifts) {
