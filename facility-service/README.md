@@ -73,6 +73,7 @@ closeTime* (> openTime, else 400), slotDurationMinutes (30|60, default 30), bank
 - `GET|POST /api/admin/branches/{branchId}/courts` (POST 201; **403** when the court limit is reached)
 - `GET|PUT|DELETE /api/admin/courts/{id}`, `PATCH /api/admin/courts/{id}/status` `{status}`
 - `GET /api/staff/courts/{id}` → `{id,branchId,status}`
+- `GET /api/staff/branches/{branchId}/courts` → `[{id,branchId,name,status}]` live courts by id, `Cache-Control: no-store`; **404** unknown/deleted branch, **409** inactive branch. No assignment check here: staff-operations/booking verify it first
 
 Request: `name*, courtTypeId*, description, imageUrl, defaultPricePerHour* (> 0), status
 (ACTIVE|MAINTENANCE|INACTIVE)`. A duplicate name in the same branch (case-insensitive, trimmed)

@@ -27,6 +27,11 @@ class CourtController {
         this.courts = courts;
     }
 
+    @GetMapping("/api/staff/branches/{branchId}/courts")
+    org.springframework.http.ResponseEntity<List<CourtResponse.ScheduleView>> staffCourts(@PathVariable long branchId) {
+        return org.springframework.http.ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore()).body(courts.staffCourts(branchId));
+    }
+
     @GetMapping("/api/admin/branches/{branchId}/courts")
     List<CourtResponse> list(@AuthenticationPrincipal Jwt jwt, @PathVariable long branchId) {
         return courts.list(owner(jwt), branchId);
