@@ -5,6 +5,7 @@ import com.fcourt.staff.integration.BookingGateway.CheckInResult;
 import com.fcourt.staff.persistence.BookingCommandStore;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.HashSet;
 import java.util.List;
@@ -47,7 +48,7 @@ public class CheckInService {
         var result = booking.checkIn(new BookingGateway.CheckInCommand(assignment.branchId(), actor, normalized,
                 date, clock.instant(), channel), "staff:check-in:" + actor + ":" + key, jwt.getTokenValue());
         if (result.bookingId() <= 0 || result.branchId() != assignment.branchId() || result.date() == null
-                || result.date().isAfter(date) || !"CHECKED_IN".equals(result.status()) || result.checkedInAt() == null
+                || !result.date().equals(date) || !"CHECKED_IN".equals(result.status()) || result.checkedInAt() == null
                 || !result.checkedInAt().atZone(zone).toLocalDate().equals(result.date())) throw BookingGateway.unavailable();
         commands.complete(actor, key, "BookingCheckedInEvent", fingerprint, result, result.bookingId(),
                 Map.of("booking", result, "actorId", actor, "channel", channel, "occurredAt", result.checkedInAt()));
@@ -64,10 +65,15 @@ public class CheckInService {
             for (var slot : court.slots()) {
                 if (slot == null || slot.bookingId() <= 0 || slot.date() == null || slot.date().isBefore(start)
                         || slot.date().isAfter(end) || slot.slotStart() == null || slot.slotEnd() == null
-                        || !slot.slotEnd().isAfter(slot.slotStart()) || slot.status() == null
+                        || !validRange(slot.slotStart(), slot.slotEnd()) || slot.status() == null
                         || !Set.of("PENDING_PAYMENT", "AWAITING_CONFIRMATION", "CONFIRMED", "CHECKED_IN", "COMPLETED", "CANCELLED").contains(slot.status())
-                        || !slots.add(court.courtId() + ":" + slot.date() + ":" + slot.slotStart())) throw BookingGateway.unavailable();
+                        || (!"CANCELLED".equals(slot.status()) && !slots.add(court.courtId() + ":" + slot.date() + ":" + slot.slotStart()))) throw BookingGateway.unavailable();
             }
         }
+    }
+
+    /** A slot may end exactly at midnight (e.g. 23:30-00:00), which sorts before its start. */
+    private static boolean validRange(LocalTime start, LocalTime end) {
+        return end.isAfter(start) || LocalTime.MIDNIGHT.equals(end);
     }
 }
