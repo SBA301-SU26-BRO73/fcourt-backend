@@ -16,6 +16,8 @@ public final class AccountDtos {
     // BCrypt only hashes the first 72 bytes, so longer passwords would silently weaken.
     static final int PASSWORD_MIN = 8;
     static final int PASSWORD_MAX = 72;
+    static final String PASSWORD_BYTES_MESSAGE =
+            "password is too long: at most 72 bytes, and accented letters take 2 to 3 bytes each";
 
     private AccountDtos() {
     }
@@ -27,8 +29,8 @@ public final class AccountDtos {
             @Size(max = 255, message = "email must be at most 255 characters") String email,
             @NotBlank(message = "phone is required") @Pattern(regexp = PHONE, message = PHONE_MESSAGE) String phone,
             @NotBlank(message = "password is required")
-            @Size(min = PASSWORD_MIN, max = PASSWORD_MAX,
-                    message = "password must be 8 to 72 characters") String password) {
+            @Size(min = PASSWORD_MIN, max = PASSWORD_MAX, message = "password must be 8 to 72 characters")
+            @MaxUtf8Bytes(value = PASSWORD_MAX, message = PASSWORD_BYTES_MESSAGE) String password) {
     }
 
     /** Multipart form: {@code legalDocuments} (licence, identity) are required, {@code courtImages} optional. */
@@ -39,8 +41,8 @@ public final class AccountDtos {
             @Size(max = 255, message = "email must be at most 255 characters") String email,
             @NotBlank(message = "phone is required") @Pattern(regexp = PHONE, message = PHONE_MESSAGE) String phone,
             @NotBlank(message = "password is required")
-            @Size(min = PASSWORD_MIN, max = PASSWORD_MAX,
-                    message = "password must be 8 to 72 characters") String password,
+            @Size(min = PASSWORD_MIN, max = PASSWORD_MAX, message = "password must be 8 to 72 characters")
+            @MaxUtf8Bytes(value = PASSWORD_MAX, message = PASSWORD_BYTES_MESSAGE) String password,
             @NotEmpty(message = "legalDocuments is required") List<MultipartFile> legalDocuments,
             List<MultipartFile> courtImages) {
     }

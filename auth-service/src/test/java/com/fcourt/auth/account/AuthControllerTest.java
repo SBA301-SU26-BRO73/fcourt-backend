@@ -92,6 +92,25 @@ class AuthControllerTest {
         mvc.perform(post("/api/auth/register/customer").contentType(MediaType.APPLICATION_JSON)
                         .content(customerJson("customer@demo.com", "0909000001", "x".repeat(73))))
                 .andExpect(status().isBadRequest());
+        verify(auth, never()).registerCustomer(any());
+    }
+
+    /** 30 characters but 90 UTF-8 bytes: BCrypt would throw, so validation must refuse it first. */
+    @Test
+    void accentedPasswordsOverBcryptsByteLimitAreRejectedEvenWhenShortInCharacters() throws Exception {
+        mvc.perform(post("/api/auth/register/customer").contentType(MediaType.APPLICATION_JSON)
+                        .content(customerJson("customer@demo.com", "0909000001", "ệ".repeat(30))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[?(@.field=='password')].message")
+                        .value(AccountDtos.PASSWORD_BYTES_MESSAGE));
+        mvc.perform(multipart("/api/auth/register/court-owner")
+                        .file(new MockMultipartFile("legalDocuments", "licence.pdf", "application/pdf", new byte[]{1}))
+                        .param("fullName", "Chu San").param("email", "owner@demo.com")
+                        .param("phone", "0909000003").param("password", "ệ".repeat(30)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("password"));
+        verify(auth, never()).registerCustomer(any());
+        verify(auth, never()).registerCourtOwner(any());
     }
 
     @Test
