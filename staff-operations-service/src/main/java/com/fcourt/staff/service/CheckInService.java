@@ -35,6 +35,19 @@ public class CheckInService {
         return schedule;
     }
 
+    public BookingGateway.TicketPreview preview(Jwt jwt, String code) {
+        var assignment = staff.assigned(jwt);
+        LocalDate date = LocalDate.now(clock.withZone(zone));
+        var result = booking.preview(new BookingGateway.PreviewCommand(assignment.branchId(),
+                Long.parseLong(jwt.getSubject()), code.strip(), date), jwt.getTokenValue());
+        if (result.bookingId() <= 0 || result.branchId() != assignment.branchId() || result.courtId() <= 0
+                || result.courtName() == null || result.date() == null || !date.equals(result.date())
+                || result.slotStart() == null || result.slotEnd() == null) throw BookingGateway.unavailable();
+        if (!"CONFIRMED".equals(result.status())) throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.CONFLICT, "Ticket is not eligible for check-in");
+        return result;
+    }
+
     @Transactional(timeout = 20)
     public CheckInResult verify(Jwt jwt, UUID key, String code, String channel) {
         var assignment = staff.assigned(jwt);
