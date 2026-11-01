@@ -3,6 +3,11 @@
 Version 1, SCRUM-26. Project owner approved adapters and boundary stubs until
 owning services exist. These endpoints are proposals, not implementations on dev.
 
+Response examples below specify required projection fields, not an exclusive
+JSON schema. Account/branch responses may contain additional facility or IAM
+fields; the adapter ignores these while validating required identity, ownership,
+role and state. Incoming Staff API requests still reject unknown fields.
+
 ## Authentication
 
 RS256 JWT via AUTH_JWK_SET_URI, exact issuer, configured audience (fcourt by
