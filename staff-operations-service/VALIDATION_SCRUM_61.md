@@ -1,5 +1,11 @@
 # SCRUM-61 validation
 
+Review follow-up (2026-11-01): the gRPC fixture test's 500ms deadline could expire
+during initial HTTP/2 connection startup on a busy runner. The test now allows
+5s for fixture calls and separately checks that a deliberately hanging authority
+actually received the RPC before its deadline fails closed. This changes test
+timing only; the server-configurable production deadline remains unchanged.
+
 Scope: Backend multi-slot walk-in, gRPC safety and server-priced cash invoice;
 stacked on SCRUM-30 / PR #11.
 
