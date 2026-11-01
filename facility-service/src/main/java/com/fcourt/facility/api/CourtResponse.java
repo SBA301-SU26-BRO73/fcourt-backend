@@ -7,6 +7,8 @@ public record CourtResponse(long id, long branchId, String name, long courtTypeI
                             String imageUrl, BigDecimal defaultPricePerHour, String status,
                             Instant createdAt, Instant updatedAt) {
 
+    public record ScheduleView(long id, long branchId, String name, String status) { }
+
     public record StaffView(long id, long branchId, String status) { }
 
     public StaffView toStaffView() {

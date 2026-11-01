@@ -96,6 +96,12 @@ public class CourtService {
         });
     }
 
+    public List<CourtResponse.ScheduleView> staffCourts(long branchId) {
+        var branch=branches.find(branchId).orElseThrow(BranchService::notFound);
+        if (!"ACTIVE".equals(branch.status())) throw new ResponseStatusException(HttpStatus.CONFLICT,"Branch is inactive");
+        return courts.listByBranch(branchId).stream().map(c -> new CourtResponse.ScheduleView(c.id(),c.branchId(),c.name(),c.status())).toList();
+    }
+
     public CourtResponse.StaffView staffCourt(long courtId) {
         return courts.find(courtId).orElseThrow(CourtService::notFound).court().toStaffView();
     }
