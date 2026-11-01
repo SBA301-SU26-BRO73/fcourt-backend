@@ -334,6 +334,24 @@ class AuthApiIntegrationTest {
     }
 
     @Test
+    void repeatedWrongCurrentPasswordsThrottleChangePassword() throws Exception {
+        String access = register(uniqueEmail(), uniquePhone()).get("accessToken").asText();
+        var wrong = org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/auth/password")
+                .header("Authorization", "Bearer " + access).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"currentPassword\":\"wrong-password\",\"newPassword\":\"Brand-new-pass1\"}");
+        for (int attempt = 0; attempt < 5; attempt++) {
+            mvc.perform(wrong).andExpect(status().isBadRequest());
+        }
+
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/auth/password")
+                        .header("Authorization", "Bearer " + access).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"%s\",\"newPassword\":\"Brand-new-pass1\"}".formatted(PASSWORD)))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .exists("Retry-After"));
+    }
+
+    @Test
     void changePasswordNeedsAnAccessToken() throws Exception {
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/auth/password")
                         .contentType(MediaType.APPLICATION_JSON)

@@ -43,6 +43,7 @@ class PasswordServiceTest {
     PasswordResetRepository resets;
     SessionService sessions;
     OutboxWriter outbox;
+    FailedAttemptThrottle throttle;
     PasswordService service;
 
     @BeforeEach
@@ -51,7 +52,8 @@ class PasswordServiceTest {
         resets = mock(PasswordResetRepository.class);
         sessions = mock(SessionService.class);
         outbox = mock(OutboxWriter.class);
-        service = new PasswordService(accounts, resets, sessions, outbox, HASHER,
+        throttle = mock(FailedAttemptThrottle.class);
+        service = new PasswordService(accounts, resets, sessions, outbox, HASHER, throttle,
                 Clock.fixed(NOW, ZoneOffset.UTC), Duration.ofMinutes(30));
     }
 
@@ -192,6 +194,29 @@ class PasswordServiceTest {
 
         verify(accounts, never()).updatePassword(anyLong(), anyString(), any());
         verifyNoInteractions(sessions);
+        verify(throttle).recordFailure("password-change:7");
+        verify(throttle, never()).recordSuccess(anyString());
+    }
+
+    @Test
+    void aThrottledChangeAnswers429BeforeThePasswordIsChecked() {
+        org.mockito.Mockito.doThrow(new com.fcourt.auth.common.RetryLaterException(FailedAttemptThrottle.LOCKED,
+                Duration.ofMinutes(10))).when(throttle).checkAllowed("password-change:7");
+
+        assertThatThrownBy(() -> service.change(7, CURRENT, "Brand-new-pass1"))
+                .satisfies(error -> AuthServiceTest.assertApi(error, HttpStatus.TOO_MANY_REQUESTS,
+                        FailedAttemptThrottle.LOCKED));
+        verifyNoInteractions(accounts, sessions);
+    }
+
+    @Test
+    void aSuccessfulChangeClearsTheFailureCount() {
+        when(accounts.findById(7)).thenReturn(Optional.of(account(7, "ACTIVE")));
+
+        service.change(7, CURRENT, "Brand-new-pass1");
+
+        verify(throttle).recordSuccess("password-change:7");
+        verify(throttle, never()).recordFailure(anyString());
     }
 
     @Test

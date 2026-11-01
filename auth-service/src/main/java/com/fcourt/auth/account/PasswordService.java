@@ -32,18 +32,20 @@ public class PasswordService {
     private final SessionService sessions;
     private final OutboxWriter outbox;
     private final PasswordEncoder passwordEncoder;
+    private final FailedAttemptThrottle throttle;
     private final Clock clock;
     private final Duration tokenTtl;
     private final SecureRandom random = new SecureRandom();
 
     PasswordService(AccountRepository accounts, PasswordResetRepository resets, SessionService sessions,
-                    OutboxWriter outbox, PasswordEncoder passwordEncoder, Clock clock,
+                    OutboxWriter outbox, PasswordEncoder passwordEncoder, FailedAttemptThrottle throttle, Clock clock,
                     @Value("${auth.password-reset.ttl:30m}") Duration tokenTtl) {
         this.accounts = accounts;
         this.resets = resets;
         this.sessions = sessions;
         this.outbox = outbox;
         this.passwordEncoder = passwordEncoder;
+        this.throttle = throttle;
         this.clock = clock;
         this.tokenTtl = tokenTtl;
     }
@@ -79,15 +81,20 @@ public class PasswordService {
 
     /**
      * Needs the current password. Every session is revoked and a fresh one is returned, so the caller
-     * stays signed in on this device while all other devices have to sign in again.
+     * stays signed in on this device while all other devices have to sign in again. Wrong current passwords
+     * are throttled per user, so a stolen access token cannot be used to guess the password.
      */
     @Transactional
     public AuthResponse change(long userId, String currentPassword, String newPassword) {
+        String attemptKey = FailedAttemptThrottle.passwordChangeKey(userId);
+        throttle.checkAllowed(attemptKey);
         var account = accounts.findById(userId).orElseThrow(() -> ApiException.notFound("Account not found"));
         AccountPolicy.requireActive(account);
         if (!passwordEncoder.matches(currentPassword, account.passwordHash())) {
+            throttle.recordFailure(attemptKey);
             throw ApiException.badRequest("Current password is incorrect");
         }
+        throttle.recordSuccess(attemptKey);
         if (passwordEncoder.matches(newPassword, account.passwordHash())) {
             throw ApiException.badRequest("New password must differ from the current password");
         }
