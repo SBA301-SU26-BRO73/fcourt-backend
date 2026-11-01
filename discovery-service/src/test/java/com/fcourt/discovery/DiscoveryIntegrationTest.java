@@ -173,6 +173,16 @@ class DiscoveryIntegrationTest {
     }
 
     @Test
+    void keywordSearchMatchesCityAndDistrictLikeMonolith() {
+        projection.apply(new BranchUpdatedEvent(1L, 1L, "Sunrise", "12 Le Loi", "Da Nang", "Hai Chau",
+                null, null, true, false, List.of()));
+        for (String keyword : List.of("da nang", "Hai Chau")) {
+            assertThat(repository.search(request(keyword, null, null, null, null, null, null, null)).content())
+                    .as(keyword).extracting(item -> item.id()).containsExactly(1L);
+        }
+    }
+
+    @Test
     void rejectsInvalidPublicParameters() {
         for (String query : List.of("page=-1", "size=101", "latitude=91&longitude=0",
                 "latitude=10", "minPrice=200&maxPrice=100", "courtTypeId=0", "page=abc", "minPrice=1.001")) {

@@ -37,7 +37,7 @@ public class BranchProjection {
                 RETURNING id
                 """, event.branchId(), event.version(), event.name(), event.address(),
                 event.city().trim(), event.district() == null ? null : event.district().trim(),
-                event.name() + " " + event.address(), event.city().trim(),
+                searchText(event), event.city().trim(),
                 event.district() == null ? null : event.district().trim(),
                 event.latitude(), event.longitude(), event.active() && !event.deleted());
         if (accepted.isEmpty()) {
@@ -58,5 +58,10 @@ public class BranchProjection {
             ps.setBigDecimal(4, court.minPrice());
             ps.setBigDecimal(5, court.maxPrice());
         });
+    }
+
+    private static String searchText(BranchUpdatedEvent event) {
+        return String.join(" ", event.name(), event.address(), event.city().trim(),
+                event.district() == null ? "" : event.district().trim());
     }
 }
