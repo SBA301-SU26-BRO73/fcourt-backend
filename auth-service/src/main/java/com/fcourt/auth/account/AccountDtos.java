@@ -11,7 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 /** Request/response shapes of the public auth API. */
 public final class AccountDtos {
-    static final String PHONE = "^(0|\\+84)\\d{8,10}$";
+    public static final String PHONE = "^(0|\\+84)\\d{8,10}$";
     static final String PHONE_MESSAGE = "phone must be a Vietnamese phone number such as 0909000001";
     // BCrypt only hashes the first 72 bytes, so longer passwords would silently weaken.
     static final int PASSWORD_MIN = 8;
