@@ -59,6 +59,27 @@ public final class AccountDtos {
             @NotBlank(message = "phone is required") @Pattern(regexp = PHONE, message = PHONE_MESSAGE) String phone) {
     }
 
+    public record ForgotPasswordRequest(
+            @NotBlank(message = "email is required") @Email(message = "email is invalid") String email) {
+    }
+
+    public record ResetPasswordRequest(
+            @NotBlank(message = "token is required") String token,
+            @NotBlank(message = "newPassword is required")
+            @Size(min = PASSWORD_MIN, max = PASSWORD_MAX,
+                    message = "newPassword must be 8 to 72 characters") String newPassword) {
+    }
+
+    public record ChangePasswordRequest(
+            @NotBlank(message = "currentPassword is required") String currentPassword,
+            @NotBlank(message = "newPassword is required")
+            @Size(min = PASSWORD_MIN, max = PASSWORD_MAX,
+                    message = "newPassword must be 8 to 72 characters") String newPassword) {
+    }
+
+    public record MessageResponse(String message) {
+    }
+
     public record UserResponse(long id, String email, String fullName, String phone, String role, String status,
                                OffsetDateTime createdAt) {
     }

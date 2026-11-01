@@ -51,6 +51,8 @@ auth:
     access-ttl: ${AUTH_JWT_ACCESS_TTL:15m}
     refresh-ttl: ${AUTH_JWT_REFRESH_TTL:30d}
   cloudinary-url: ${AUTH_CLOUDINARY_URL:}
+  password-reset:
+    ttl: ${AUTH_PASSWORD_RESET_TTL:30m}
   events:
     enabled: ${AUTH_EVENTS_ENABLED:true}
     topic: ${AUTH_EVENTS_TOPIC:fcourt.auth.events}

@@ -62,6 +62,11 @@ class AccountRepository {
                 userId, url, docType, Timestamp.from(at));
     }
 
+    void updatePassword(long id, String passwordHash, Instant at) {
+        jdbc.update("UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?",
+                passwordHash, Timestamp.from(at), id);
+    }
+
     void updateProfile(long id, String fullName, String phone, Instant at) {
         jdbc.update("UPDATE users SET full_name = ?, phone = ?, updated_at = ? WHERE id = ?",
                 fullName, phone, Timestamp.from(at), id);

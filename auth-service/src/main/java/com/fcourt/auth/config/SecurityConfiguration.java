@@ -78,7 +78,8 @@ public class SecurityConfiguration {
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/api/auth/register/**", "/api/auth/login", "/api/auth/refresh",
                                 "/api/auth/logout", "/.well-known/jwks.json").permitAll()
-                        .requestMatchers("/api/auth/profile").authenticated()
+                        .requestMatchers("/api/auth/password/forgot", "/api/auth/password/reset").permitAll()
+                        .requestMatchers("/api/auth/profile", "/api/auth/password").authenticated()
                         .requestMatchers("/api/super-admin/**").hasRole(UserRole.SUPER_ADMIN.name())
                         .anyRequest().denyAll())
                 .oauth2ResourceServer(oauth -> oauth
