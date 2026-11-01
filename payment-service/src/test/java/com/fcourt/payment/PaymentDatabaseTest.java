@@ -516,4 +516,61 @@ class PaymentDatabaseTest {
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
     }
 
+    long pendingRefund() throws Exception {
+        submitted();jdbc.update("UPDATE payments SET status='CONFIRMED' WHERE booking_id=42");ownBranch();
+        return refundService("CANCELLED","80000").request(refundRequest(),admin()).id();
+    }
+    AdminRefundService adminRefunds(ReceiptStorage storage){return new AdminRefundService(store,ownership,storage,tx);}
+    @Test
+    void refundCompletionRequiresActualImageAndCannotOverwriteCompletedProof() throws Exception {
+        long id=pendingRefund();var storage=org.mockito.Mockito.mock(ReceiptStorage.class);
+        org.mockito.Mockito.when(storage.upload(org.mockito.ArgumentMatchers.any())).thenReturn("https://res.cloudinary.com/demo/proof.png");
+        var service=adminRefunds(storage);
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->service.decide(id,"COMPLETED",null,null,admin())).hasMessageContaining("400");
+        var bad=new org.springframework.mock.web.MockMultipartFile("file","fake.jpg","image/jpeg","fake".getBytes());
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->service.decide(id,"COMPLETED",null,bad,admin())).hasMessageContaining("400");
+        org.mockito.Mockito.verifyNoInteractions(storage);
+        assertThat(service.decide(id,"APPROVED",null,null,admin()).status()).isEqualTo("APPROVED");
+        var completed=service.decide(id,"COMPLETED",null,image(),admin());
+        assertThat(completed.transferProofUrl()).isEqualTo("https://res.cloudinary.com/demo/proof.png");
+        assertThat(service.decide(id,"COMPLETED",null,image(),admin()).id()).isEqualTo(id);
+        org.mockito.Mockito.verify(storage,org.mockito.Mockito.times(1)).upload(org.mockito.ArgumentMatchers.any());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM payment_outbox WHERE event_type='RefundCompletedEvent'",Long.class)).isEqualTo(1);
+        String payload=jdbc.queryForObject("SELECT payload::text FROM payment_outbox WHERE event_type='RefundCompletedEvent'",String.class);
+        assertThat(payload).doesNotContain("bankAccountNumber").contains("transferProofUrl");
+    }
+    @Test
+    void refundDecisionRaceHasOneFinalStateAndOneCompletionEvent() throws Exception {
+        long id=pendingRefund();var service=adminRefunds(bytes->"https://res.cloudinary.com/demo/proof.png");
+        try(var pool=java.util.concurrent.Executors.newFixedThreadPool(2)){
+            var start=new java.util.concurrent.CountDownLatch(1);var calls=new java.util.ArrayList<java.util.concurrent.Future<?>>();
+            for(boolean complete:new boolean[]{true,false})calls.add(pool.submit(()->{try{start.await();service.decide(id,complete?"COMPLETED":"REJECTED","Không hợp lệ",complete?image():null,admin());}catch(org.springframework.web.server.ResponseStatusException e){assertThat(e.getStatusCode().value()).isEqualTo(409);}catch(Exception e){throw new RuntimeException(e);}}));
+            start.countDown();for(var call:calls)call.get(10,java.util.concurrent.TimeUnit.SECONDS);
+        }
+        String state=jdbc.queryForObject("SELECT status FROM refund_requests WHERE id=?",String.class,id);
+        assertThat(state).isIn("COMPLETED","REJECTED");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM payment_outbox WHERE event_type='RefundCompletedEvent'",Long.class)).isEqualTo(state.equals("COMPLETED")?1:0);
+    }
+    @Test
+    void refundOutboxFailureRollsBackCompletion() throws Exception {
+        long id=pendingRefund();
+        jdbc.execute("ALTER TABLE payment_outbox ADD CONSTRAINT test_refund_outbox CHECK(event_type<>'RefundCompletedEvent') NOT VALID");
+        try{
+            org.assertj.core.api.Assertions.assertThatThrownBy(()->adminRefunds(bytes->"https://res.cloudinary.com/demo/proof.png").decide(id,"COMPLETED",null,image(),admin())).isInstanceOf(RuntimeException.class);
+            assertThat(jdbc.queryForObject("SELECT status FROM refund_requests WHERE id=?",String.class,id)).isEqualTo("PENDING");
+        }finally{jdbc.execute("ALTER TABLE payment_outbox DROP CONSTRAINT test_refund_outbox");}
+    }
+    @Test
+    void refundAdminRoutesRequireRoleBranchOwnershipAndProofPart() throws Exception {
+        long id=pendingRefund();
+        securedMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/admin/refunds/pending?branchId=7")
+            .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+        org.mockito.Mockito.doThrow(new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN)).when(ownership).require(org.mockito.ArgumentMatchers.eq(8L),org.mockito.ArgumentMatchers.any());
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->adminRefunds(bytes->"unused").pending(8,0,20,admin())).hasMessageContaining("403");
+        securedMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/api/admin/refunds/"+id+"/complete").with(r->{r.setMethod("PUT");return r;})
+            .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt().authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN"))))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+    }
+
 }
