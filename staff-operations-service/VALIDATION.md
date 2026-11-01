@@ -39,3 +39,16 @@ No full-system or production readiness is claimed. This PR does not implement
 schedule, booking/check-in or POS tasks, which have their own branches/PRs.
 
 No Jira status, review request, assignment or approval has been changed.
+
+## Review follow-up: extended upstream JSON (2026-11-01)
+
+Account and Branch projections ignore unknown upstream fields while keeping all
+identity, ownership, role and status checks. Incoming API requests retain strict
+unknown-field validation. The CRUD fixture includes additional facility fields;
+an actual-HTTP contract suite uses the full PR #20 BranchResponse with a strict
+Jackson converter and negative authorization cases.
+
+Re-executed `mvn -f staff-operations-service/pom.xml -B -ntp clean verify`:
+**44 tests passed, zero failures/errors/skips**, executable JAR and coverage gate
+passed; service line coverage **97.33%**. This supersedes the original 34-test
+count for this PR. Fixtures are not deployed-service acceptance evidence.

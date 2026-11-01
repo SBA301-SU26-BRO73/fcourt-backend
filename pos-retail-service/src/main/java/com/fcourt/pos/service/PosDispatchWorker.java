@@ -36,10 +36,15 @@ public class PosDispatchWorker {
 
     public void drain() {
         RuntimeException failure = null;
-        var pending = jdbc.queryForList("SELECT event_id FROM pos_outbox WHERE published_at IS NULL ORDER BY CASE WHEN kind = 'CHARGE' THEN 0 ELSE 1 END, created_at, event_id LIMIT 10", UUID.class);
-        for (UUID eventId : pending) {
-            try { transaction.executeWithoutResult(status -> publishOne(eventId)); }
-            catch (RuntimeException error) { if (failure == null) failure = error; else failure.addSuppressed(error); }
+        // Independent quotas keep unavailable booking commands from filling
+        // every batch. Publish events first so a slow booking service cannot
+        // delay CASH events already waiting for a healthy Kafka broker.
+        for (String kind : java.util.List.of("EVENT", "CHARGE")) {
+            var pending = jdbc.queryForList("SELECT event_id FROM pos_outbox WHERE published_at IS NULL AND kind = ? ORDER BY created_at, event_id LIMIT 10", UUID.class, kind);
+            for (UUID eventId : pending) {
+                try { transaction.executeWithoutResult(status -> publishOne(eventId)); }
+                catch (RuntimeException error) { if (failure == null) failure = error; else failure.addSuppressed(error); }
+            }
         }
         if (failure != null) throw failure;
     }
