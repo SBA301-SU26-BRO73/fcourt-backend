@@ -1,0 +1,19 @@
+services:
+  staff-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: staff_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${STAFF_DATABASE_PASSWORD:?set STAFF_DATABASE_PASSWORD}
+    ports:
+      - "127.0.0.1:${STAFF_DATABASE_PORT:-5490}:5432"
+    volumes:
+      - staff_database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d staff_db"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  staff_database:

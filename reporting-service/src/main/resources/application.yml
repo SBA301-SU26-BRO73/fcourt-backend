@@ -1,0 +1,57 @@
+server:
+  port: ${SERVER_PORT:8084}
+  error:
+    include-message: never
+    include-stacktrace: never
+
+spring:
+  application:
+    name: reporting-service
+  datasource:
+    url: ${REPORTING_DB_URL:jdbc:postgresql://localhost:5432/reporting_db}
+    username: ${REPORTING_DB_USER:postgres}
+    password: ${REPORTING_DB_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 3000
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      # Own consumer group: booking/discovery consumers of the same topics are unaffected.
+      group-id: ${REPORTING_CONSUMER_GROUP:reporting-service-v1}
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      # Used only for <topic>.DLT records.
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        max.block.ms: 5000
+    listener:
+      ack-mode: record
+      missing-topics-fatal: false
+
+reporting:
+  time-zone: ${REPORTING_TIME_ZONE:Asia/Ho_Chi_Minh}
+  facility-url: ${FACILITY_URL:http://localhost:8083}
+  auth:
+    jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+    issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
+    audience: ${AUTH_JWT_AUDIENCE:fcourt}
+  kafka:
+    enabled: ${REPORTING_KAFKA_ENABLED:true}
+    payment-topic: ${PAYMENT_EVENTS_TOPIC:fcourt.payment.events}
+    staff-topic: ${STAFF_EVENTS_TOPIC:fcourt.staff.events}
+    branch-topic: ${BRANCH_UPDATED_TOPIC:facility.branch-updated.v1}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
