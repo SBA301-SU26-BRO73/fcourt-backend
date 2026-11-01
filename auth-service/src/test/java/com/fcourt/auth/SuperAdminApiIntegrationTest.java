@@ -208,6 +208,9 @@ class SuperAdminApiIntegrationTest {
         long customer = jdbc.queryForObject("""
                 INSERT INTO users(email, password_hash, role, status, full_name)
                 VALUES (?, 'x', 'CUSTOMER', 'ACTIVE', 'Toggle me') RETURNING id""", Long.class, unique("customer"));
+        mvc.perform(asSuperAdmin(put("/api/super-admin/users/" + customer + "/toggle-status")))
+                .andExpect(status().isBadRequest());
+        assertThat(statusOf(customer)).isEqualTo("ACTIVE");
         mvc.perform(asSuperAdmin(put("/api/super-admin/users/" + customer + "/toggle-status"))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"abuse report\"}"))
                 .andExpect(status().isOk())
