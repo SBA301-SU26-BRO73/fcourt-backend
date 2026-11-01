@@ -35,13 +35,20 @@ class PaymentApprovalService {
             store.jdbc().queryForObject("SELECT pg_advisory_xact_lock(?)",Object.class,bookingId);
             var payment=store.jdbc().query("SELECT * FROM payments WHERE id=? FOR UPDATE",store::row,paymentId).getFirst();
             String desired=confirm ? "CONFIRMED" : "REJECTED";
-            if (desired.equals(payment.status())) return payment;
+            if (desired.equals(payment.status())) {
+                if (confirm && payment.checkInCode()==null) {
+                    store.issueTicket(bookingId);var issued=store.find(bookingId);
+                    store.event("PaymentConfirmedEvent",issued);return issued;
+                }
+                return payment;
+            }
             if (!"PENDING".equals(payment.status()) || payment.submittedAt()==null) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,"Payment is not awaiting approval");
             }
             store.jdbc().update("""
                     UPDATE payments SET status=?,confirmed_at=now(),confirmed_by=?,rejection_reason=?,updated_at=now() WHERE id=?
                     """,desired,ownership.actor(jwt),confirm ? null : reason.strip(),paymentId);
+            if (confirm) store.issueTicket(bookingId);
             var saved=store.find(bookingId);
             store.event(confirm ? "PaymentConfirmedEvent" : "PaymentRejectedEvent",saved);
             return saved;

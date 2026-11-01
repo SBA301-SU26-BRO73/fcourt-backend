@@ -54,7 +54,7 @@ class ReceiptCleanupTest {
     @Test
     void uploadedImageIsDeletedWhenConcurrentUploadWonTheRace() throws Exception {
         var service = service(CheckoutApiTest.NOW);
-        var winner = new PaymentRecord(1, 42, 7, java.math.BigDecimal.TEN, "PENDING", "https://res.cloudinary.com/demo/other.png", null, null, null);
+        var winner = new PaymentRecord(1, 42, 7, java.math.BigDecimal.TEN, "PENDING", "https://res.cloudinary.com/demo/other.png", java.time.Instant.EPOCH, null, null, null, null);
         when(store.find(42L)).thenReturn(null, winner);
         service.upload(42, null, "guest", image());
         verify(storage).delete(URL);
@@ -63,7 +63,7 @@ class ReceiptCleanupTest {
     @Test
     void imageIsKeptWhenPaymentSaved() throws Exception {
         var service = service(CheckoutApiTest.NOW);
-        var saved = new PaymentRecord(1, 42, 7, java.math.BigDecimal.TEN, "PENDING", URL, null, null, null);
+        var saved = new PaymentRecord(1, 42, 7, java.math.BigDecimal.TEN, "PENDING", URL, java.time.Instant.EPOCH, null, null, null, null);
         when(store.find(42L)).thenReturn(null, null);
         when(store.submit(any(), any())).thenReturn(saved);
         service.upload(42, null, "guest", image());

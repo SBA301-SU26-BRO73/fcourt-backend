@@ -25,9 +25,17 @@ class PaymentStore {
     PaymentRecord submit(CheckoutInfo checkout, String url) {
         jdbc.update("""
                 INSERT INTO payments(booking_id,branch_id,amount,bill_image_url,checkout,submitted_at)
-                VALUES (?,?,?,?,?::jsonb,now()) ON CONFLICT (booking_id) DO NOTHING
+                VALUES (?,?,?,?,?::jsonb,now()) ON CONFLICT (booking_id) DO UPDATE SET bill_image_url=EXCLUDED.bill_image_url,
+                    checkout=EXCLUDED.checkout,amount=EXCLUDED.amount,submitted_at=now(),updated_at=now()
+                WHERE payments.status='PENDING' AND payments.submitted_at IS NULL
                 """, checkout.bookingId(), checkout.branchId(), checkout.amount(), url, encode(checkout));
         return find(checkout.bookingId());
+    }
+    void issueTicket(long bookingId) {
+        jdbc.update("""
+                UPDATE payments SET check_in_code=?,qr_image_url=? WHERE booking_id=?
+                    AND status='CONFIRMED' AND check_in_code IS NULL
+                """,TicketQr.newCode(),"/api/payments/"+bookingId+"/ticket/qr",bookingId);
     }
     void event(String type, PaymentRecord payment) {
         UUID eventId = UUID.randomUUID();
@@ -48,7 +56,8 @@ class PaymentStore {
             return new PaymentRecord(rs.getLong("id"),rs.getLong("booking_id"),rs.getLong("branch_id"),
                     rs.getBigDecimal("amount"),rs.getString("status"),rs.getString("bill_image_url"),
                     time == null ? null : time.toInstant(),rs.getString("rejection_reason"),
-                    checkout == null ? null : json.readValue(checkout, CheckoutInfo.class));
+                    checkout == null ? null : json.readValue(checkout, CheckoutInfo.class),
+                    rs.getString("check_in_code"),rs.getString("qr_image_url"));
         } catch (JsonProcessingException e) { throw new IllegalStateException("Invalid stored checkout", e); }
     }
 }
