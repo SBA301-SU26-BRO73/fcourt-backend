@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import date, datetime, time, timedelta, timezone
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 import hashlib
 import json
 import os
@@ -144,7 +144,8 @@ def build_rows(m, hashed_password, plan_limits=(15, 3)):
         created = datetime.combine(booking_day, time(6), zone)
         start = datetime.combine(booking_day, time(8 + i//10*2), zone)
         total = price*2
-        discount = Decimal(10000) if i == 0 else min(total*Decimal("0.10"), Decimal(10000)) if i == 1 else Decimal(0)
+        discount = (Decimal(10000) if i == 0 else min(total*Decimal("0.10"), Decimal(10000)) if i == 1 else Decimal(0))
+        discount = discount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         confirmed = state in {"CONFIRMED", "CHECKED_IN", "COMPLETED"}
         payment_state = "CONFIRMED" if confirmed else "REJECTED" if state == "CANCELLED" else "PENDING"
         add("payment_db", "payments", id=base+i, branch_id=base+branch_index, amount=total-discount,
