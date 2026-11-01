@@ -19,6 +19,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +28,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,13 +50,18 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "staff.events.enabled=false")
 class StaffIntegrationTest {
     static final ObjectMapper JSON = new ObjectMapper().findAndRegisterModules();
     static final RSAKey SIGNING_KEY = key("auth");
     static final RSAKey FOREIGN_KEY = key("foreign");
     static final AtomicInteger CREATES = new AtomicInteger();
     static final Map<String, Map<String, Object>> ACCOUNTS = new ConcurrentHashMap<>();
+    static final Map<String, Map<String, Object>> CHECK_IN_RESULTS = new ConcurrentHashMap<>();
+    static final AtomicBoolean CHECKED_IN = new AtomicBoolean();
+    static volatile int bookingFailure;
+    static volatile boolean wrongBranch;
+    static volatile int bookingDateShift;
     static volatile int failure;
     static volatile boolean active = true;
     static volatile boolean branchActive = true;
@@ -75,6 +83,7 @@ class StaffIntegrationTest {
         registry.add("staff.facility.url", () -> URL);
         registry.add("staff.auth.jwk-set-uri", () -> URL + "/jwks");
         registry.add("staff.auth.issuer", () -> "fcourt-test");
+        registry.add("staff.booking.url", () -> URL);
     }
 
     @Autowired TestRestTemplate http;
@@ -83,6 +92,11 @@ class StaffIntegrationTest {
     @BeforeEach
     void reset() {
         jdbc.execute("TRUNCATE staff RESTART IDENTITY CASCADE");
+        jdbc.execute("TRUNCATE staff_booking_commands, staff_outbox");
+        CHECK_IN_RESULTS.clear();
+        CHECKED_IN.set(false);
+        bookingFailure = bookingDateShift = 0;
+        wrongBranch = false;
         ACCOUNTS.clear();
         CREATES.set(0);
         failure = 0;
@@ -268,6 +282,102 @@ class StaffIntegrationTest {
                 token("1", "ADMIN"), null).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
+    @Test
+    void todayScheduleUsesAssignedBranchAndReturnsNoStore() {
+        create(UUID.randomUUID(), body(7));
+        var response = call(HttpMethod.GET, "/api/staff/schedule/today", null, token("100", "STAFF"), null);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().path("branchId").asLong()).isEqualTo(7);
+        assertThat(response.getBody().path("courts").get(0).path("slots").get(0).path("date").asText())
+                .isEqualTo(LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).toString());
+        assertThat(response.getHeaders().getCacheControl()).contains("no-store");
+    }
+
+    @Test
+    void checkInPersistsOneDurableEventAndSameKeyReplays() {
+        create(UUID.randomUUID(), body(7));
+        UUID key = UUID.randomUUID();
+        var first = checkIn(key);
+        assertThat(first.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(first.getBody().path("status").asText()).isEqualTo("CHECKED_IN");
+        assertThat(checkIn(key).getBody()).isEqualTo(first.getBody());
+        assertThat(checkIn(UUID.randomUUID()).getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_outbox WHERE published_at IS NULL", Integer.class)).isEqualTo(1);
+        String payload = jdbc.queryForObject("SELECT payload FROM staff_outbox", String.class);
+        assertThat(payload).contains("BookingCheckedInEvent", "actorId", "QR").doesNotContain("FC-89234", "Bearer");
+    }
+
+    @Test
+    void concurrentDifferentCheckInCommandsCannotCheckInTwice() throws Exception {
+        create(UUID.randomUUID(), body(7));
+        int successful = 0;
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var requests = java.util.stream.IntStream.range(0, 6)
+                    .mapToObj(ignored -> executor.submit(() -> checkIn(UUID.randomUUID()))).toList();
+            for (var request : requests) {
+                var status = request.get().getStatusCode();
+                assertThat(status).isIn(HttpStatus.OK, HttpStatus.CONFLICT);
+                if (status == HttpStatus.OK) successful++;
+            }
+        }
+        assertThat(successful).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_outbox", Integer.class)).isEqualTo(1);
+    }
+
+    @Test
+    void checkInRecoversAfterOutboxInsertRollsBack() {
+        create(UUID.randomUUID(), body(7));
+        UUID key = UUID.randomUUID();
+        jdbc.execute("ALTER TABLE staff_outbox ADD CONSTRAINT reject_event CHECK (booking_id <> 42)");
+        try {
+            assertThat(checkIn(key).getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_booking_commands", Integer.class)).isZero();
+        } finally {
+            jdbc.execute("ALTER TABLE staff_outbox DROP CONSTRAINT reject_event");
+        }
+        assertThat(checkIn(key).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(CHECK_IN_RESULTS).hasSize(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_outbox", Integer.class)).isEqualTo(1);
+    }
+
+    @Test
+    void malformedScheduleAndCheckInResponsesFailClosed() {
+        create(UUID.randomUUID(), body(7));
+        wrongBranch = true;
+        assertThat(call(HttpMethod.GET, "/api/staff/schedule/today", null, token("100", "STAFF"), null).getStatusCode())
+                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(checkIn(UUID.randomUUID()).getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_outbox", Integer.class)).isZero();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {404, 409, 500})
+    void rejectedBookingCheckInDoesNotEmitSuccess(int status) {
+        create(UUID.randomUUID(), body(7));
+        bookingFailure = status;
+        assertThat(checkIn(UUID.randomUUID()).getStatusCode().value()).isEqualTo(status == 500 ? 503 : status);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_outbox", Integer.class)).isZero();
+    }
+
+    @Test
+    void invalidOrForeignDateCodeAndDifferentKeyMetadataAreRejected() {
+        create(UUID.randomUUID(), body(7));
+        assertThat(call(HttpMethod.POST, "/api/staff/check-in/verify", Map.of("checkInCode", " "),
+                token("100", "STAFF"), UUID.randomUUID()).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        bookingDateShift = 1;
+        assertThat(checkIn(UUID.randomUUID()).getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        bookingDateShift = 0;
+        CHECKED_IN.set(false);
+        UUID key = UUID.randomUUID();
+        assertThat(checkIn(key).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(call(HttpMethod.POST, "/api/staff/check-in/verify", Map.of("checkInCode", "DIFFERENT"),
+                token("100", "STAFF"), key).getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    ResponseEntity<JsonNode> checkIn(UUID key) {
+        return call(HttpMethod.POST, "/api/staff/check-in/verify", Map.of("checkInCode", "FC-89234"), token("100", "STAFF"), key);
+    }
+
     ResponseEntity<JsonNode> create(UUID key, Object body) {
         return call(HttpMethod.POST, "/api/admin/staff", body, token("1", "ADMIN"), key);
     }
@@ -329,7 +439,26 @@ class StaffIntegrationTest {
         try {
             var jwt = SignedJWT.parse(exchange.getRequestHeaders().getFirst("Authorization").substring(7)).getJWTClaimsSet();
             long actor = Long.parseLong(jwt.getSubject());
-            if (path.equals("/api/auth/me")) {
+            if (path.startsWith("/api/internal/branches/")) {
+                if (bookingFailure != 0) { send(exchange, bookingFailure, Map.of()); return; }
+                send(exchange, 200, Map.of("branchId", wrongBranch ? 8 : 7, "courts", List.of(Map.of(
+                        "courtId", 21, "courtName", "Court 1", "slots", List.of(Map.of("bookingId", 42,
+                        "date", LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(bookingDateShift).toString(),
+                        "slotStart", "09:00", "slotEnd", "09:30", "status", "CONFIRMED", "customerName", "Guest"))))));
+            } else if (path.equals("/api/internal/bookings/check-in")) {
+                if (bookingFailure != 0) { send(exchange, bookingFailure, Map.of()); return; }
+                JsonNode body = JSON.readTree(exchange.getRequestBody());
+                String key = exchange.getRequestHeaders().getFirst("Idempotency-Key");
+                synchronized (CHECK_IN_RESULTS) {
+                    if (CHECK_IN_RESULTS.containsKey(key)) { send(exchange, 200, CHECK_IN_RESULTS.get(key)); return; }
+                    if (!CHECKED_IN.compareAndSet(false, true)) { send(exchange, 409, Map.of()); return; }
+                    var response = Map.<String, Object>of("bookingId", 42, "branchId", wrongBranch ? 8 : 7,
+                            "date", LocalDate.parse(body.path("date").asText()).plusDays(bookingDateShift).toString(),
+                            "status", "CHECKED_IN", "checkedInAt", Instant.now().toString());
+                    CHECK_IN_RESULTS.put(key, response);
+                    send(exchange, 200, response);
+                }
+            } else if (path.equals("/api/auth/me")) {
                 send(exchange, 200, Map.of("id", wrongAccount ? 999 : actor, "role", jwt.getStringListClaim("roles").getFirst(),
                         "status", active ? "ACTIVE" : "INACTIVE"));
             } else if (path.startsWith("/api/admin/branches/") || path.startsWith("/api/staff/branches/")) {
