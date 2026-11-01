@@ -36,6 +36,24 @@ Full staff verify passes with 117 tests (no failures/skips), including a read-on
 preview assertion, branch mismatch and role rejection. This adds no booking DB
 access or cached admission authority.
 
+## SCRUM-31 counter contact and checkout projection
+
+Walk-in accepts optional guestName (1–150 characters), included in replay identity
+and forwarded unchanged to the booking authority with the canonical quote. Missing
+names are omitted from serialization to preserve legacy unnamed command identity.
+The authority must also fingerprint and persist the name, including reconciliation.
+
+`GET /api/staff/bookings/{id}/checkout-preview` returns bookingId, branchId,
+surchargeAmount and totalAmount from the booking authority, scoped by live staff
+assignment. Negative/inconsistent amounts or foreign results fail closed. Upstream
+GET `/api/internal/bookings/{id}/checkout-preview?branchId=...&actorId=...` must
+authorize forwarded STAFF and compute authoritative fees. It is a read projection,
+not a payment commitment or a price lock; checkout still performs its atomic guard.
+
+Full staff verify now passes 119 tests, zero failures/errors/skips, coverage gate
+passes. Added guest-name fingerprint and read-only scoped fee tests. Actual
+authority implementation/live acceptance is still required.
+
 2026-11-01: `mvn -f staff-operations-service/pom.xml verify` passes, including
 real PostgreSQL and Kafka containers, HTTP/JWT fixtures and JaCoCo's >=80% service
 coverage gate. Reactivation tests cover owner/role rejection, active assignment,
