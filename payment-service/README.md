@@ -111,3 +111,17 @@ Submission commits the payment and `PaymentSubmittedEvent` to `payment_outbox` i
 **Integration contract:** booking-service consumes `PaymentSubmittedEvent` and atomically changes an eligible `PENDING_PAYMENT` booking to `AWAITING_CONFIRMATION`, retaining occupied slots. This consumer and the actual booking/facility APIs are not implemented on `dev`; payment-service never writes their databases. Receipt persistence alone does not establish this cross-service acceptance condition. Coordinate booking expiry against receipt submission at this boundary before enabling customer traffic.
 
 Validation: Java 21 `mvn -f payment-service/pom.xml clean verify` (18 tests, PostgreSQL 16 Testcontainer); mocks isolate Cloudinary/upstream HTTP and Kafka acknowledgement/failure. Real Cloudinary credentials and live booking/facility/Kafka acceptance remain external checks. SDK references: [Cloudinary Java](https://cloudinary.com/documentation/java_integration), [Spring Kafka sending](https://docs.spring.io/spring-kafka/reference/kafka/sending-messages.html).
+
+## Admin approval — SCRUM-36
+
+- `GET /api/admin/payments/pending?branchId=7&offset=0`: oldest-first submitted PENDING records, 50 per page. Snapshot includes optional `customerName` supplied by the booking authority; absent names display as guest/customer in Flutter.
+- `PUT /api/admin/payments/{paymentId}/confirm`: commits local payment `CONFIRMED` and `PaymentConfirmedEvent`.
+- `PUT /api/admin/payments/{paymentId}/reject`: JSON `{"reason":"..."}` (1–500 nonblank characters), commits `REJECTED`, reason and `PaymentRejectedEvent`.
+
+Admin routes validate RS256 JWT signatures through `AUTH_JWK_SET_URI`, exact `AUTH_JWT_ISSUER`, audience `AUTH_JWT_AUDIENCE` (default `fcourt`), expiration and `roles: ["ADMIN"]` (or `role: "ADMIN"`). `sub` must contain the positive numeric user ID. Configure these against the final auth-service contract; no unsigned/decoded-only token fallback exists. Customer/guest routes continue delegating booking ownership to the authoritative booking API.
+
+Every admin read/write calls `GET facility /api/admin/branches/{id}` with the caller Bearer credential and requires response `{ "id":7, "adminId":9 }` to match JWT subject. This proposed endpoint must enforce active account/branch ownership in facility-service. Missing/invalid dependencies fail closed (503); foreign owners get 403. Payment IDs, branch IDs and actor IDs are never trusted from a client decision body.
+
+Same-decision retries return existing data without duplicate events; opposite decisions return 409. A per-booking transaction lock and row lock serialize confirm/reject. Payment state and outbox event commit or roll back together. The inherited schema uses `CONFIRMED` for a successful payment, rather than introducing a second `SUCCESS` spelling. Booking consumer contract: confirmation atomically enters booking `CONFIRMED`; rejection enters `CANCELLED` and releases slots. Consumers must deduplicate event IDs and handle races with booking expiry; these cross-service side effects remain pending until those consumers are implemented.
+
+Validation: Java 21 `mvn -f payment-service/pom.xml clean verify` — 26 tests. Adds actual RSA-signed JWT/JWK checks (invalid signature/issuer/audience/expiry), Spring Security 401/403, facility ownership mismatch, PostgreSQL confirm/reject race, idempotency, reason validation and forced-outbox-failure rollback. No live auth/facility/booking integration is claimed.

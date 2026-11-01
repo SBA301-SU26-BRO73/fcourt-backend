@@ -66,6 +66,6 @@ class PaymentUpstreams {
 
     record Booking(Long id, String bookingCode, Long branchId, String branchName,
                    String courtName, LocalDate date, List<CheckoutInfo.Slot> slots,
-                   BigDecimal totalPrice, String status, Instant holdExpiresAt) { }
+                   BigDecimal totalPrice, String status, Instant holdExpiresAt, String customerName) { }
     record Bank(Long id, String bankName, String bankBin, String bankAccountNumber, String bankAccountName) { }
 }

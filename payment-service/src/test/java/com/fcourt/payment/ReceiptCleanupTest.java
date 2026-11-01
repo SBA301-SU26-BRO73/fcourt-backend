@@ -30,7 +30,7 @@ class ReceiptCleanupTest {
         var booking = new ObjectMapper().findAndRegisterModules().readValue(CheckoutApiTest.BOOKING, PaymentUpstreams.Booking.class);
         when(upstreams.booking(42L, null, "guest")).thenReturn(booking);
         var info = new CheckoutInfo(42L, "BK00000042", 7L, "Thu Duc", "Court 1", booking.date(), booking.slots(),
-                booking.totalPrice(), "VCB", "970436", "00123", "FCOURT", "FC BK00000042", booking.holdExpiresAt());
+                booking.totalPrice(), "VCB", "970436", "00123", "FCOURT", "FC BK00000042", booking.holdExpiresAt(), booking.customerName());
         when(checkout.checkout(42L, null, "guest")).thenReturn(info);
         when(storage.upload(any())).thenReturn(URL);
         when(store.jdbc()).thenReturn(mock(JdbcTemplate.class));

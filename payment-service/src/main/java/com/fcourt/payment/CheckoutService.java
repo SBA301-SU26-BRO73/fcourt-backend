@@ -62,7 +62,7 @@ class CheckoutService {
         return new CheckoutInfo(booking.id(), booking.bookingCode(), booking.branchId(),
                 booking.branchName(), booking.courtName(), booking.date(), List.copyOf(booking.slots()),
                 amount, bank.bankName(), bank.bankBin(), bank.bankAccountNumber(), bank.bankAccountName(),
-                "FC " + booking.bookingCode(), booking.holdExpiresAt());
+                "FC " + booking.bookingCode(), booking.holdExpiresAt(), booking.customerName());
     }
 
     private boolean blank(String value) { return value == null || value.isBlank(); }
