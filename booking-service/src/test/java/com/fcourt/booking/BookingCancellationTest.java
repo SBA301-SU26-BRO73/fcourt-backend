@@ -52,6 +52,15 @@ class BookingCancellationTest extends BookingApiTest {
         assertThat(jdbc.queryForObject("SELECT count(*) FROM booking_outbox",Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT status FROM bookings WHERE id=1",String.class)).isEqualTo("CANCELLED");
     }
+    @Test void cancelledEventCarriesIsoSlotDatesAndTimesForConsumers()throws Exception{
+        tx.execute(s->at(cutoff()).cancel(1,"Đổi lịch",user(10)));
+        var event=json.readTree(jdbc.queryForObject("SELECT payload::text FROM booking_outbox",String.class));
+        var slot=event.path("booking").path("slots").get(0);
+        assertThat(slot.path("date").asText()).isEqualTo("2099-12-01");
+        assertThat(slot.path("startTime").asText()).isEqualTo("18:00:00");
+        assertThat(slot.path("courtId").asLong()).isEqualTo(1);
+        assertThat(event.path("booking").path("branchId").asLong()).isEqualTo(7);
+    }
     @Test void outboxFailureRollsBackBookingAndReservation(){
         jdbc.execute("ALTER TABLE booking_outbox ADD CONSTRAINT test_failure CHECK(false) NOT VALID");
         try{
