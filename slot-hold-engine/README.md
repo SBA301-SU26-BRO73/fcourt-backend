@@ -36,6 +36,11 @@ or a past date. `404`: court missing. `409`: slot held, booked, closed or expire
 `503`: discovery or Redis unavailable, or discovery response violates the contract.
 There is no waiting or retry loop on a conflicting hold.
 
+`DELETE /api/bookings/hold-slots/{holdToken}` releases a hold on cancel or payment
+(`204`, idempotent, also for expired or unknown tokens, `400` for a malformed token,
+`503` when Redis is unavailable). `redis/release.lua` deletes a slot key only while it
+still holds this token, so a hold that expired and was re-acquired by someone else is never freed.
+
 ## Proposed discovery contract — integration pending SCRUM-22
 
 Discovery must implement `GET /api/public/courts/{courtId}/slots?date=YYYY-MM-DD`
