@@ -4,6 +4,7 @@ import com.cloudinary.Cloudinary;
 import java.net.URI;
 import java.util.Map;
 import java.util.UUID;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -33,6 +34,20 @@ class CloudinaryReceiptStorage implements ReceiptStorage {
             throw unavailable();
         }
     }
+    @Override
+    public void delete(String url) {
+        if (this.url.isBlank() || url == null) return;
+        try {
+            String path = URI.create(url).getPath();
+            String file = path.substring(path.lastIndexOf('/') + 1);
+            int dot = file.lastIndexOf('.');
+            String publicId = "fcourt/receipts/" + (dot > 0 ? file.substring(0, dot) : file);
+            new Cloudinary(this.url).uploader().destroy(publicId, Map.of("resource_type", "image", "invalidate", true));
+        } catch (Exception e) {
+            LoggerFactory.getLogger(getClass()).warn("Receipt cleanup failed, image left for retention job");
+        }
+    }
+
     private ResponseStatusException unavailable() {
         return new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Receipt storage unavailable");
     }

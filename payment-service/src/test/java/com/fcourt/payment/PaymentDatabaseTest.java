@@ -322,7 +322,7 @@ class PaymentDatabaseTest {
     @Autowired CustomerPayments customerPayments;
     @Test
     void customerHistoryRejectsSpoofedHeadersAndOtherOwners() throws Exception {
-        submitted(); customerPayments.claim(42,10L);
+        submitted(); CustomerPayments.claim(jdbc,42,10L);
         jdbc.update("INSERT INTO payment_customer_sync(customer_id) VALUES (10),(20)");
         securedMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/payments/my-transactions").header("X-User-Id","10"))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
@@ -339,7 +339,7 @@ class PaymentDatabaseTest {
     }
     @Test
     void customerHistoryMapsExactAmountAndEmptyPages() throws Exception {
-        submitted();customerPayments.claim(42,9L);jdbc.update("INSERT INTO payment_customer_sync(customer_id) VALUES (9)");
+        submitted();CustomerPayments.claim(jdbc,42,9L);jdbc.update("INSERT INTO payment_customer_sync(customer_id) VALUES (9)");
         jdbc.update("UPDATE payments SET status='CONFIRMED' WHERE booking_id=42");
         var history=customerPayments.history(admin(),0,1);
         assertThat(history.items().getFirst().amount()).isEqualByComparingTo("160000");
@@ -348,7 +348,7 @@ class PaymentDatabaseTest {
         assertThat(customerPayments.history(admin(),1,1).items()).isEmpty();
         assertThat(customerPayments.history(admin(),1,1).total()).isEqualTo(1);
         org.assertj.core.api.Assertions.assertThatThrownBy(()->customerPayments.history(admin(),-1,20)).hasMessageContaining("400");
-        org.assertj.core.api.Assertions.assertThatThrownBy(()->customerPayments.claim(42,20L)).hasMessageContaining("409");
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->CustomerPayments.claim(jdbc,42,20L)).hasMessageContaining("409");
     }
     @Test
     void legacyHistoryReconcilesOnlyAuthoritativeOwnerBookings() throws Exception {
