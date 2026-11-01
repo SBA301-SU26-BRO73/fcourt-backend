@@ -39,6 +39,27 @@ class ManifestTest(unittest.TestCase):
         with self.assertRaises(seed.SeedError): seed.password_hash("plaintext-password")
         with self.assertRaises(seed.SeedError): seed.DockerDatabase("name;bad")
 
+    def test_bank_bin_is_required_and_preserves_leading_zeros(self):
+        for value in [None, 970436, "12345", "1234567", "abcdef", "12345 "]:
+            m = copy.deepcopy(EXAMPLE); m["branches"][0]["bankBin"] = value
+            with self.subTest(value=value), self.assertRaises(seed.SeedError): seed.validate(m, True)
+        m = copy.deepcopy(EXAMPLE); del m["branches"][0]["bankBin"]
+        with self.assertRaises(seed.SeedError): seed.validate(m, True)
+        m = copy.deepcopy(EXAMPLE); m["branches"][0]["bankBin"] = "000001"
+        self.assertEqual(seed.validate(m, True)["branches"][0]["bankBin"], "000001")
+
+    def test_fractional_discounts_use_half_up_cents_and_exact_totals(self):
+        for price, expected in [("10000.01", "2000.00"), ("10000.03", "2000.01"), ("49999.99", "10000.00")]:
+            m = copy.deepcopy(EXAMPLE); m["slotPrice"] = price
+            rows = seed.build_rows(seed.validate(m, True), PUBLIC_DEMO_HASH)
+            payment = rows["payment_db"]["payments"][1]
+            with self.subTest(price=price):
+                self.assertEqual(payment["discount_amount"], Decimal(expected))
+                for row in rows["payment_db"]["payments"]:
+                    self.assertGreaterEqual(row["amount"].as_tuple().exponent, -2)
+                    self.assertGreaterEqual(row["discount_amount"].as_tuple().exponent, -2)
+                    self.assertEqual(row["amount"] + row["discount_amount"], Decimal(price)*2)
+
     def test_rows_have_consistent_refs_totals_slots_and_terminal_states(self):
         m = seed.validate(copy.deepcopy(EXAMPLE), True)
         rows = seed.build_rows(m, PUBLIC_DEMO_HASH)
@@ -77,19 +98,6 @@ class ManifestTest(unittest.TestCase):
         self.assertNotIn("DEMO-ACCOUNT", output.getvalue())
 
 
-    def test_fractional_discounts_use_half_up_cents_and_exact_totals(self):
-        for price, expected in [("10000.01", "2000.00"), ("10000.03", "2000.01"), ("49999.99", "10000.00")]:
-            m = copy.deepcopy(EXAMPLE); m["slotPrice"] = price
-            rows = seed.build_rows(seed.validate(m, True), PUBLIC_DEMO_HASH)
-            payment = rows["payment_db"]["payments"][1]
-            with self.subTest(price=price):
-                self.assertEqual(payment["discount_amount"], Decimal(expected))
-                for row in rows["payment_db"]["payments"]:
-                    self.assertGreaterEqual(row["amount"].as_tuple().exponent, -2)
-                    self.assertGreaterEqual(row["discount_amount"].as_tuple().exponent, -2)
-                    self.assertEqual(row["amount"] + row["discount_amount"], Decimal(price)*2)
-
-
 class PostgreSQLSeedTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -115,6 +123,7 @@ class PostgreSQLSeedTest(unittest.TestCase):
                 cls.db.execute("postgres", f'CREATE DATABASE "{db}";')
                 cls.db.execute(db, (ROOT / service / "database/V1__init_schema.sql").read_text(encoding="utf-8"))
             cls.db.execute("staff_db", (ROOT / "staff-operations-service/src/main/resources/db/migration/V2__staff_management.sql").read_text(encoding="utf-8"))
+            cls.db.execute("facility_db", (HERE / "fixtures/facility_v3.sql").read_text(encoding="utf-8"))
             for service, db in [("auth-service", "auth_db"), ("subscription-service", "subscription_db")]:
                 cls.db.execute(db, (ROOT / service / "database/V2__seed_sample_data.sql").read_text(encoding="utf-8"))
         except BaseException:
@@ -154,6 +163,36 @@ class PostgreSQLSeedTest(unittest.TestCase):
         self.assertEqual(result["booking_slots"], 50)
         self.assertEqual(self.db.execute("auth_db", "SELECT count(*) FROM users WHERE id BETWEEN 200000 AND 209999;"), "9")
 
+    def test_fractional_price_apply_and_rerun_match_persisted_money(self):
+        for index, (price, discount) in enumerate([("10000.01", "2000.00"), ("10000.03", "2000.01"), ("49999.99", "10000.00")]):
+            base = 600000 + index*100000
+            m = self.manifest("test-fraction-"+str(index), base); m["slotPrice"] = price
+            with self.subTest(price=price):
+                first = seed.apply(m, PUBLIC_DEMO_HASH, self.db, allow_fixtures=True)
+                self.assertEqual(seed.apply(m, PUBLIC_DEMO_HASH, self.db, allow_fixtures=True), first)
+                actual = self.db.execute("payment_db", f"SELECT amount::text || '|' || discount_amount::text FROM payments WHERE id={base+1};")
+                amount, reduction = map(Decimal, actual.split("|"))
+                self.assertEqual(reduction, Decimal(discount))
+                self.assertEqual(amount+reduction, Decimal(price)*2)
+                self.assertEqual(self.db.execute("booking_db", f"SELECT count(*) FROM bookings WHERE id BETWEEN {base} AND {base+9999};"), "30")
+
+    def test_bank_bins_are_seeded_with_facility_v3_and_replay_unchanged(self):
+        m = self.manifest("test-bank-bins", 1000000)
+        for index, branch in enumerate(m["branches"]): branch["bankBin"] = str(index+1).zfill(6)
+        first = seed.apply(m, PUBLIC_DEMO_HASH, self.db, allow_fixtures=True)
+        self.assertEqual(seed.apply(m, PUBLIC_DEMO_HASH, self.db, allow_fixtures=True), first)
+        self.assertEqual(self.db.execute("facility_db", "SELECT string_agg(bank_bin, ',' ORDER BY id) FROM branches WHERE id BETWEEN 1000000 AND 1000002;"), "000001,000002,000003")
+
+    def test_missing_facility_bank_schema_fails_before_writing_any_seed_rows(self):
+        m = self.manifest("test-missing-schema", 900000)
+        self.db.execute("facility_db", "ALTER TABLE branches RENAME COLUMN bank_bin TO hidden_bank_bin;")
+        try:
+            with self.assertRaisesRegex(seed.SeedError, "V3 migration"):
+                seed.apply(m, PUBLIC_DEMO_HASH, self.db, allow_fixtures=True)
+            self.assertEqual(self.db.execute("auth_db", "SELECT count(*) FROM users WHERE id BETWEEN 900000 AND 909999;"), "0")
+        finally:
+            self.db.execute("facility_db", "ALTER TABLE branches RENAME COLUMN hidden_bank_bin TO bank_bin;")
+
     def test_existing_non_seed_row_is_never_overwritten(self):
         m = self.manifest("test-collision", 300000)
         self.db.execute("auth_db", "INSERT INTO users(id,email,password_hash,role,status) OVERRIDING SYSTEM VALUE VALUES(300000,'unrelated@fixture.invalid','fixture','ADMIN','ACTIVE');")
@@ -174,20 +213,6 @@ class PostgreSQLSeedTest(unittest.TestCase):
         m["branches"][0]["address"] = address
         seed.apply(m, PUBLIC_DEMO_HASH, self.db, allow_fixtures=True)
         self.assertEqual(self.db.execute("facility_db", "SELECT address FROM branches WHERE id=500000;"), address)
-
-
-    def test_fractional_price_apply_and_rerun_match_persisted_money(self):
-        for index, (price, discount) in enumerate([("10000.01", "2000.00"), ("10000.03", "2000.01"), ("49999.99", "10000.00")]):
-            base = 600000 + index*100000
-            m = self.manifest("test-fraction-"+str(index), base); m["slotPrice"] = price
-            with self.subTest(price=price):
-                first = seed.apply(m, PUBLIC_DEMO_HASH, self.db, allow_fixtures=True)
-                self.assertEqual(seed.apply(m, PUBLIC_DEMO_HASH, self.db, allow_fixtures=True), first)
-                actual = self.db.execute("payment_db", f"SELECT amount::text || '|' || discount_amount::text FROM payments WHERE id={base+1};")
-                amount, reduction = map(Decimal, actual.split("|"))
-                self.assertEqual(reduction, Decimal(discount))
-                self.assertEqual(amount+reduction, Decimal(price)*2)
-                self.assertEqual(self.db.execute("booking_db", f"SELECT count(*) FROM bookings WHERE id BETWEEN {base} AND {base+9999};"), "30")
 
 
 if __name__ == "__main__": unittest.main()
