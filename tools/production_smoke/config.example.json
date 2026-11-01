@@ -1,0 +1,24 @@
+{
+  "scope":"production",
+  "baseUrl":"https://REPLACE_PRODUCTION.invalid",
+  "samples":3,
+  "timeoutSeconds":5,
+  "latencyBudgetMs":1000,
+  "tokenEnv":null,
+  "corsOrigin":null,
+  "protectedPath":null,
+  "healthPaths":{
+    "auth-service":"/health/auth",
+    "subscription-service":"/health/subscription",
+    "facility-service":"/health/facility",
+    "reporting-service":"/health/reporting",
+    "discovery-service":"/health/discovery",
+    "voucher-service":"/health/voucher",
+    "slot-hold-engine":"/health/slot-hold",
+    "booking-service":"/health/booking",
+    "payment-service":"/health/payment",
+    "staff-operations-service":"/health/staff",
+    "pos-retail-service":"/health/pos",
+    "notification-service":"/health/notification"
+  }
+}
