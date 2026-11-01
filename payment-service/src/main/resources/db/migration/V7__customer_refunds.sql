@@ -1,0 +1,10 @@
+ALTER TABLE refund_requests DROP CONSTRAINT refund_requests_status_check;
+UPDATE refund_requests SET status='COMPLETED' WHERE status='CONFIRMED';
+ALTER TABLE refund_requests ADD CONSTRAINT refund_requests_status_check CHECK(status IN ('PENDING','APPROVED','REJECTED','COMPLETED'));
+ALTER TABLE refund_requests ADD COLUMN customer_id bigint;
+ALTER TABLE refund_requests ADD COLUMN branch_id bigint;
+ALTER TABLE refund_requests ADD COLUMN bank_bin varchar(6);
+ALTER TABLE refund_requests ADD COLUMN admin_note varchar(500);
+ALTER TABLE refund_requests ADD COLUMN approved_at timestamptz;
+CREATE INDEX idx_refunds_customer ON refund_requests(customer_id,created_at DESC);
+CREATE INDEX idx_refunds_branch_status ON refund_requests(branch_id,status,created_at);
