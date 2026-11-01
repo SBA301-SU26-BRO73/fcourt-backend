@@ -88,13 +88,18 @@ Rules:
   one request per minute per account is honoured, and a new request invalidates the earlier token. The token
   is random, valid for 30 minutes, works once and is stored only as a SHA-256 hash in
   `password_reset_tokens`. It leaves the service only inside `PasswordResetRequestedEvent`; the notification
-  service builds the emailed link from it. Note that the event payload, token included, stays readable in
-  `auth_outbox` (published rows are not purged yet), so database read access there means access to tokens
-  that are still within their 30 minutes.
+  service builds the emailed link from it. The outbox row is written as `sensitive`: once Kafka acknowledged
+  it, the relay replaces its payload with `{eventId, type, scrubbed: true}`, so the token is readable in
+  `auth_outbox` only until delivery (normally about a second, longer while Kafka is down or events are off).
 - Passwords (`newPassword` included) must also fit BCrypt's 72 UTF-8 bytes, otherwise 400.
 - Reset sets the new password and revokes every refresh token of the user. Change password needs the current
   password, rejects reusing it, revokes every session and returns a fresh `AuthResponse` so the caller stays
-  signed in on this device while other devices have to sign in again.
+  signed in on this device while other devices have to sign in again. Wrong current passwords are throttled
+  per user like login (5 per 15 minutes, then 429 with `Retry-After`).
+- Both reset and change set `users.password_changed_at`; access tokens issued before it (compared to the
+  second, the precision of `iat`) are refused with 401 on every route of this service, at the cost of one
+  primary key lookup per authenticated request. Other services do not run this check, so there an older
+  access token stays valid until it expires (15 minutes).
 - An access token that is already issued stays valid until it expires even if the account is locked later,
   except on `/api/auth/profile` and `/api/super-admin/**`, which re-check the account in the database.
 
@@ -155,8 +160,8 @@ restricted to the notification service.
 
 - Leave `AUTH_JWK_SET_URI` at its default so the service validates its own tokens against its own JWKS.
 - Everything not listed in `SecurityConfiguration` is `denyAll`: add new routes there.
-- `V5` creates `refresh_tokens`, `V6` creates `failed_attempts` and `V7` creates `password_reset_tokens`;
-  start new migrations at `V8`. `UserRole` / `UserStatus` in `com.fcourt.auth.user` are shared.
+- `V5` creates `refresh_tokens`, `V6` creates `failed_attempts`, `V7` creates `password_reset_tokens`, `V8`
+  adds `auth_outbox.sensitive` and `V9` adds `users.password_changed_at`; start new migrations at `V10`. `UserRole` / `UserStatus` in `com.fcourt.auth.user` are shared.
 - `SessionService.closeAll(userId)` revokes every session of a user.
 - Expired and revoked `refresh_tokens` rows, used or expired `password_reset_tokens` rows and old
   `failed_attempts` rows are not purged yet.
