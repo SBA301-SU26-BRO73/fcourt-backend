@@ -139,3 +139,33 @@ The expiry scheduler runs every 60 seconds, in indexed batches of 200 sessions. 
 **Cross-service acceptance:** booking-service consumes PaymentConfirmedEvent (including checkInCode and qrImageUrl) to persist ticket data and confirm the booking; consumes rejection/expiry to cancel and release slots, with idempotent state guards. This service only stores its local copy and emits durable events. It does not directly mutate booking_db or claim unseen booking/slot consumers are implemented. A production rollout needs agreed receipt-vs-expiry coordination and these consumers; owner/guest credentials must remain valid for reading a paid booking after the original hold expires.
 
 Validation: Java 21 `mvn -f payment-service/pom.xml clean verify` — 31 tests including PostgreSQL 16, exact five-minute expiry, submitted-session exemption, sweep/upload race, stable unique code, actual ZXing QR decode, ticket ownership/state gating and no-store PNG APIs. Existing tests cover transactional outbox rollback and real RSA signature validation. Flutter consumes this contract in SCRUM-39. Backend repo has no CI workflow.
+
+## Customer transaction history — SCRUM-68
+
+GET `/api/payments/my-transactions?page=0&size=20` requires a verified JWT with a
+positive numeric subject; issuer/audience/JWKS match admin validation. Never trust
+X-User-Id or query-supplied user IDs. Response `{items,page,size,total}` contains
+transactionCode (PAY-id), booking ID/code, branch/court, exact decimal amount,
+method VIETQR, status SUCCESS/PENDING/REJECTED, occurredAt (receipt submission) and
+receiptImageUrl. Unsubmitted checkout sessions are excluded. Order is submittedAt/id
+descending; bounds page 0..100000, size 1..100. One SQL statement counts/selects the
+same snapshot even for empty pages. Response Cache-Control is no-store.
+
+Flyway V4 adds verified customer ownership and an ownership-migration marker. Receipt
+upload now verifies any supplied Bearer locally, authorizes the same credential with
+booking-service, then claims the payment in the same DB transaction as submission.
+Guest hold tokens never imply a customer identity. Conflicting ownership fails closed.
+
+For legacy receipts, the first history read fetches ALL owner-scoped booking history
+from SCRUM-53 with the same Bearer, validates page/count/identity consistency, then
+claims only matching existing unowned payments and marks migration complete atomically.
+The authority must be live; outage/malformed/changing pagination returns 503 rather
+than a misleading empty history or guessed owner. Retry is safe. Limit is one million
+owned bookings; larger histories need an explicit offline reconciliation job. Guest
+history is not linked by telephone. Deploy updated writers together; legacy writers
+must not continue producing ownerless signed-in receipts after reconciliation.
+
+Validation: Java 21 Maven clean verify, PostgreSQL 16 and four migrations. Added
+coverage checks auth/header spoofing, customer isolation, exact amount/status mapping,
+pagination, ownership conflict, legacy owner resolution and fail-closed upstream
+outage. Live account/booking/payment acceptance remains an integration check.
