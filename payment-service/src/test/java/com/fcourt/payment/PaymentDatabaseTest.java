@@ -34,7 +34,7 @@ class PaymentDatabaseTest {
 
     @org.junit.jupiter.api.BeforeEach
     void clear() {
-        jdbc.execute("TRUNCATE payment_customer_sync,payment_outbox,payments RESTART IDENTITY");
+        jdbc.execute("TRUNCATE refund_requests,payment_customer_sync,payment_outbox,payments RESTART IDENTITY");
         redis.execute((org.springframework.data.redis.core.RedisCallback<Object>)c->{c.serverCommands().flushDb();return null;});
     }
     @Autowired org.springframework.data.redis.core.StringRedisTemplate redis;
@@ -317,7 +317,7 @@ class PaymentDatabaseTest {
                 .isEqualByComparingTo("160000.00");
         assertThat(jdbc.queryForObject("SELECT status FROM payments", String.class)).isEqualTo("PENDING");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM refund_requests", Long.class)).isZero();
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success", Long.class)).isEqualTo(6);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success", Long.class)).isEqualTo(7);
     }
     @Autowired CustomerPayments customerPayments;
     @Test
@@ -465,6 +465,55 @@ class PaymentDatabaseTest {
         nanos.sort(Long::compareTo);
         java.nio.file.Files.writeString(java.nio.file.Path.of("target/status-cache-benchmark.json"),
             "{\"samples\":200,\"p50ms\":"+nanos.get(100)/1e6+",\"p95ms\":"+nanos.get(190)/1e6+",\"note\":\"local warm guest service+Redis, excludes HTTP/TLS/JWT/upstream and production load\"}");
+    }
+
+    RefundService refundService(String state,String amount) throws Exception {
+        var authority=org.mockito.Mockito.mock(PaymentUpstreams.class);
+        var booking=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules().readValue(
+            CheckoutApiTest.BOOKING.replace("PENDING_PAYMENT",state).replace("\"id\":42","\"refundAmount\":"+amount+",\"id\":42"),PaymentUpstreams.Booking.class);
+        org.mockito.Mockito.when(authority.booking(42,"Bearer token",null)).thenReturn(booking);
+        org.mockito.Mockito.when(authority.booking(42,"Bearer other",null)).thenThrow(new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND));
+        return new RefundService(store,authority,tx);
+    }
+    RefundService.Request refundRequest(){return new RefundService.Request(42,"Vietcombank","970436","00123456789","NGUYEN VAN A","Đổi lịch");}
+    @Test
+    void refundUsesServerEntitlementAndDuplicateRequestDoesNotCreateAnother() throws Exception {
+        submitted();jdbc.update("UPDATE payments SET status='CONFIRMED' WHERE booking_id=42");
+        var service=refundService("CANCELLED","80000");
+        var first=service.request(refundRequest(),admin());var retry=service.request(refundRequest(),admin());
+        assertThat(first.amount()).isEqualByComparingTo("80000");assertThat(retry.id()).isEqualTo(first.id());
+        assertThat(first.status()).isEqualTo("PENDING");assertThat(jdbc.queryForObject("SELECT count(*) FROM refund_requests",Long.class)).isEqualTo(1);
+        assertThat(service.state(42,admin()).request().id()).isEqualTo(first.id());
+        var other=org.springframework.security.oauth2.jwt.Jwt.withTokenValue("other").header("alg","RS256").subject("20").build();
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->service.state(42,other)).hasMessageContaining("404");
+    }
+    @Test
+    void refundRejectsUnpaidUncancelledAndExcessiveAmount() throws Exception {
+        submitted();
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->refundService("CANCELLED","80000").request(refundRequest(),admin())).hasMessageContaining("409");
+        jdbc.update("UPDATE payments SET status='CONFIRMED' WHERE booking_id=42");
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->refundService("CONFIRMED","80000").request(refundRequest(),admin())).hasMessageContaining("409");
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->refundService("CANCELLED","200000").request(refundRequest(),admin())).hasMessageContaining("409");
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->refundService("CANCELLED","0").request(refundRequest(),admin())).hasMessageContaining("409");
+    }
+    @Test
+    void concurrentRefundRequestsRemainUnique() throws Exception {
+        submitted();jdbc.update("UPDATE payments SET status='CONFIRMED' WHERE booking_id=42");var service=refundService("CANCELLED","80000");
+        try(var pool=java.util.concurrent.Executors.newFixedThreadPool(2)){
+            var start=new java.util.concurrent.CountDownLatch(1);var calls=new java.util.ArrayList<java.util.concurrent.Future<RefundView>>();
+            for(int n=0;n<2;n++)calls.add(pool.submit(()->{start.await();return service.request(refundRequest(),admin());}));
+            start.countDown();assertThat(calls.get(0).get(10,java.util.concurrent.TimeUnit.SECONDS).id()).isEqualTo(calls.get(1).get(10,java.util.concurrent.TimeUnit.SECONDS).id());
+        }
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM refund_requests",Long.class)).isEqualTo(1);
+    }
+    @Test
+    void refundRouteRequiresAuthAndValidVietnamBankFields() throws Exception {
+        var body="{\"bookingId\":42,\"bankName\":\"VCB\",\"bankBin\":\"970436\",\"bankAccountNumber\":\"bad\",\"bankAccountName\":\"A\",\"reason\":\"test\"}";
+        securedMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/refunds/request").contentType("application/json").content(body))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
+        securedMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/refunds/request").contentType("application/json").content(body)
+            .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt().jwt(j->j.subject("9"))))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
     }
 
 }
