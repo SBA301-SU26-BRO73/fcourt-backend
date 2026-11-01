@@ -13,6 +13,8 @@ import java.util.List;
  */
 public final class SlotTemplateEngine {
     public static final int SLOT_MINUTES = 30;
+    /** Largest value of time_slot_templates.price (numeric(10,2)). */
+    static final BigDecimal MAX_PRICE = new BigDecimal("99999999.99");
 
     public record Block(LocalTime start, LocalTime end) { }
 
@@ -45,12 +47,18 @@ public final class SlotTemplateEngine {
     /** price ?? defaultPricePerHour * durationMinutes / 60 * multiplier, rounded to 2 decimals (VND). */
     public static BigDecimal slotPrice(BigDecimal explicitPrice, BigDecimal defaultPricePerHour,
                                        int durationMinutes, BigDecimal multiplier) {
-        if (explicitPrice != null) return explicitPrice.setScale(2, RoundingMode.HALF_UP);
+        if (explicitPrice != null) return validPrice(explicitPrice.setScale(2, RoundingMode.HALF_UP));
         if (defaultPricePerHour == null) {
             throw new IllegalArgumentException("price is required because the court has no defaultPricePerHour");
         }
         BigDecimal factor = multiplier == null ? BigDecimal.ONE : multiplier;
-        return defaultPricePerHour.multiply(BigDecimal.valueOf(durationMinutes)).multiply(factor)
-                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+        return validPrice(defaultPricePerHour.multiply(BigDecimal.valueOf(durationMinutes)).multiply(factor)
+                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP));
+    }
+
+    private static BigDecimal validPrice(BigDecimal price) {
+        if (price.signum() <= 0) throw new IllegalArgumentException("price must be greater than 0");
+        if (price.compareTo(MAX_PRICE) > 0) throw new IllegalArgumentException("price must be at most " + MAX_PRICE);
+        return price;
     }
 }

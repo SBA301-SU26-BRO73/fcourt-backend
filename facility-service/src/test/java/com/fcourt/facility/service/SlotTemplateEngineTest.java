@@ -47,4 +47,14 @@ class SlotTemplateEngineTest {
         assertThatThrownBy(() -> SlotTemplateEngine.slotPrice(null, null, 30, null))
                 .hasMessageContaining("price is required");
     }
+
+    @Test
+    void rejectsPricesThatAreNotPositiveOrDoNotFitTheColumn() {
+        assertThatThrownBy(() -> SlotTemplateEngine.slotPrice(BigDecimal.ZERO, new BigDecimal("100000"), 30, null))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("greater than 0");
+        assertThatThrownBy(() -> SlotTemplateEngine.slotPrice(null, new BigDecimal("9999999999.99"), 30,
+                new BigDecimal("9999.9999"))).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("at most");
+        assertThat(SlotTemplateEngine.slotPrice(null, new BigDecimal("0.01"), 30, null)).isEqualByComparingTo("0.01");
+    }
 }
