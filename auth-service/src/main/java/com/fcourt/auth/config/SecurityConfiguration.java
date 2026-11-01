@@ -87,6 +87,8 @@ public class SecurityConfiguration {
                         .requestMatchers("/api/auth/password/forgot", "/api/auth/password/reset").permitAll()
                         .requestMatchers("/api/auth/profile", "/api/auth/password").authenticated()
                         .requestMatchers("/api/super-admin/**").hasRole(UserRole.SUPER_ADMIN.name())
+                        .requestMatchers("/api/auth/me").authenticated()
+                        .requestMatchers("/api/internal/staff-accounts", "/api/internal/staff-accounts/**").hasRole(UserRole.ADMIN.name())
                         .anyRequest().denyAll())
                 .oauth2ResourceServer(oauth -> oauth
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(converter))
