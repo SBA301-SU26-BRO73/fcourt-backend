@@ -67,6 +67,6 @@ class StaffBootstrapTest {
                 .isEqualTo(7);
         assertThat(jdbc.queryForObject(
                 "SELECT count(*) FROM flyway_schema_history WHERE success", Integer.class))
-                .isEqualTo(4);
+                .isEqualTo(5);
     }
 }

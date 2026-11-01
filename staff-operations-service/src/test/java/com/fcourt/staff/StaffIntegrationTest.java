@@ -90,6 +90,8 @@ class StaffIntegrationTest {
 
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
+        registry.add("STAFF_OFFLINE_SIGNING_KEY",()->"fixture-offline-signing-key-not-for-production");
+        registry.add("STAFF_BOOKING_SERVICE_TOKEN",()->"fixture-staff-booking-token-not-for-production");
         registry.add("spring.datasource.url", DATABASE::getJdbcUrl);
         registry.add("spring.datasource.username", DATABASE::getUsername);
         registry.add("spring.datasource.password", DATABASE::getPassword);
@@ -165,6 +167,63 @@ class StaffIntegrationTest {
     }
 
     @Test
+    void offlineSnapshotHashesCodesAndReplayIsAtomicAndIdempotent() {
+        create(UUID.randomUUID(),body(7));
+        var snapshot=call(HttpMethod.GET,"/api/staff/offline/tickets",null,token("100","STAFF"),null);
+        assertThat(snapshot.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(snapshot.getBody().toString()).doesNotContain("offline-ticket");
+        String permit=snapshot.getBody().path("tickets").get(0).path("permit").asText();
+        var request=Map.of("permit",permit,"occurredAt",Instant.now().toString());
+        UUID key=UUID.randomUUID();
+        var first=call(HttpMethod.POST,"/api/staff/check-in/offline",request,token("100","STAFF"),key);
+        assertThat(first.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(call(HttpMethod.POST,"/api/staff/check-in/offline",request,token("100","STAFF"),key).getBody()).isEqualTo(first.getBody());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_check_in_audit WHERE channel='OFFLINE'",Integer.class)).isEqualTo(1);
+        assertThat(call(HttpMethod.POST,"/api/staff/check-in/offline",Map.of("permit",permit+"x","occurredAt",Instant.now().toString()),
+                token("100","STAFF"),UUID.randomUUID()).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void walkInForwardsAndFingerprintsGuestName() {
+        create(UUID.randomUUID(), body(7));
+        var request = new java.util.HashMap<>(walkInBody());
+        request.put("guestName", "Counter Guest");
+        UUID key = UUID.randomUUID();
+        assertThat(walkIn(key, request).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(WALK_IN_REQUESTS.values()).anyMatch(value -> value.contains("Counter Guest"));
+        request.put("guestName", "Another Guest");
+        assertThat(walkIn(key, request).getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void checkoutPreviewIsScopedAndDoesNotCompleteBooking() {
+        create(UUID.randomUUID(), body(7));
+        var result = call(HttpMethod.GET, "/api/staff/bookings/43/checkout-preview", null, token("100", "STAFF"), null);
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody().path("surchargeAmount").decimalValue()).isEqualByComparingTo("5000");
+        assertThat(COMPLETED.get()).isFalse();
+        wrongBranch = true;
+        assertThat(call(HttpMethod.GET, "/api/staff/bookings/43/checkout-preview", null,
+                token("100", "STAFF"), null).getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    @Test
+    void ticketPreviewIsReadOnlyAndScopedToActiveStaff() {
+        create(UUID.randomUUID(), body(7));
+        var response = call(HttpMethod.POST, "/api/staff/check-in/preview",
+                Map.of("checkInCode", "ticket"), token("100", "STAFF"), null);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().path("bookingId").asLong()).isEqualTo(42);
+        assertThat(CHECKED_IN.get()).isFalse();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_booking_commands", Integer.class)).isZero();
+        wrongBranch = true;
+        assertThat(call(HttpMethod.POST, "/api/staff/check-in/preview", Map.of("checkInCode", "ticket"),
+                token("100", "STAFF"), null).getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(call(HttpMethod.POST, "/api/staff/check-in/preview", Map.of("checkInCode", "ticket"),
+                token("1", "ADMIN"), null).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
     void repeatedCreateIsIdempotentAndDoesNotStoreCredentials() {
         UUID command = UUID.randomUUID();
         var first = create(command, body(7));
@@ -176,6 +235,40 @@ class StaffIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_commands", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForList("SELECT column_name FROM information_schema.columns WHERE table_schema = 'public'"))
                 .noneMatch(row -> row.get("column_name").toString().contains("password"));
+    }
+
+    @Test
+    void reactivationRestoresOnlyTheOwnedAssignmentAndReplays() {
+        long id = create(UUID.randomUUID(), body(7)).getBody().path("id").asLong();
+        call(HttpMethod.DELETE, "/api/admin/staff/" + id, null, token("1", "ADMIN"), UUID.randomUUID());
+        var managed=call(HttpMethod.GET,"/api/admin/staff/accounts/100?branchId=7",null,token("1","ADMIN"),null);
+        assertThat(managed.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(managed.getBody().path("active").asBoolean()).isFalse();
+        assertThat(call(HttpMethod.GET,"/api/admin/staff/accounts/100?branchId=8",null,token("1","ADMIN"),null).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        UUID key = UUID.randomUUID();
+        String path = "/api/admin/staff/" + id + "/reactivate";
+        assertThat(call(HttpMethod.POST, path, null, token("2", "ADMIN"), UUID.randomUUID()).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(call(HttpMethod.POST, path, null, token("100", "STAFF"), UUID.randomUUID()).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        var first = call(HttpMethod.POST, path, null, token("1", "ADMIN"), key);
+        assertThat(first.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(first.getBody().path("active").asBoolean()).isTrue();
+        assertThat(call(HttpMethod.POST, path, null, token("1", "ADMIN"), key).getBody()).isEqualTo(first.getBody());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_audit WHERE action='REACTIVATE'", Integer.class))
+                .isEqualTo(1);
+        assertThat(call(HttpMethod.GET, "/api/staff/me", null, token("100", "STAFF"), null).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void reactivationFailsClosedWhenIdentityUnavailable() {
+        long id = create(UUID.randomUUID(), body(7)).getBody().path("id").asLong();
+        call(HttpMethod.DELETE, "/api/admin/staff/" + id, null, token("1", "ADMIN"), UUID.randomUUID());
+        failure = 503;
+        assertThat(call(HttpMethod.POST, "/api/admin/staff/" + id + "/reactivate", null,
+                token("1", "ADMIN"), UUID.randomUUID()).getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(jdbc.queryForObject("SELECT deleted_at IS NOT NULL FROM staff WHERE id=?", Boolean.class, id)).isTrue();
     }
 
     @Test
@@ -505,7 +598,7 @@ class StaffIntegrationTest {
     }
 
     ResponseEntity<JsonNode> checkout(UUID key) {
-        return call(HttpMethod.PUT, "/api/staff/bookings/43/checkout", null, token("100", "STAFF"), key);
+        return call(HttpMethod.PUT, "/api/staff/bookings/43/checkout", Map.of("expectedSurcharge",0,"expectedTotal",20000), token("100", "STAFF"), key);
     }
 
     static Map<String, Object> walkInBody() {
@@ -745,7 +838,15 @@ class StaffIntegrationTest {
         try {
             var jwt = SignedJWT.parse(exchange.getRequestHeaders().getFirst("Authorization").substring(7)).getJWTClaimsSet();
             long actor = Long.parseLong(jwt.getSubject());
-            if (path.startsWith("/api/internal/branches/")) {
+            if (path.endsWith("/offline-tickets")) {
+                send(exchange,200,Map.of("branchId",7,"tickets",List.of(Map.of("bookingId",42,"courtName","Court 1",
+                        "customerName","Guest","checkInCode","offline-ticket","date",LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).toString(),
+                        "slotStart","00:00","slotEnd","00:00","status","CONFIRMED"))));
+            } else if(path.equals("/api/internal/bookings/offline-check-in")) {
+                var request=JSON.readTree(exchange.getRequestBody());
+                send(exchange,200,Map.of("bookingId",request.path("bookingId").asLong(),"branchId",7,"date",request.path("date").asText(),
+                        "status","CHECKED_IN","checkedInAt",request.path("checkedInAt").asText()));
+            } else if (path.startsWith("/api/internal/branches/")) {
                 if (bookingFailure != 0) { send(exchange, bookingFailure, Map.of()); return; }
                 if (bulkSchedule) {
                     Map<String, String> query = new java.util.HashMap<>();
@@ -844,6 +945,13 @@ class StaffIntegrationTest {
                 send(exchange, 200, Map.of("id", branch, "adminId", branch == 7 ? 1 : 2,
                         "status", branchActive ? "ACTIVE" : "INACTIVE", "name", "Fixture venue",
                         "address", "Fixture address", "bankBin", "000000"));
+            } else if (path.equals("/api/internal/bookings/43/checkout-preview")) {
+                send(exchange, 200, Map.of("bookingId", 43, "branchId", wrongBranch ? 8 : 7,
+                        "surchargeAmount", 5000, "totalAmount", 205000));
+            } else if (path.equals("/api/internal/bookings/check-in/preview")) {
+                send(exchange, 200, Map.of("bookingId", 42, "branchId", wrongBranch ? 8 : 7,
+                        "courtId", 21, "courtName", "Court 1", "date", LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).toString(),
+                        "slotStart", "09:00", "slotEnd", "09:30", "status", "CONFIRMED", "customerName", "Guest"));
             } else if (path.equals("/api/internal/staff-accounts")) {
                 CREATES.incrementAndGet();
                 JsonNode body = JSON.readTree(exchange.getRequestBody());
@@ -853,7 +961,8 @@ class StaffIntegrationTest {
                         "role", "STAFF", "status", "ACTIVE"));
                 send(exchange, 201, account);
             } else if (path.startsWith("/api/internal/staff-accounts/")) {
-                long id = Long.parseLong(path.substring(path.lastIndexOf('/') + 1));
+                String accountPath = path.replace("/reactivate", "");
+                long id = Long.parseLong(accountPath.substring(accountPath.lastIndexOf('/') + 1));
                 boolean delete = exchange.getRequestMethod().equals("DELETE");
                 JsonNode body = delete ? JSON.createObjectNode() : JSON.readTree(exchange.getRequestBody());
                 send(exchange, 200, Map.of("id", id, "email", "staff@example.com", "fullName", body.path("fullName").asText("Staff"),
