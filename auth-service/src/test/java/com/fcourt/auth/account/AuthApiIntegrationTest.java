@@ -245,6 +245,43 @@ class AuthApiIntegrationTest {
     }
 
     @Test
+    void repeatedWrongPasswordsLockTheEmailTemporarilyEvenForTheRightPassword() throws Exception {
+        String email = uniqueEmail();
+        register(email, uniquePhone());
+        for (int attempt = 0; attempt < 5; attempt++) {
+            mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                            .content(credentials(email, "wrong-password")))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(credentials(email, PASSWORD)))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .exists("Retry-After"));
+        // Once the lock is over the right password works again and clears the count.
+        jdbc.update("UPDATE failed_attempts SET locked_until = now() - interval '1 second' WHERE attempt_key = ?",
+                "login:" + email);
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(credentials(email, PASSWORD)))
+                .andExpect(status().isOk());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM failed_attempts WHERE attempt_key = ?", Integer.class,
+                "login:" + email)).isZero();
+    }
+
+    @Test
+    void anUnknownEmailIsThrottledTheSameWaySo429RevealsNothing() throws Exception {
+        String email = uniqueEmail();
+        for (int attempt = 0; attempt < 5; attempt++) {
+            mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                            .content(credentials(email, "wrong-password")))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content(credentials(email, "wrong-password")))
+                .andExpect(status().isTooManyRequests());
+    }
+
+    @Test
     void jwksEndpointIsPublicAndExposesNoPrivateKeyMaterial() throws Exception {
         mvc.perform(get("/.well-known/jwks.json"))
                 .andExpect(status().isOk())

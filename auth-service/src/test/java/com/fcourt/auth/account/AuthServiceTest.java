@@ -48,6 +48,7 @@ class AuthServiceTest {
     SessionService sessions;
     DocumentStorage storage;
     PasswordEncoder encoder;
+    FailedAttemptThrottle throttle;
     AuthService service;
 
     @BeforeEach
@@ -56,7 +57,8 @@ class AuthServiceTest {
         sessions = mock(SessionService.class);
         storage = mock(DocumentStorage.class);
         encoder = spy(new BCryptPasswordEncoder(4));
-        service = new AuthService(accounts, sessions, encoder, storage, Clock.fixed(NOW, ZoneOffset.UTC));
+        throttle = mock(FailedAttemptThrottle.class);
+        service = new AuthService(accounts, sessions, encoder, storage, throttle, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
@@ -184,6 +186,34 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> service.registerCourtOwner(owner(List.of(file("a.pdf", "application/pdf", 10)), null)))
                 .satisfies(error -> assertApi(error, HttpStatus.SERVICE_UNAVAILABLE, "Document storage is unavailable"));
+    }
+
+    @Test
+    void lockedLoginAnswers429BeforeThePasswordIsChecked() {
+        org.mockito.Mockito.doThrow(new com.fcourt.auth.common.RetryLaterException(FailedAttemptThrottle.LOCKED,
+                java.time.Duration.ofMinutes(10))).when(throttle).checkAllowed("login:customer@demo.com");
+
+        assertThatThrownBy(() -> service.login(new LoginRequest(" Customer@Demo.com", PASSWORD)))
+                .satisfies(error -> assertApi(error, HttpStatus.TOO_MANY_REQUESTS, FailedAttemptThrottle.LOCKED));
+        verifyNoInteractions(accounts, sessions);
+        verify(encoder, never()).matches(anyString(), anyString());
+    }
+
+    @Test
+    void failedLoginsAreCountedPerEmailKnownOrNotAndASuccessClearsTheCount() {
+        var active = accountWithPassword(7, "customer@demo.com", "CUSTOMER", "ACTIVE");
+        when(accounts.findByEmail("customer@demo.com")).thenReturn(Optional.of(active));
+        when(accounts.findByEmail("ghost@demo.com")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.login(new LoginRequest("customer@demo.com", "wrong-password")))
+                .isInstanceOf(ApiException.class);
+        assertThatThrownBy(() -> service.login(new LoginRequest("ghost@demo.com", PASSWORD)))
+                .isInstanceOf(ApiException.class);
+        service.login(new LoginRequest("customer@demo.com", PASSWORD));
+
+        verify(throttle).recordFailure("login:customer@demo.com");
+        verify(throttle).recordFailure("login:ghost@demo.com");
+        verify(throttle).recordSuccess("login:customer@demo.com");
     }
 
     @Test

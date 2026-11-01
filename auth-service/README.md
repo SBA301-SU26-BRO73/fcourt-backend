@@ -68,6 +68,10 @@ Rules:
   they cannot sign in until a super admin approves them. Documents: JPEG, PNG, WebP or PDF, 5 MB each; a failed
   upload rolls the whole registration back.
 - Login gives the same 401 for an unknown email and a wrong password (and spends the same hashing time).
+- 5 wrong passwords for one email within 15 minutes lock that email for 15 minutes: login answers 429 with
+  `Retry-After`, even with the right password. Unknown emails are counted the same way, so a 429 does not
+  reveal whether an email exists. A correct password clears the count. Settings: `auth.attempts.*`. The lock
+  is temporary on purpose; anyone can trigger it for an email, so it may delay the owner by 15 minutes.
   Only after the password is correct does it refuse `PENDING_APPROVAL`, `REJECTED`, `LOCKED` and `INACTIVE`
   accounts with 403 and a reason.
 - Access tokens are RS256 with `iss`, `aud`, numeric `sub`, `roles` and a 15 minute lifetime. Refresh tokens
@@ -129,4 +133,4 @@ facility/subscription services can consume it to enable branch creation for the 
 - `V5` creates `refresh_tokens`; start new migrations at `V6`. `UserRole` / `UserStatus` in
   `com.fcourt.auth.user` are shared.
 - `SessionService.closeAll(userId)` revokes every session of a user (use it when the password changes).
-- Expired and revoked `refresh_tokens` rows are not purged yet.
+- Expired and revoked `refresh_tokens` rows and old `failed_attempts` rows are not purged yet.

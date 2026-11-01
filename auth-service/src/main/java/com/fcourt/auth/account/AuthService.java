@@ -39,16 +39,18 @@ public class AuthService {
     private final SessionService sessions;
     private final PasswordEncoder passwordEncoder;
     private final DocumentStorage storage;
+    private final FailedAttemptThrottle throttle;
     private final Clock clock;
     /** Verified against when the email is unknown, so login timing does not reveal which emails exist. */
     private final String timingEqualiserHash;
 
     AuthService(AccountRepository accounts, SessionService sessions, PasswordEncoder passwordEncoder,
-                DocumentStorage storage, Clock clock) {
+                DocumentStorage storage, FailedAttemptThrottle throttle, Clock clock) {
         this.accounts = accounts;
         this.sessions = sessions;
         this.passwordEncoder = passwordEncoder;
         this.storage = storage;
+        this.throttle = throttle;
         this.clock = clock;
         this.timingEqualiserHash = passwordEncoder.encode("timing-equaliser");
     }
@@ -75,13 +77,22 @@ public class AuthService {
                 "Registration submitted. You can sign in once a super admin approves it.");
     }
 
+    /**
+     * Counts failures per email, known or not, so the 429 cannot be used to find registered emails.
+     * Not transactional: the failure count must commit although the login fails.
+     */
     public AuthResponse login(LoginRequest request) {
-        var account = accounts.findByEmail(normaliseEmail(request.email())).orElse(null);
+        String email = normaliseEmail(request.email());
+        String attemptKey = FailedAttemptThrottle.loginKey(email);
+        throttle.checkAllowed(attemptKey);
+        var account = accounts.findByEmail(email).orElse(null);
         boolean matches = passwordEncoder.matches(request.password(),
                 account == null ? timingEqualiserHash : account.passwordHash());
         if (account == null || !matches) {
+            throttle.recordFailure(attemptKey);
             throw ApiException.unauthorized("Invalid email or password");
         }
+        throttle.recordSuccess(attemptKey);
         // Status is only revealed after the password proved who is asking.
         AccountPolicy.requireActive(account);
         return sessions.open(account);
