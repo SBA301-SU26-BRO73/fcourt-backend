@@ -179,6 +179,36 @@ class StaffIntegrationTest {
     }
 
     @Test
+    void reactivationRestoresOnlyTheOwnedAssignmentAndReplays() {
+        long id = create(UUID.randomUUID(), body(7)).getBody().path("id").asLong();
+        call(HttpMethod.DELETE, "/api/admin/staff/" + id, null, token("1", "ADMIN"), UUID.randomUUID());
+        UUID key = UUID.randomUUID();
+        String path = "/api/admin/staff/" + id + "/reactivate";
+        assertThat(call(HttpMethod.POST, path, null, token("2", "ADMIN"), UUID.randomUUID()).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(call(HttpMethod.POST, path, null, token("100", "STAFF"), UUID.randomUUID()).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        var first = call(HttpMethod.POST, path, null, token("1", "ADMIN"), key);
+        assertThat(first.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(first.getBody().path("active").asBoolean()).isTrue();
+        assertThat(call(HttpMethod.POST, path, null, token("1", "ADMIN"), key).getBody()).isEqualTo(first.getBody());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_audit WHERE action='REACTIVATE'", Integer.class))
+                .isEqualTo(1);
+        assertThat(call(HttpMethod.GET, "/api/staff/me", null, token("100", "STAFF"), null).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void reactivationFailsClosedWhenIdentityUnavailable() {
+        long id = create(UUID.randomUUID(), body(7)).getBody().path("id").asLong();
+        call(HttpMethod.DELETE, "/api/admin/staff/" + id, null, token("1", "ADMIN"), UUID.randomUUID());
+        failure = 503;
+        assertThat(call(HttpMethod.POST, "/api/admin/staff/" + id + "/reactivate", null,
+                token("1", "ADMIN"), UUID.randomUUID()).getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(jdbc.queryForObject("SELECT deleted_at IS NOT NULL FROM staff WHERE id=?", Boolean.class, id)).isTrue();
+    }
+
+    @Test
     void sameKeyWithDifferentMetadataConflicts() {
         UUID key = UUID.randomUUID();
         assertThat(create(key, body(7)).getStatusCode()).isEqualTo(HttpStatus.CREATED);
@@ -853,7 +883,8 @@ class StaffIntegrationTest {
                         "role", "STAFF", "status", "ACTIVE"));
                 send(exchange, 201, account);
             } else if (path.startsWith("/api/internal/staff-accounts/")) {
-                long id = Long.parseLong(path.substring(path.lastIndexOf('/') + 1));
+                String accountPath = path.replace("/reactivate", "");
+                long id = Long.parseLong(accountPath.substring(accountPath.lastIndexOf('/') + 1));
                 boolean delete = exchange.getRequestMethod().equals("DELETE");
                 JsonNode body = delete ? JSON.createObjectNode() : JSON.readTree(exchange.getRequestBody());
                 send(exchange, 200, Map.of("id", id, "email", "staff@example.com", "fullName", body.path("fullName").asText("Staff"),
