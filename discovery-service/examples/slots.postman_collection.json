@@ -1,0 +1,35 @@
+{
+  "info": {"name": "SCRUM-22 court slots", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"},
+  "variable": [{"key": "baseUrl", "value": "http://localhost:8085"}, {"key": "sampleDate", "value": "2030-01-01"}],
+  "item": [
+    {
+      "name": "Future slots (seed Redis hold for slot 38)",
+      "request": {"method": "GET", "url": "{{baseUrl}}/api/public/courts/1/slots?date={{sampleDate}}"},
+      "event": [{"listen": "test", "script": {"exec": [
+        "pm.test('success without JWT', () => pm.response.to.have.status(200));",
+        "pm.test('no-store', () => pm.expect(pm.response.headers.get('Cache-Control')).to.eql('no-store'));",
+        "pm.test('48 sample slots with prices and states', () => { const slots = pm.response.json(); pm.expect(slots).to.have.lengthOf(48); pm.expect(slots[36].status).to.eql('BOOKED'); pm.expect(slots[38].status).to.eql('OUT_OF_SERVICE'); slots.forEach(s => { pm.expect(s).to.have.property('price'); pm.expect(['AVAILABLE','HOLD','BOOKED','OUT_OF_SERVICE','EXPIRED']).to.include(s.status); pm.expect(s).not.to.have.property('holdToken'); }); });"
+      ]}}]
+    },
+    {
+      "name": "Past slots are EXPIRED",
+      "request": {"method": "GET", "url": "{{baseUrl}}/api/public/courts/1/slots?date=2000-01-01"},
+      "event": [{"listen": "test", "script": {"exec": ["pm.test('all expired', () => { pm.response.to.have.status(200); pm.response.json().forEach(s => pm.expect(s.status).to.eql('EXPIRED')); });"]}}]
+    },
+    {
+      "name": "Missing court (fixture supports only court 1)",
+      "request": {"method": "GET", "url": "{{baseUrl}}/api/public/courts/999/slots?date={{sampleDate}}"},
+      "event": [{"listen": "test", "script": {"exec": ["pm.test('404', () => pm.response.to.have.status(404));"]}}]
+    },
+    {
+      "name": "Invalid date",
+      "request": {"method": "GET", "url": "{{baseUrl}}/api/public/courts/1/slots?date=2030-02-30"},
+      "event": [{"listen": "test", "script": {"exec": ["pm.test('400', () => pm.response.to.have.status(400));"]}}]
+    },
+    {
+      "name": "Invalid court ID",
+      "request": {"method": "GET", "url": "{{baseUrl}}/api/public/courts/0/slots?date={{sampleDate}}"},
+      "event": [{"listen": "test", "script": {"exec": ["pm.test('400', () => pm.response.to.have.status(400));"]}}]
+    }
+  ]
+}
