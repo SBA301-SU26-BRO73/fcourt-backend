@@ -43,6 +43,12 @@ class PaymentSecurity {
                 .build();
     }
     @Bean @Order(2)
+    SecurityFilterChain historySecurity(HttpSecurity http) throws Exception {
+        return http.securityMatcher("/api/payments/my-transactions").csrf(c->c.disable())
+            .sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(a->a.anyRequest().authenticated()).oauth2ResourceServer(o->o.jwt(j->{})).build();
+    }
+    @Bean @Order(3)
     SecurityFilterChain customerSecurity(HttpSecurity http) throws Exception {
         // Customer and guest authorization is delegated to the booking authority per request.
         return http.csrf(csrf -> csrf.disable()).sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
