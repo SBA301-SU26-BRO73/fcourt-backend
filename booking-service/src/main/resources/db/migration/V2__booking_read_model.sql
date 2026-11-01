@@ -12,3 +12,4 @@ ALTER TABLE bookings ADD COLUMN payment_status varchar(25);
 CREATE INDEX idx_bookings_customer_history ON bookings(customer_id,created_at DESC,id DESC);
 CREATE TABLE booking_inbox(event_id uuid PRIMARY KEY, received_at timestamptz NOT NULL DEFAULT now());
 -- Snapshots are populated by booking creation/facility integration; legacy rows stay readable.
+CREATE INDEX idx_booking_slots_booking ON booking_slots(booking_id,slot_start,id);
