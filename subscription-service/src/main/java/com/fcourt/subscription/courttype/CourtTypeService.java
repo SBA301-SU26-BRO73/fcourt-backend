@@ -46,7 +46,8 @@ public class CourtTypeService {
         long id;
         try {
             id = courtTypes.insert(name, blankToNull(request.nameEn()), blankToNull(request.description()),
-                    blankToNull(request.icon()), blankToNull(request.color()), isActive(request), clock.instant());
+                    blankToNull(request.icon()), blankToNull(request.color()), activeOr(request, true),
+                    clock.instant());
         } catch (DuplicateKeyException race) {
             throw ApiException.conflict(NAME_TAKEN);
         }
@@ -55,14 +56,15 @@ public class CourtTypeService {
 
     @Transactional
     public CourtTypeResponse update(long id, CourtTypeRequest request) {
-        get(id);
+        var current = get(id);
         String name = request.name().strip();
         if (courtTypes.nameInUse(name, id)) {
             throw ApiException.conflict(NAME_TAKEN);
         }
         try {
             courtTypes.update(id, name, blankToNull(request.nameEn()), blankToNull(request.description()),
-                    blankToNull(request.icon()), blankToNull(request.color()), isActive(request), clock.instant());
+                    blankToNull(request.icon()), blankToNull(request.color()), activeOr(request, current.active()),
+                    clock.instant());
         } catch (DuplicateKeyException race) {
             throw ApiException.conflict(NAME_TAKEN);
         }
@@ -75,8 +77,9 @@ public class CourtTypeService {
         courtTypes.softDelete(id, clock.instant());
     }
 
-    private static boolean isActive(CourtTypeRequest request) {
-        return request.active() == null || request.active();
+    /** An omitted {@code active} means true on create and keeps the current value on update. */
+    private static boolean activeOr(CourtTypeRequest request, boolean fallback) {
+        return request.active() == null ? fallback : request.active();
     }
 
     private static String blankToNull(String value) {

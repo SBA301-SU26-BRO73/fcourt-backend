@@ -121,6 +121,15 @@ class CourtTypeServiceTest {
     }
 
     @Test
+    void updateWithoutTheActiveFlagKeepsTheCurrentValueInsteadOfReEnablingTheType() {
+        when(courtTypes.find(1)).thenReturn(Optional.of(courtType(1, "Volleyball", false)));
+
+        service.update(1, request("Volleyball"));
+
+        verify(courtTypes).update(1, "Volleyball", null, null, null, null, false, NOW);
+    }
+
+    @Test
     void updateRejectsANameTakenByAnotherType() {
         when(courtTypes.find(1)).thenReturn(Optional.of(courtType(1, "Football", true)));
         when(courtTypes.nameInUse("Tennis", 1)).thenReturn(true);
