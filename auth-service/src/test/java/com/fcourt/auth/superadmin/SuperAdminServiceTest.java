@@ -130,13 +130,26 @@ class SuperAdminServiceTest {
     }
 
     @Test
+    void lockingRequiresReasonLikeTheMonolith() {
+        when(users.findForUpdate(6)).thenReturn(Optional.of(user(6, "CUSTOMER", "ACTIVE")));
+
+        for (String blank : new String[] {null, "", "   "}) {
+            assertThatThrownBy(() -> service.toggleStatus(ACTOR, 6, blank))
+                    .isInstanceOfSatisfying(ApiException.class,
+                            e -> assertThat(e.status()).isEqualTo(HttpStatus.BAD_REQUEST));
+        }
+        verify(users, never()).updateStatus(anyLong(), anyString(), any());
+        verify(users, never()).logAction(eq(6L), anyLong(), anyString(), any(), anyString(), any(), any());
+    }
+
+    @Test
     void toggleRefusesSuperAdminsAndNonToggleableStatuses() {
         when(users.findForUpdate(ACTOR)).thenReturn(Optional.of(user(ACTOR, "SUPER_ADMIN", "ACTIVE")));
         when(users.findForUpdate(17)).thenReturn(Optional.of(user(17, "ADMIN", "PENDING_APPROVAL")));
 
-        assertThatThrownBy(() -> service.toggleStatus(ACTOR, ACTOR, null))
+        assertThatThrownBy(() -> service.toggleStatus(ACTOR, ACTOR, "x"))
                 .isInstanceOfSatisfying(ApiException.class, e -> assertThat(e.status()).isEqualTo(HttpStatus.CONFLICT));
-        assertThatThrownBy(() -> service.toggleStatus(ACTOR, 17, null))
+        assertThatThrownBy(() -> service.toggleStatus(ACTOR, 17, "x"))
                 .isInstanceOfSatisfying(ApiException.class, e -> assertThat(e.status()).isEqualTo(HttpStatus.CONFLICT));
         verify(users, never()).updateStatus(anyLong(), anyString(), any());
     }

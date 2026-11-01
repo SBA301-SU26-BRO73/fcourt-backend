@@ -86,6 +86,9 @@ public class SuperAdminService {
         String next;
         String action;
         if (UserStatus.ACTIVE.name().equals(user.status())) {
+            if (normalise(reason) == null) {
+                throw ApiException.badRequest("reason is required to lock an account");
+            }
             next = UserStatus.LOCKED.name();
             action = LOCK;
         } else if (UserStatus.LOCKED.name().equals(user.status())) {
