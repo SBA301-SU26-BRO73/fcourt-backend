@@ -1,6 +1,7 @@
 package com.fcourt.subscription;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -30,12 +31,15 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -192,6 +196,48 @@ class CatalogApiIntegrationTest {
         mvc.perform(put("/api/court-types/" + second).header("Authorization", bearer(SUPER_ADMIN, "SUPER_ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON).content(courtTypeJson(first)))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void namesAreUniqueIgnoringCaseButATypeMayChangeTheCaseOfItsOwnName() throws Exception {
+        String name = unique("Squash");
+        long id = createCourtType(courtTypeJson(name)).get("id").asLong();
+        String shouted = name.toUpperCase(Locale.ROOT);
+
+        mvc.perform(post("/api/court-types").header("Authorization", bearer(SUPER_ADMIN, "SUPER_ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON).content(courtTypeJson(shouted)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Court type name already exists"));
+        mvc.perform(put("/api/court-types/" + id).header("Authorization", bearer(SUPER_ADMIN, "SUPER_ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON).content(courtTypeJson(shouted)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value(shouted));
+
+        String plan = unique("Bronze");
+        mvc.perform(post("/api/subscription-plans").header("Authorization", bearer(SUPER_ADMIN, "SUPER_ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON).content(planJson(plan, "[]", "true")))
+                .andExpect(status().isCreated());
+        mvc.perform(post("/api/subscription-plans").header("Authorization", bearer(SUPER_ADMIN, "SUPER_ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(planJson(plan.toUpperCase(Locale.ROOT), "[]", "true")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Subscription plan name already exists"));
+        // The database enforces the same rule for writers that bypass the service.
+        assertThatThrownBy(() -> jdbc.update("INSERT INTO court_types (name) VALUES (?)",
+                shouted.toLowerCase(Locale.ROOT))).isInstanceOf(DuplicateKeyException.class);
+    }
+
+    @Test
+    void aPlanPricedZeroIsRejectedByTheApiAndTheDatabase() throws Exception {
+        mvc.perform(post("/api/subscription-plans").header("Authorization", bearer(SUPER_ADMIN, "SUPER_ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"%s\",\"monthlyPrice\":0,\"maxBranches\":1,\"maxCourts\":1}"
+                                .formatted(unique("Free"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("monthlyPrice"));
+        assertThatThrownBy(() -> jdbc.update("INSERT INTO subscription_plans (name, max_courts, max_branches, "
+                + "monthly_price) VALUES (?, 1, 1, 0)", unique("Free")))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test

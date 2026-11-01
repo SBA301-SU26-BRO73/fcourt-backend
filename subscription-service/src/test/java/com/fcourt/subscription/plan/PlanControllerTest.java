@@ -92,10 +92,23 @@ class PlanControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors[?(@.field=='name')].message").value("name is required"))
                 .andExpect(jsonPath("$.errors[?(@.field=='monthlyPrice')].message")
-                        .value("monthlyPrice must not be negative"))
+                        .value("monthlyPrice must be positive; omit it if the plan is not sold monthly"))
                 .andExpect(jsonPath("$.errors[?(@.field=='maxBranches')].message")
                         .value("maxBranches must be at least 1"))
                 .andExpect(jsonPath("$.errors[?(@.field=='maxCourts')].message").value("maxCourts is required"));
+        verify(service, never()).create(any());
+    }
+
+    @Test
+    void aZeroPriceIsRejectedBecauseTheFreeTierIsTheStarterNotAPlan() throws Exception {
+        mvc.perform(post("/api/subscription-plans").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Free\",\"monthlyPrice\":0,\"yearlyPrice\":0,\"maxBranches\":1,"
+                                + "\"maxCourts\":1}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[?(@.field=='monthlyPrice')].message")
+                        .value("monthlyPrice must be positive; omit it if the plan is not sold monthly"))
+                .andExpect(jsonPath("$.errors[?(@.field=='yearlyPrice')].message")
+                        .value("yearlyPrice must be positive; omit it if the plan is not sold yearly"));
         verify(service, never()).create(any());
     }
 

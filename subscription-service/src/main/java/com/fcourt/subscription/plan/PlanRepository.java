@@ -57,10 +57,14 @@ class PlanRepository {
         return jdbc.query(COLUMNS + " AND id = ?", this::plan, id).stream().findFirst();
     }
 
-    /** {@code exceptId} lets an update keep its own name; pass 0 when creating. */
+    /**
+     * Case-insensitive, like the {@code lower(name)} unique index. {@code exceptId} lets an update keep its
+     * own name (or change only its case); pass 0 when creating.
+     */
     boolean nameInUse(String name, long exceptId) {
         return Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT EXISTS (SELECT 1 FROM subscription_plans WHERE name = ? AND deleted_at IS NULL AND id <> ?)",
+                "SELECT EXISTS (SELECT 1 FROM subscription_plans WHERE lower(name) = lower(?) "
+                        + "AND deleted_at IS NULL AND id <> ?)",
                 Boolean.class, name, exceptId));
     }
 
