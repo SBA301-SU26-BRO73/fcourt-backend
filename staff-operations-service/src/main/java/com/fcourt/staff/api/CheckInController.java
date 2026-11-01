@@ -33,7 +33,15 @@ class CheckInController {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.verify(jwt, key, request.checkInCode(), "QR"));
     }
 
-    record Code(@NotBlank @Size(max = 128) String checkInCode) { }
+    @PostMapping("/api/staff/check-in/preview")
+    ResponseEntity<BookingGateway.TicketPreview> preview(@AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody Code request) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.preview(jwt, request.checkInCode()));
+    }
+
+    record Code(@NotBlank @Size(max = 128) String checkInCode) {
+        @Override public String toString() { return "Code[REDACTED]"; }
+    }
 
     @PostMapping("/api/staff/check-in/manual")
     ResponseEntity<BookingGateway.CheckInResult> manual(@AuthenticationPrincipal Jwt jwt,

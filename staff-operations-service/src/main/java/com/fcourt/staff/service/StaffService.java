@@ -46,6 +46,10 @@ public class StaffService {
         upstream.activeBranch(assigned.branchId(), jwt.getTokenValue());
         return assigned;
     }
+    public StaffView managedUser(Jwt jwt,long userId,long branchId) {
+        admin(jwt);if(branchId>0)upstream.ownedBranch(branchId,actor(jwt),jwt.getTokenValue());var managed=store.managedUser(userId,branchId);if(branchId==0)upstream.ownedBranch(managed.branchId(),actor(jwt),jwt.getTokenValue());
+        return managed;
+    }
 
     @Transactional(timeout = 15)
     public StaffView create(Jwt jwt, UUID key, Create request) {
@@ -101,6 +105,22 @@ public class StaffService {
             store.disable(id);
         }
         store.record(actor(jwt), key, "DISABLE", fingerprint, id);
+        return store.get(id, false);
+    }
+
+    @Transactional(timeout = 15)
+    public StaffView reactivate(Jwt jwt, long id, UUID key) {
+        admin(jwt);
+        store.lockCommand(actor(jwt), key);
+        StaffView staff = owned(jwt, id);
+        String fingerprint = fingerprint(List.of(id));
+        Long replay = store.replay(actor(jwt), key, "REACTIVATE", fingerprint);
+        if (replay != null) return store.get(replay, false);
+        if (!staff.active()) {
+            upstream.reactivate(staff.userId(), staff.branchId(), upstreamKey(jwt, key), jwt.getTokenValue());
+            store.reactivate(id);
+        }
+        store.record(actor(jwt), key, "REACTIVATE", fingerprint, id);
         return store.get(id, false);
     }
 
