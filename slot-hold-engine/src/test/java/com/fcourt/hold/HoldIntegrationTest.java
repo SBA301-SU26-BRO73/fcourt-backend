@@ -3,6 +3,7 @@ package com.fcourt.hold;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -64,6 +65,41 @@ class HoldIntegrationTest {
         var result = Redisson.create(config);
         CLIENTS.add(result);
         return result;
+    }
+
+    String heldToken(Long... slots) throws Exception {
+        available();
+        var body = mvc.perform(post("/api/bookings/hold-slots").contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(request(slots)))).andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return MAPPER.readTree(body).get("holdToken").asText();
+    }
+
+    @Test
+    void releaseFreesOwnedSlotsAndToken() throws Exception {
+        String token = heldToken(1L, 2L);
+        mvc.perform(delete("/api/bookings/hold-slots/" + token)).andExpect(status().isNoContent());
+        assertThat(redis.getKeys().count()).isZero();
+        assertThat(store.acquire(request(1L, 2L), "next")).isNotNull();
+    }
+
+    @Test
+    void releaseNeverDeletesSlotNowOwnedBySomeoneElse() throws Exception {
+        String token = heldToken(1L, 2L);
+        redis.<String>getBucket("fcourt:hold:1:2030-01-01:2", StringCodec.INSTANCE).set("other");
+        mvc.perform(delete("/api/bookings/hold-slots/" + token)).andExpect(status().isNoContent());
+        assertThat(redis.getBucket("fcourt:hold:1:2030-01-01:1").isExists()).isFalse();
+        assertThat(redis.<String>getBucket("fcourt:hold:1:2030-01-01:2", StringCodec.INSTANCE).get()).isEqualTo("other");
+        assertThat(redis.getBucket("fcourt:hold-token:" + token).isExists()).isFalse();
+    }
+
+    @Test
+    void releaseIsIdempotentAndRejectsMalformedToken() throws Exception {
+        String token = heldToken(1L);
+        mvc.perform(delete("/api/bookings/hold-slots/" + token)).andExpect(status().isNoContent());
+        mvc.perform(delete("/api/bookings/hold-slots/" + token)).andExpect(status().isNoContent());
+        mvc.perform(delete("/api/bookings/hold-slots/" + java.util.UUID.randomUUID())).andExpect(status().isNoContent());
+        mvc.perform(delete("/api/bookings/hold-slots/not-a-token")).andExpect(status().isBadRequest());
     }
 
     @AfterAll

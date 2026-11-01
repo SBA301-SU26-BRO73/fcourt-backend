@@ -19,6 +19,14 @@ class HoldService {
         this.store = store;
     }
 
+    void release(UUID token) {
+        try {
+            store.release(token.toString());
+        } catch (RedisException e) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Slot hold storage unavailable");
+        }
+    }
+
     HoldResponse hold(HoldRequest request) {
         if (new HashSet<>(request.slotIds()).size() != request.slotIds().size()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Duplicate slot IDs");
