@@ -1,0 +1,71 @@
+server:
+  port: ${SERVER_PORT:8081}
+  error:
+    include-message: never
+    include-stacktrace: never
+
+spring:
+  application:
+    name: auth-service
+  mvc:
+    problemdetails:
+      enabled: true
+  datasource:
+    url: ${AUTH_DATABASE_URL:jdbc:postgresql://localhost:5432/auth_db}
+    username: ${AUTH_DATABASE_USER:postgres}
+    password: ${AUTH_DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 3000
+  jdbc:
+    template:
+      query-timeout: 3s
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 30MB
+  flyway:
+    baseline-on-migrate: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+        delivery.timeout.ms: 10000
+        request.timeout.ms: 5000
+        max.block.ms: 5000
+
+auth:
+  jwt:
+    # The defaults validate the tokens auth-service issues itself via /.well-known/jwks.json.
+    # Other services point jwk-set-uri at this service.
+    jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+    issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
+    audience: ${AUTH_JWT_AUDIENCE:fcourt}
+    # PKCS8 PEM RSA private key used to sign tokens. Blank generates an ephemeral key (dev only).
+    private-key: ${AUTH_JWT_PRIVATE_KEY:}
+    key-id: ${AUTH_JWT_KEY_ID:}
+    access-ttl: ${AUTH_JWT_ACCESS_TTL:15m}
+    refresh-ttl: ${AUTH_JWT_REFRESH_TTL:30d}
+  cloudinary-url: ${AUTH_CLOUDINARY_URL:}
+  # Wrong passwords per email (login) or per user (change password) before a temporary 429 lock.
+  attempts:
+    max-failures: ${AUTH_ATTEMPTS_MAX_FAILURES:5}
+    window: ${AUTH_ATTEMPTS_WINDOW:15m}
+    lock: ${AUTH_ATTEMPTS_LOCK:15m}
+  events:
+    enabled: ${AUTH_EVENTS_ENABLED:true}
+    topic: ${AUTH_EVENTS_TOPIC:fcourt.auth.events}
+    delay-ms: ${AUTH_EVENTS_DELAY_MS:1000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
