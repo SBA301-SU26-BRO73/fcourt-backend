@@ -1,0 +1,32 @@
+server:
+  port: ${SERVER_PORT:8088}
+spring:
+  application:
+    name: booking-service
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5488/booking_db}
+    username: ${DATABASE_USER:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: booking-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      enable-auto-commit: false
+    listener:
+      ack-mode: record
+  mvc:
+    problemdetails:
+      enabled: true
+booking:
+  jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+  jwt-issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
+  jwt-audience: ${AUTH_JWT_AUDIENCE:fcourt}
+  events-enabled: ${BOOKING_EVENTS_ENABLED:true}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

@@ -33,18 +33,26 @@ class ReceiptService {
         byte[] bytes=ReceiptValidator.read(file);
         var info=checkout.checkout(id,auth,hold);
         String url=storage.upload(bytes);
-        return tx.execute(ignored -> {
-            // Serializes competing uploads, including across payment-service instances.
-            store.jdbc().queryForObject("SELECT pg_advisory_xact_lock(?)", Object.class,id);
-            var existing=store.find(id);
-            if (existing != null) return existing;
-            if (!info.expiresAt().isAfter(clock.instant())) {
-                throw new ResponseStatusException(HttpStatus.GONE,"Hold expired during upload");
-            }
-            var saved=store.submit(info,url);
-            store.event("PaymentSubmittedEvent",saved);
-            return saved;
-        });
+        PaymentRecord result;
+        try {
+                result = tx.execute(ignored -> {
+                // Serializes competing uploads, including across payment-service instances.
+                store.jdbc().queryForObject("SELECT pg_advisory_xact_lock(?)", Object.class,id);
+                var existing=store.find(id);
+                if (existing != null) return existing;
+                if (!info.expiresAt().isAfter(clock.instant())) {
+                    throw new ResponseStatusException(HttpStatus.GONE,"Hold expired during upload");
+                }
+                var saved=store.submit(info,url);
+                store.event("PaymentSubmittedEvent",saved);
+                return saved;
+            });
+        } catch (RuntimeException e) {
+            storage.delete(url);
+            throw e;
+        }
+        if (!url.equals(result.receiptImageUrl())) storage.delete(url);
+        return result;
     }
     PaymentUpstreams.Booking authorize(long id, String auth, String hold) {
         if ((auth == null || !auth.startsWith("Bearer ") || auth.length() <= 7)

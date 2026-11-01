@@ -1,0 +1,10 @@
+Xin chào {{name}},
+
+Đơn đặt sân {{bookingCode}} của bạn đã được xác nhận.
+
+{{details}}
+
+Tổng tiền: {{amount}}
+Mã vé check-in: {{ticketCode}}
+
+Vui lòng xuất trình mã QR trong ứng dụng hoặc mã vé trên khi đến sân.
