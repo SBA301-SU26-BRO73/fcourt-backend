@@ -352,6 +352,54 @@ class PosIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT count(*) FROM pos_settlement_events", Integer.class)).isZero();
     }
 
+    @Test void unavailableChargeBatchDoesNotStarveCashEventsAndRecoversWithoutRestocking() {
+        long product = product(40);
+        var bookingOrders = new ArrayList<Long>();
+        for (int i = 0; i < 12; i++) {
+            var sale = sell(UUID.randomUUID(), "BOOKING", 42L, List.of(item(product, 1)));
+            assertThat(sale.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+            bookingOrders.add(sale.getBody().path("id").asLong());
+        }
+        var cash = sell(UUID.randomUUID(), "CASH", null, List.of(item(product, 1)));
+        assertThat(cash.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        long cashId = cash.getBody().path("id").asLong();
+        chargeStatus = 503;
+        for (int i = 0; i < 3; i++) {
+            assertThatThrownBy(dispatch::drain).isInstanceOf(RuntimeException.class);
+        }
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM pos_outbox WHERE order_id = ? AND published_at IS NOT NULL", Integer.class, cashId))
+                .as("CASH event must reach Kafka despite an unavailable booking service").isEqualTo(1);
+        assertThat(status(cashId)).isEqualTo("PAID");
+        assertThat(bookingOrders).allSatisfy(id -> assertThat(status(id)).isEqualTo("PENDING_CHARGE"));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM pos_outbox WHERE kind = 'CHARGE' AND published_at IS NULL", Integer.class)).isEqualTo(12);
+        assertThat(stock(product)).isEqualTo(27);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM pos_stock_movements WHERE kind = 'RESTOCK'", Integer.class)).isZero();
+        chargeStatus = 0;
+        for (int i = 0; i < 4; i++) dispatch.drain();
+        assertThat(bookingOrders).allSatisfy(id -> assertThat(status(id)).isEqualTo("ON_BOOKING"));
+        assertThat(CHARGES).hasSize(12);
+        assertThat(stock(product)).isEqualTo(27);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM pos_outbox WHERE published_at IS NULL", Integer.class)).isZero();
+    }
+
+    @Test void failedKafkaBatchDoesNotPreventIndependentBookingAttachment() {
+        long product = product(5);
+        var sale = sell(UUID.randomUUID(), "BOOKING", 42L, List.of(item(product, 1)));
+        long orderId = sale.getBody().path("id").asLong();
+        @SuppressWarnings("unchecked") KafkaTemplate<String, String> failedKafka = org.mockito.Mockito.mock(KafkaTemplate.class);
+        org.mockito.Mockito.when(failedKafka.send(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString()))
+                .thenReturn(CompletableFuture.failedFuture(new IllegalStateException("broker down")));
+        var worker = new PosDispatchWorker(jdbc, store, commands, upstream, failedKafka, transactions, "pos-test-events", false);
+        assertThatThrownBy(worker::drain).isInstanceOf(RuntimeException.class);
+        assertThat(status(orderId)).isEqualTo("ON_BOOKING");
+        assertThat(CHARGES).hasSize(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM pos_outbox WHERE kind = 'EVENT' AND published_at IS NULL", Integer.class)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM pos_outbox WHERE kind = 'CHARGE' AND published_at IS NULL", Integer.class)).isZero();
+        dispatch.drain();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM pos_outbox WHERE published_at IS NULL", Integer.class)).isZero();
+        assertThat(stock(product)).isEqualTo(4);
+    }
+
     @Test void zeroStockAdjustmentIsRejected() {
         long id = product(5);
         assertThat(call(HttpMethod.POST, "/api/admin/pos/products/" + id + "/stock-adjustments", Map.of("delta", 0, "reason", "invalid"),
