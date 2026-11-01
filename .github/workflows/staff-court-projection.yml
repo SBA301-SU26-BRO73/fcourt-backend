@@ -1,0 +1,19 @@
+﻿name: staff-court-projection
+on:
+  pull_request:
+    paths: ['facility-service/**', '.github/workflows/staff-court-projection.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: facility-service/pom.xml
+      - run: mvn -B -f facility-service/pom.xml verify

@@ -53,6 +53,8 @@ class PosIntegrationTest {
     static volatile int chargeStatus;
     static volatile boolean failAfterCharge;
     static volatile boolean foreignBooking;
+    static volatile java.util.function.IntSupplier connectionsInUse = () -> 0;
+    static final java.util.concurrent.atomic.AtomicInteger MAX_CONNECTIONS_DURING_UPSTREAM = new java.util.concurrent.atomic.AtomicInteger();
     static final HttpServer UPSTREAM = server();
     static final String URL = "http://localhost:" + UPSTREAM.getAddress().getPort();
     @Container static final PostgreSQLContainer<?> DATABASE = new PostgreSQLContainer<>("postgres:16-alpine");
@@ -73,10 +75,12 @@ class PosIntegrationTest {
     @Autowired PosCommands commands;
     @Autowired PosUpstreams upstream;
     @Autowired PlatformTransactionManager transactions;
+    @Autowired javax.sql.DataSource dataSource;
 
     @BeforeEach void reset() {
         jdbc.execute("TRUNCATE products, orders RESTART IDENTITY CASCADE");
         jdbc.execute("TRUNCATE pos_settlement_events");
+        MAX_CONNECTIONS_DURING_UPSTREAM.set(0);
         active = true; upstreamStatus = chargeStatus = 0; failAfterCharge = foreignBooking = false; CHARGES.clear();
     }
     @AfterAll static void stop() { UPSTREAM.stop(0); }
@@ -102,6 +106,18 @@ class PosIntegrationTest {
         assertThat(invoice.getBody().path("items").get(0).path("productName").asText()).isEqualTo("Water");
         assertThat(call(HttpMethod.GET, "/api/staff/pos/orders", null, token("100", "STAFF"), null).getBody().size()).isEqualTo(1);
         assertThat(invoice.getHeaders().getCacheControl()).contains("no-store");
+    }
+
+    @Test void noDatabaseConnectionIsHeldWhileCallingUpstreams() throws Exception {
+        var pool = dataSource.unwrap(com.zaxxer.hikari.HikariDataSource.class).getHikariPoolMXBean();
+        connectionsInUse = pool::getActiveConnections;
+        try {
+            long product = product(10);
+            assertThat(sell(UUID.randomUUID(), "BOOKING", 42L, List.of(item(product, 1))).getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+            assertThat(call(HttpMethod.PUT, "/api/admin/pos/products/" + product,
+                    Map.of("name", "Water", "unit", "bottle", "category", "drinks", "price", 10000, "active", true), token("1", "ADMIN"), UUID.randomUUID()).getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(MAX_CONNECTIONS_DURING_UPSTREAM.get()).isZero();
+        } finally { connectionsInUse = () -> 0; }
     }
 
     @Test void stockAdjustmentAndProductCreationReplayWithoutDoubleMovement() {
@@ -448,6 +464,7 @@ class PosIntegrationTest {
     static void handle(HttpExchange x) throws IOException {
         String path = x.getRequestURI().getPath();
         if (path.equals("/jwks")) { send(x, 200, new JWKSet(SIGNING_KEY.toPublicJWK()).toJSONObject()); return; }
+        MAX_CONNECTIONS_DURING_UPSTREAM.accumulateAndGet(connectionsInUse.getAsInt(), Math::max);
         if (upstreamStatus != 0) { send(x, upstreamStatus, Map.of()); return; }
         try {
             if (path.endsWith("/pos-charges")) {

@@ -10,7 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -19,16 +20,21 @@ public class ProductService {
     private final PosStore store;
     private final PosUpstreams access;
     private final PosCommands commands;
-    public ProductService(JdbcTemplate jdbc, PosStore store, PosUpstreams access, PosCommands commands) {
+    private final TransactionTemplate transaction;
+    public ProductService(JdbcTemplate jdbc, PosStore store, PosUpstreams access, PosCommands commands,
+                          PlatformTransactionManager manager) {
         this.jdbc = jdbc; this.store = store; this.access = access; this.commands = commands;
+        transaction = new TransactionTemplate(manager); transaction.setTimeout(15);
     }
     public List<PosViews.Product> catalog(Jwt jwt, String query, String category, int limit, int offset) {
         return store.catalog(access.staffBranch(jwt), query, category, limit, offset);
     }
-    @Transactional(timeout = 15)
     public PosViews.Product create(Jwt jwt, UUID key, PosRequests.Product request) {
         long actor = Long.parseLong(jwt.getSubject());
         access.adminBranch(jwt, request.branchId());
+        return transaction.execute(status -> insert(actor, key, request));
+    }
+    private PosViews.Product insert(long actor, UUID key, PosRequests.Product request) {
         commands.lock(actor, key);
         String hash = commands.fingerprint(request);
         Long replay = commands.productReplay(actor, key, "CREATE", hash);
@@ -39,13 +45,15 @@ public class ProductService {
         commands.recordProduct(actor, key, "CREATE", hash, id);
         return store.product(id, false);
     }
-    @Transactional(timeout = 15)
     public PosViews.Product update(Jwt jwt, long id, UUID key, PosRequests.ProductUpdate request) {
         long actor = Long.parseLong(jwt.getSubject());
+        long authorizedBranch = store.product(id, false).branchId();
+        access.adminBranch(jwt, authorizedBranch);
+        return transaction.execute(status -> change(actor, id, key, request, authorizedBranch));
+    }
+    private PosViews.Product change(long actor, long id, UUID key, PosRequests.ProductUpdate request, long authorizedBranch) {
         commands.lock(actor, key);
-        var product = store.product(id, false);
-        access.adminBranch(jwt, product.branchId());
-        if (store.product(id, true).branchId() != product.branchId()) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Product ownership changed");
+        if (store.product(id, true).branchId() != authorizedBranch) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Product ownership changed");
         String hash = commands.fingerprint(List.of(id, request));
         Long replay = commands.productReplay(actor, key, "UPDATE", hash);
         if (replay != null) return store.product(replay, false);
@@ -54,15 +62,16 @@ public class ProductService {
         commands.recordProduct(actor, key, "UPDATE", hash, id);
         return store.product(id, false);
     }
-    @Transactional(timeout = 15)
     public PosViews.Product adjust(Jwt jwt, long id, UUID key, PosRequests.StockAdjustment request) {
         if (request.delta() == 0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stock delta must not be zero");
         long actor = Long.parseLong(jwt.getSubject());
+        long authorizedBranch = store.product(id, false).branchId();
+        access.adminBranch(jwt, authorizedBranch);
+        return transaction.execute(status -> move(actor, id, key, request, authorizedBranch));
+    }
+    private PosViews.Product move(long actor, long id, UUID key, PosRequests.StockAdjustment request, long authorizedBranch) {
         commands.lock(actor, key);
-        var product = store.product(id, false);
-        access.adminBranch(jwt, product.branchId());
-        long authorizedBranch = product.branchId();
-        product = store.product(id, true);
+        var product = store.product(id, true);
         if (product.branchId() != authorizedBranch) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Product ownership changed");
         String hash = commands.fingerprint(List.of(id, request));
         Long replay = commands.productReplay(actor, key, "ADJUST", hash);
