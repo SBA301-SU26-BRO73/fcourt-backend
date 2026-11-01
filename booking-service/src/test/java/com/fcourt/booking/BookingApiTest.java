@@ -69,6 +69,13 @@ class BookingApiTest {
         mvc.perform(get("/api/bookings/4").header("X-Hold-Token","guest-secret")).andExpect(status().isOk());
         mvc.perform(get("/api/bookings/4").header("X-Hold-Token","wrong")).andExpect(status().isNotFound());
     }
+    @Test void historyLoadsSlotsInOrderAndSlotLookupByBookingIsIndexed() throws Exception {
+        jdbc.update("INSERT INTO booking_slots(booking_id,court_id,booking_date,slot_start,slot_end,price_at_booking) VALUES (1,1,'2099-12-01','17:00','17:30',90000)");
+        mvc.perform(get("/api/bookings/my?size=1&page=1").with(jwt().jwt(j->j.subject("10"))))
+            .andExpect(jsonPath("$.items[0].id").value(1)).andExpect(jsonPath("$.items[0].slots.length()").value(2))
+            .andExpect(jsonPath("$.items[0].slots[0].startTime").value("17:00:00")).andExpect(jsonPath("$.items[0].slots[1].startTime").value("18:00:00"));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM pg_indexes WHERE tablename='booking_slots' AND indexdef LIKE '%(booking_id%'",Integer.class)).isPositive();
+    }
     String event(UUID id,String type,String amount) throws Exception {
         return json.writeValueAsString(Map.of("eventId",id,"type",type,"payment",Map.of("id",42,"bookingId",1,"branchId",7,"amount",Integer.parseInt(amount),"status","CONFIRMED","checkInCode","12345678901234567890123456789012","qrImageUrl","/api/payments/1/ticket/qr","receiptImageUrl","https://res.cloudinary.com/demo/bill.png")));
     }
