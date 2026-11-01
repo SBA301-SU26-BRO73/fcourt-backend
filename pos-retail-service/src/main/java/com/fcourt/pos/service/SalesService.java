@@ -15,7 +15,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -25,13 +26,23 @@ public class SalesService {
     private final PosUpstreams access;
     private final PosCommands commands;
     private final Clock clock;
-    public SalesService(JdbcTemplate jdbc, PosStore store, PosUpstreams access, PosCommands commands, Clock clock) {
+    private final TransactionTemplate transaction;
+    public SalesService(JdbcTemplate jdbc, PosStore store, PosUpstreams access, PosCommands commands, Clock clock,
+                        PlatformTransactionManager manager) {
         this.jdbc = jdbc; this.store = store; this.access = access; this.commands = commands; this.clock = clock;
+        transaction = new TransactionTemplate(manager); transaction.setTimeout(20);
     }
-    @Transactional(timeout = 20)
     public PosViews.Order create(Jwt jwt, UUID key, PosRequests.Order request) {
         long actor = Long.parseLong(jwt.getSubject());
         long branch = access.staffBranch(jwt);
+        if ("BOOKING".equals(request.paymentMethod()) && request.bookingId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Booking ID is required for booking payment");
+        }
+        boolean replay = !jdbc.queryForList("SELECT 1 FROM orders WHERE staff_user_id = ? AND idempotency_key = ?", actor, key).isEmpty();
+        if (request.bookingId() != null && !replay) access.bookingContext(jwt, request.bookingId(), branch);
+        return transaction.execute(status -> place(actor, branch, key, request));
+    }
+    private PosViews.Order place(long actor, long branch, UUID key, PosRequests.Order request) {
         commands.lock(actor, key);
         var items = request.items().stream().sorted(Comparator.comparingLong(PosRequests.Item::productId)).toList();
         String hash = commands.fingerprint(new PosRequests.Order(request.paymentMethod(), request.bookingId(), items));
@@ -40,10 +51,6 @@ public class SalesService {
             if (!hash.equals(previous.getFirst().get("request_fingerprint"))) throw commands.conflict();
             return ownOrder(((Number) previous.getFirst().get("id")).longValue(), branch);
         }
-        if ("BOOKING".equals(request.paymentMethod()) && request.bookingId() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Booking ID is required for booking payment");
-        }
-        if (request.bookingId() != null) access.bookingContext(jwt, request.bookingId(), branch);
         var selected = new java.util.ArrayList<PosViews.Product>();
         var ids = new HashSet<Long>();
         BigDecimal total = BigDecimal.ZERO;
