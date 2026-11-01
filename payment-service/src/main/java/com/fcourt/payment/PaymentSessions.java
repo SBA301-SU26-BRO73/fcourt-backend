@@ -1,6 +1,7 @@
 package com.fcourt.payment;
 
 import java.time.Clock;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -37,7 +38,10 @@ class PaymentSessions {
                     AND booking_id IS NOT NULL AND expires_at <= ?
                 ORDER BY id LIMIT 200
                 """,Long.class,java.sql.Timestamp.from(clock.instant()));
-        for(long id:ids) expireOne(id);
+        for(long id:ids) {
+            try { expireOne(id); }
+            catch (RuntimeException e) { LoggerFactory.getLogger(getClass()).warn("Expiry failed for booking {}, retrying next run",id,e); }
+        }
     }
     void expireOne(long id) {
         tx.executeWithoutResult(ignored -> {
