@@ -115,13 +115,13 @@ public class WalkInService {
     }
 
     @Transactional(timeout = 20)
-    public BookingGateway.CheckoutResult checkout(Jwt jwt, long bookingId, UUID key) {
+    public BookingGateway.CheckoutResult checkout(Jwt jwt, long bookingId, UUID key, java.math.BigDecimal expectedSurcharge, java.math.BigDecimal expectedTotal) {
         var assignment = staff.assigned(jwt);
         long actor = Long.parseLong(jwt.getSubject());
-        String fingerprint = commands.fingerprint(List.of(assignment.branchId(), bookingId));
+        String fingerprint = commands.fingerprint(List.of(assignment.branchId(), bookingId, expectedSurcharge.stripTrailingZeros(),expectedTotal.stripTrailingZeros()));
         var replay = commands.replay(actor, key, "BookingCompletedEvent", fingerprint, BookingGateway.CheckoutResult.class);
         if (replay != null) return replay;
-        var result = booking.checkout(bookingId, assignment.branchId(), actor, clock.instant(),
+        var result = booking.checkout(bookingId, assignment.branchId(), actor, clock.instant(), expectedSurcharge, expectedTotal,
                 "staff:checkout:" + actor + ":" + key, jwt.getTokenValue());
         if (result.bookingId() != bookingId || result.branchId() != assignment.branchId()
                 || !"COMPLETED".equals(result.status()) || result.completedAt() == null) throw BookingGateway.unavailable();

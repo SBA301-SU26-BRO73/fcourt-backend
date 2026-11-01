@@ -44,9 +44,11 @@ public class WalkInController {
 
     @PutMapping("/api/staff/bookings/{id}/checkout")
     ResponseEntity<BookingGateway.CheckoutResult> checkout(@AuthenticationPrincipal Jwt jwt,
-            @PathVariable @Positive long id, @RequestHeader("Idempotency-Key") UUID key) {
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.checkout(jwt, id, key));
+            @PathVariable @Positive long id, @RequestHeader("Idempotency-Key") UUID key, @Valid @RequestBody CheckoutRequest request) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.checkout(jwt, id, key, request.expectedSurcharge(),request.expectedTotal()));
     }
+
+    public record CheckoutRequest(@NotNull @jakarta.validation.constraints.DecimalMin("0") @jakarta.validation.constraints.Digits(integer=8,fraction=2) java.math.BigDecimal expectedSurcharge, @NotNull @jakarta.validation.constraints.DecimalMin("0") @jakarta.validation.constraints.Digits(integer=8,fraction=2) java.math.BigDecimal expectedTotal) { }
 
     public record WalkInRequest(@Positive long courtId, @NotNull LocalDate date,
                                 @NotNull @Size(min = 1, max = 48) List<@NotNull @Positive Long> slotIds,

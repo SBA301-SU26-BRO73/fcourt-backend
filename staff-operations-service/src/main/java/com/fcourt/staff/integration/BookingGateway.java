@@ -58,30 +58,34 @@ public class BookingGateway {
     public WalkInResult walkIn(WalkInCommand request, String key, String token) {
         return execute(() -> booking.post().uri("/api/internal/bookings/walk-in")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token).header("Idempotency-Key", key)
-                .body(request).retrieve().body(WalkInResult.class));
+                .header("X-Staff-Service-Token",serviceCredential()).body(request).retrieve().body(WalkInResult.class));
     }
 
     public WalkInResult reconcileWalkIn(WalkInCommand request, String key, String token) {
         try {
             return execute(() -> booking.post().uri("/api/internal/bookings/walk-in/reconcile")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + token).header("Idempotency-Key", key)
-                    .body(request).retrieve().body(WalkInResult.class));
+                    .header("X-Staff-Service-Token",serviceCredential()).body(request).retrieve().body(WalkInResult.class));
         } catch (ResponseStatusException error) {
             if (error.getStatusCode().value() == 404) return null;
             throw error;
         }
     }
 
-    public CheckoutResult checkout(long id, long branch, long actor, Instant completedAt, String key, String token) {
+    public CheckoutResult checkout(long id, long branch, long actor, Instant completedAt, java.math.BigDecimal expectedSurcharge, java.math.BigDecimal expectedTotal, String key, String token) {
         return execute(() -> booking.put().uri("/api/internal/bookings/{id}/checkout", id)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token).header("Idempotency-Key", key)
-                .body(new CheckoutCommand(branch, actor, completedAt)).retrieve().body(CheckoutResult.class));
+                .header("X-Staff-Service-Token",serviceCredential()).body(new CheckoutCommand(branch, actor, completedAt,expectedSurcharge,expectedTotal)).retrieve().body(CheckoutResult.class));
     }
 
     public CheckoutPreview checkoutPreview(long id, long branch, long actor, String token) {
         return execute(() -> booking.get().uri(uri -> uri.path("/api/internal/bookings/{id}/checkout-preview")
                 .queryParam("branchId", branch).queryParam("actorId", actor).build(id))
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token).retrieve().body(CheckoutPreview.class));
+    }
+
+    private String serviceCredential() {
+        if(staffServiceToken.getBytes(java.nio.charset.StandardCharsets.UTF_8).length<32)throw unavailable();return staffServiceToken;
     }
 
     private <T> T execute(Call<T> operation) {
@@ -127,9 +131,12 @@ public class BookingGateway {
                             String policyVersion, List<ChargedSlot> items) { }
     public record CashInvoice(String receiptCode, long cashierUserId, BigDecimal baseAmount,
                               BigDecimal surchargeAmount, BigDecimal totalAmount, String policyVersion, List<ChargedSlot> items) { }
-    public record CheckoutCommand(long branchId, long actorId, Instant completedAt) { }
+    public record CheckoutCommand(long branchId, long actorId, Instant completedAt, BigDecimal expectedSurcharge, BigDecimal expectedTotal) { }
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown=true)
     public record CheckoutResult(long bookingId, long branchId, String status, Instant completedAt) { }
-    public record CheckoutPreview(long bookingId, long branchId, BigDecimal surchargeAmount, BigDecimal totalAmount) { }
+    public record CheckoutPreview(long bookingId, long branchId, BigDecimal surchargeAmount, BigDecimal totalAmount, BigDecimal posAmount) {
+        public CheckoutPreview {if(posAmount==null)posAmount=BigDecimal.ZERO;}
+    }
     public record OfflineRoster(long branchId,List<OfflineTicket> tickets) { }
     @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown=true)
     public record OfflineTicket(long bookingId,String courtName,String customerName,String checkInCode,
