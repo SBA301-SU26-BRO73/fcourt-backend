@@ -68,7 +68,7 @@ class PasswordServiceTest {
         verify(resets).invalidateOpenTokens(7, NOW);
         verify(resets).insert(eq(7L), hash.capture(), eq(NOW.plus(Duration.ofMinutes(30))), eq(NOW));
         var event = ArgumentCaptor.forClass(Object.class);
-        verify(outbox).append(eq(7L), eq("PasswordResetRequestedEvent"), eq(1), event.capture());
+        verify(outbox).appendSensitive(eq(7L), eq("PasswordResetRequestedEvent"), eq(1), event.capture());
         var data = (PasswordResetRequestedEvent) event.getValue();
         assertThat(data.userId()).isEqualTo(7);
         assertThat(data.email()).isEqualTo("owner@demo.com");

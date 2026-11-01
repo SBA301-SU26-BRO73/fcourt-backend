@@ -108,7 +108,8 @@ public class PasswordService {
         Instant expiresAt = now.plus(tokenTtl);
         resets.invalidateOpenTokens(account.id(), now);
         resets.insert(account.id(), SessionService.hash(token), expiresAt, now);
-        outbox.append(account.id(), PasswordResetRequestedEvent.TYPE, PasswordResetRequestedEvent.VERSION,
+        // The event carries the raw token: the relay scrubs the payload once Kafka has it.
+        outbox.appendSensitive(account.id(), PasswordResetRequestedEvent.TYPE, PasswordResetRequestedEvent.VERSION,
                 new PasswordResetRequestedEvent(account.id(), account.email(), account.fullName(), token, expiresAt));
     }
 

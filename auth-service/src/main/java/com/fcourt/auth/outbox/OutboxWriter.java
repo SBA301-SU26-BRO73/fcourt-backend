@@ -28,6 +28,19 @@ public class OutboxWriter {
 
     @Transactional(propagation = Propagation.MANDATORY)
     public UUID append(long aggregateId, String type, int version, Object data) {
+        return insert(aggregateId, type, version, data, false);
+    }
+
+    /**
+     * For events that carry a secret: once published, {@link OutboxRelay} replaces the payload with
+     * {@code {eventId, type, scrubbed: true}}, so the secret is not kept in the table after delivery.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public UUID appendSensitive(long aggregateId, String type, int version, Object data) {
+        return insert(aggregateId, type, version, data, true);
+    }
+
+    private UUID insert(long aggregateId, String type, int version, Object data, boolean sensitive) {
         UUID eventId = UUID.randomUUID();
         String payload;
         try {
@@ -35,8 +48,8 @@ public class OutboxWriter {
         } catch (JsonProcessingException error) {
             throw new IllegalStateException("Cannot serialise " + type, error);
         }
-        jdbc.update("INSERT INTO auth_outbox(event_id, aggregate_id, event_type, payload) VALUES (?, ?, ?, ?)",
-                eventId, aggregateId, type, payload);
+        jdbc.update("INSERT INTO auth_outbox(event_id, aggregate_id, event_type, payload, sensitive) "
+                + "VALUES (?, ?, ?, ?, ?)", eventId, aggregateId, type, payload, sensitive);
         return eventId;
     }
 }
