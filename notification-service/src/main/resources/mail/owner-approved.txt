@@ -1,0 +1,5 @@
+Xin chào {{name}},
+
+Hồ sơ chủ sân của bạn trên FCOURT đã được duyệt. Bạn có thể đăng nhập và bắt đầu tạo chi nhánh, sân và khung giờ cho thuê.
+
+Cảm ơn bạn đã đồng hành cùng FCOURT.
