@@ -90,6 +90,15 @@ public class StaffUpstreams {
                 || !"STAFF".equals(account.role()) || !"INACTIVE".equals(account.status())) throw unavailable();
     }
 
+    public void reactivate(long userId, long branchId, String command, String token) {
+        Account account = execute(() -> auth.post().uri("/api/internal/staff-accounts/{id}/reactivate", userId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .header("Idempotency-Key", command).body(java.util.Map.of("branchId", branchId))
+                .retrieve().body(Account.class));
+        validateStaff(account);
+        if (account.id() != userId) throw unavailable();
+    }
+
     private void validateStaff(Account account) {
         if (account == null || account.id() == null || account.id() <= 0 || !"STAFF".equals(account.role())
                 || !"ACTIVE".equals(account.status()) || account.email() == null || account.fullName() == null
