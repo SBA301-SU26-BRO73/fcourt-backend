@@ -1,0 +1,50 @@
+server:
+  port: ${SERVER_PORT:8091}
+  error:
+    include-message: never
+    include-stacktrace: never
+spring:
+  application:
+    name: pos-retail-service
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+  datasource:
+    url: ${POS_DATABASE_URL:jdbc:postgresql://localhost:5491/pos_retail_db}
+    username: ${POS_DATABASE_USER:postgres}
+    password: ${POS_DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 3000
+  flyway:
+    baseline-on-migrate: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      properties:
+        max.block.ms: 3000
+        request.timeout.ms: 3000
+        delivery.timeout.ms: 10000
+pos:
+  auth-url: ${AUTH_URL:http://localhost:8081}
+  staff-url: ${STAFF_URL:http://localhost:8090}
+  facility-url: ${FACILITY_URL:http://localhost:8083}
+  booking-url: ${BOOKING_URL:http://localhost:8088}
+  jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+  issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
+  audience: ${AUTH_JWT_AUDIENCE:fcourt}
+  booking-service-token: ${POS_BOOKING_SERVICE_TOKEN:}
+  settlement-token: ${POS_SETTLEMENT_SERVICE_TOKEN:}
+  dispatch-enabled: ${POS_DISPATCH_ENABLED:true}
+  events-topic: ${POS_EVENTS_TOPIC:fcourt.pos.events}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

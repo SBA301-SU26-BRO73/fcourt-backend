@@ -1,0 +1,1 @@
+{"branchId":1,"version":1,"name":"Sunrise Badminton","address":"123 Nguyen Trai","city":"Ho Chi Minh","district":"Quan 1","latitude":10.762622,"longitude":106.660172,"active":true,"deleted":false,"courts":[{"id":1,"courtTypeId":1,"minPrice":100000,"maxPrice":200000},{"id":2,"courtTypeId":2,"minPrice":250000,"maxPrice":400000}]}
