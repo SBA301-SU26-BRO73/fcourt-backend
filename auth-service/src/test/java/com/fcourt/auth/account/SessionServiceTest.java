@@ -85,7 +85,7 @@ class SessionServiceTest {
 
         assertThat(response.refreshToken()).isNotEqualTo(PRESENTED);
         var order = inOrder(refreshTokens);
-        order.verify(refreshTokens).revoke(11, NOW);
+        order.verify(refreshTokens).markRotated(11, NOW);
         order.verify(refreshTokens).insert(eq(7L), anyString(), any(), eq(NOW));
         verify(refreshTokens, never()).revokeAllOf(anyLong(), any());
     }
@@ -100,14 +100,27 @@ class SessionServiceTest {
     }
 
     @Test
-    void reusingARevokedTokenRevokesEverySessionOfThatUser() {
+    void replayingARotatedTokenRevokesEverySessionOfThatUser() {
+        when(refreshTokens.findForUpdate(SessionService.hash(PRESENTED)))
+                .thenReturn(Optional.of(rotated(NOW.minusSeconds(5), NOW.plusSeconds(60))));
+
+        assertThatThrownBy(() -> sessions.rotate(PRESENTED))
+                .satisfies(error -> assertApi(error, HttpStatus.UNAUTHORIZED, "Refresh token is invalid"));
+
+        verify(refreshTokens).revokeAllOf(7, NOW);
+        verify(refreshTokens, never()).insert(anyLong(), anyString(), any(), any());
+    }
+
+    /** Logout, password change and lock revoke without rotating: a stale device must not end newer sessions. */
+    @Test
+    void aTokenRevokedWithoutRotationIsRefusedButLeavesOtherSessionsAlone() {
         when(refreshTokens.findForUpdate(SessionService.hash(PRESENTED)))
                 .thenReturn(Optional.of(stored(NOW.minusSeconds(5), NOW.plusSeconds(60))));
 
         assertThatThrownBy(() -> sessions.rotate(PRESENTED))
                 .satisfies(error -> assertApi(error, HttpStatus.UNAUTHORIZED, "Refresh token is invalid"));
 
-        verify(refreshTokens).revokeAllOf(7, NOW);
+        verify(refreshTokens, never()).revokeAllOf(anyLong(), any());
         verify(refreshTokens, never()).insert(anyLong(), anyString(), any(), any());
     }
 
@@ -171,7 +184,12 @@ class SessionServiceTest {
 
     static StoredToken stored(Instant revokedAt, Instant expiresAt) {
         return new StoredToken(11, 7, expiresAt.atOffset(ZoneOffset.UTC),
-                revokedAt == null ? null : revokedAt.atOffset(ZoneOffset.UTC));
+                revokedAt == null ? null : revokedAt.atOffset(ZoneOffset.UTC), null);
+    }
+
+    static StoredToken rotated(Instant rotatedAt, Instant expiresAt) {
+        var at = rotatedAt.atOffset(ZoneOffset.UTC);
+        return new StoredToken(11, 7, expiresAt.atOffset(ZoneOffset.UTC), at, at);
     }
 
     static AccountRecord account(long id, String role, String status) {

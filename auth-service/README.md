@@ -65,7 +65,8 @@ There is no `data` envelope; errors are the same RFC 7807 problems as everywhere
 
 Rules:
 - Email is trimmed and lower-cased; email and phone must be unique (409). Phone: `0` or `+84` then 8 to 10
-  digits. Password: 8 to 72 characters (BCrypt only hashes the first 72 bytes).
+  digits. Password: 8 to 72 characters and at most 72 UTF-8 bytes, BCrypt's limit (a Vietnamese accented
+  letter takes 2 to 3 bytes), otherwise 400.
 - Customers register `ACTIVE` and get a session straight away. Court owners (`ADMIN`) register
   `PENDING_APPROVAL`, their files go to Cloudinary and into `user_documents` (`LEGAL` / `COURT_IMAGE`), and
   they cannot sign in until a super admin approves them. Documents: JPEG, PNG, WebP or PDF, 5 MB each; a failed
@@ -75,8 +76,9 @@ Rules:
   accounts with 403 and a reason.
 - Access tokens are RS256 with `iss`, `aud`, numeric `sub`, `roles` and a 15 minute lifetime. Refresh tokens
   are opaque random values stored only as a SHA-256 hash in `refresh_tokens`, valid for 30 days, and work
-  once. Presenting a revoked token again is treated as theft and revokes every session of that user.
-  Refreshing for a locked account also revokes its sessions.
+  once. Presenting a token that was already rotated by a refresh is treated as theft and revokes every
+  session of that user. A token ended by logout, a password change or a lock is only refused (401), so a
+  stale device cannot sign out newer sessions. Refreshing for a locked account also revokes its sessions.
 - Forgot password never reveals whether an email is registered. Only `ACTIVE` accounts get a token, at most
   one request per minute per account is honoured, and a new request invalidates the earlier token. The token
   is random, valid for 30 minutes, works once and is stored only as a SHA-256 hash in

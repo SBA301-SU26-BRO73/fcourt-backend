@@ -18,8 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Access token plus opaque refresh token pairs. A refresh token works once: it is revoked when
- * exchanged and replaced by a new one. Presenting an already revoked token means it leaked or was
- * replayed, so every session of that user is revoked.
+ * exchanged and replaced by a new one. Presenting an already rotated token means it leaked or was
+ * replayed, so every session of that user is revoked. A token revoked by logout, a password change or
+ * a locked account is only refused.
  */
 @Service
 public class SessionService {
@@ -57,9 +58,14 @@ public class SessionService {
         Instant now = clock.instant();
         var stored = refreshTokens.findForUpdate(hash(refreshToken))
                 .orElseThrow(() -> ApiException.unauthorized("Refresh token is invalid"));
-        if (stored.revokedAt() != null) {
+        if (stored.rotatedAt() != null) {
             // Committed despite the exception (noRollbackFor), so the stolen token family dies.
             refreshTokens.revokeAllOf(stored.userId(), now);
+            throw ApiException.unauthorized("Refresh token is invalid");
+        }
+        if (stored.revokedAt() != null) {
+            // Logged out or revoked (password change, lock): dead, but not evidence of theft. Revoking
+            // everything here would let a stale device sign out the session that replaced it.
             throw ApiException.unauthorized("Refresh token is invalid");
         }
         if (!stored.expiresAt().toInstant().isAfter(now)) {
@@ -73,7 +79,7 @@ public class SessionService {
             refreshTokens.revokeAllOf(account.id(), now);
             throw notActive;
         }
-        refreshTokens.revoke(stored.id(), now);
+        refreshTokens.markRotated(stored.id(), now);
         return open(account);
     }
 

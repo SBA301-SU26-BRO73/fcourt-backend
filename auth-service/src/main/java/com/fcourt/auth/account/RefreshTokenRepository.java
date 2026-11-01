@@ -16,7 +16,9 @@ class RefreshTokenRepository {
         this.jdbc = jdbc;
     }
 
-    record StoredToken(long id, long userId, OffsetDateTime expiresAt, OffsetDateTime revokedAt) {
+    /** {@code rotatedAt} is set only when the token was exchanged by a refresh, never by logout or revocation. */
+    record StoredToken(long id, long userId, OffsetDateTime expiresAt, OffsetDateTime revokedAt,
+                       OffsetDateTime rotatedAt) {
     }
 
     void insert(long userId, String tokenHash, Instant expiresAt, Instant at) {
@@ -26,17 +28,19 @@ class RefreshTokenRepository {
 
     /** Row lock serialises two concurrent refreshes with the same token. */
     Optional<StoredToken> findForUpdate(String tokenHash) {
-        return jdbc.query("SELECT id, user_id, expires_at, revoked_at FROM refresh_tokens "
+        return jdbc.query("SELECT id, user_id, expires_at, revoked_at, rotated_at FROM refresh_tokens "
                         + "WHERE token_hash = ? FOR UPDATE",
                 (row, index) -> new StoredToken(row.getLong("id"), row.getLong("user_id"),
                         row.getObject("expires_at", OffsetDateTime.class),
-                        row.getObject("revoked_at", OffsetDateTime.class)), tokenHash)
+                        row.getObject("revoked_at", OffsetDateTime.class),
+                        row.getObject("rotated_at", OffsetDateTime.class)), tokenHash)
                 .stream().findFirst();
     }
 
-    void revoke(long id, Instant at) {
-        jdbc.update("UPDATE refresh_tokens SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL",
-                Timestamp.from(at), id);
+    /** Spends the token on a refresh; a later presentation of it is then recognised as a replay. */
+    void markRotated(long id, Instant at) {
+        jdbc.update("UPDATE refresh_tokens SET revoked_at = ?, rotated_at = ? WHERE id = ? AND revoked_at IS NULL",
+                Timestamp.from(at), Timestamp.from(at), id);
     }
 
     void revokeByHash(String tokenHash, Instant at) {
