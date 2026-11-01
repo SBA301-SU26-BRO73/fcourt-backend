@@ -39,7 +39,7 @@ public class StaffStore {
         return withShifts(rows).getFirst();
     }
     public StaffView managedUser(long userId,long branchId) {
-        var rows=jdbc.query("SELECT * FROM staff WHERE user_id=? AND branch_id=?",this::map,userId,branchId);
+        var rows=jdbc.query("SELECT * FROM staff WHERE user_id=? AND (?=0 OR branch_id=?)",this::map,userId,branchId,branchId);
         if(rows.isEmpty())throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Managed staff not found");
         return withShifts(rows).getFirst();
     }

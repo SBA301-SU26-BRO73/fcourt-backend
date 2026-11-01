@@ -47,8 +47,8 @@ public class StaffService {
         return assigned;
     }
     public StaffView managedUser(Jwt jwt,long userId,long branchId) {
-        admin(jwt);upstream.ownedBranch(branchId,actor(jwt),jwt.getTokenValue());
-        return store.managedUser(userId,branchId);
+        admin(jwt);if(branchId>0)upstream.ownedBranch(branchId,actor(jwt),jwt.getTokenValue());var managed=store.managedUser(userId,branchId);if(branchId==0)upstream.ownedBranch(managed.branchId(),actor(jwt),jwt.getTokenValue());
+        return managed;
     }
 
     @Transactional(timeout = 15)
