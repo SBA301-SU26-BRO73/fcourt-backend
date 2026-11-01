@@ -12,6 +12,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
+@org.springframework.test.annotation.DirtiesContext(classMode=org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 @SpringBootTest(properties="payment.events-enabled=false")
 @org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 class PaymentDatabaseTest {
@@ -19,8 +20,11 @@ class PaymentDatabaseTest {
     static final PostgreSQLContainer<?> DATABASE = new PostgreSQLContainer<>("postgres:16-alpine")
             .withDatabaseName("payment_db");
 
+    @Container static final org.testcontainers.containers.GenericContainer<?> REDIS=new org.testcontainers.containers.GenericContainer<>("redis:7-alpine").withExposedPorts(6379);
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
+        registry.add("spring.data.redis.host",REDIS::getHost);
+        registry.add("spring.data.redis.port",()->REDIS.getMappedPort(6379));
         registry.add("spring.datasource.url", DATABASE::getJdbcUrl);
         registry.add("spring.datasource.username", DATABASE::getUsername);
         registry.add("spring.datasource.password", DATABASE::getPassword);
@@ -29,7 +33,11 @@ class PaymentDatabaseTest {
     @Autowired JdbcTemplate jdbc;
 
     @org.junit.jupiter.api.BeforeEach
-    void clear() { jdbc.execute("TRUNCATE payment_customer_sync,payment_outbox,payments RESTART IDENTITY"); }
+    void clear() {
+        jdbc.execute("TRUNCATE payment_customer_sync,payment_outbox,payments RESTART IDENTITY");
+        redis.execute((org.springframework.data.redis.core.RedisCallback<Object>)c->{c.serverCommands().flushDb();return null;});
+    }
+    @Autowired org.springframework.data.redis.core.StringRedisTemplate redis;
 
     @Autowired PaymentStore store;
     @Autowired org.springframework.transaction.support.TransactionTemplate tx;
@@ -309,7 +317,7 @@ class PaymentDatabaseTest {
                 .isEqualByComparingTo("160000.00");
         assertThat(jdbc.queryForObject("SELECT status FROM payments", String.class)).isEqualTo("PENDING");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM refund_requests", Long.class)).isZero();
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success", Long.class)).isEqualTo(5);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success", Long.class)).isEqualTo(6);
     }
     @Autowired CustomerPayments customerPayments;
     @Test
@@ -404,6 +412,59 @@ class PaymentDatabaseTest {
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("X-Total-Received","160000.00"))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.summary.rejectedCount").value(1));
+    }
+
+    @Autowired PaymentStatusCache statusCache;
+    PaymentStatusService statusService(ReceiptService authority,PaymentStatusCache cache){return new PaymentStatusService(authority,org.mockito.Mockito.mock(CustomerPayments.class),store,cache);}
+    @Test
+    void compactStatusCacheReusesAuthorizedProofAndRejectsAnotherToken() throws Exception {
+        submitted();
+        var authority=org.mockito.Mockito.mock(ReceiptService.class);
+        org.mockito.Mockito.doThrow(new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED))
+            .when(authority).authorize(42,null,"wrong");
+        var service=statusService(authority,statusCache);
+        assertThat(service.status(42,null,"proof").paymentStatus()).isEqualTo("PENDING");
+        assertThat(service.status(42,null,"proof").bookingId()).isEqualTo(42);
+        org.mockito.Mockito.verify(authority,org.mockito.Mockito.times(1)).authorize(42,null,"proof");
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->service.status(42,null,"wrong")).hasMessageContaining("401");
+        assertThat(statusCache.get(42).guestHash()).isNotEqualTo("proof");
+    }
+    @Test
+    void approvalInvalidatesCacheAndFencesLateOldWrites() throws Exception {
+        submitted();ownBranch();var authority=org.mockito.Mockito.mock(ReceiptService.class);
+        var service=statusService(authority,statusCache);service.status(42,null,"proof");
+        var old=statusCache.get(42);
+        approvals.decide(store.find(42).id(),true,null,admin());
+        assertThat(statusCache.get(42)).isNull();statusCache.put(old);
+        assertThat(statusCache.get(42)).isNull();
+        assertThat(service.status(42,null,"proof").paymentStatus()).isEqualTo("SUCCESS");
+        org.mockito.Mockito.verify(authority,org.mockito.Mockito.times(2)).authorize(42,null,"proof");
+    }
+    @Test
+    void redisFailureFallsBackToAuthorityAndDatabase() throws Exception {
+        submitted();
+        var broken=org.mockito.Mockito.mock(org.springframework.data.redis.core.StringRedisTemplate.class);
+        org.mockito.Mockito.when(broken.opsForValue()).thenThrow(new org.springframework.dao.DataAccessResourceFailureException("offline"));
+        var cache=new PaymentStatusCache(broken,new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules(),true);
+        var authority=org.mockito.Mockito.mock(ReceiptService.class);
+        assertThat(statusService(authority,cache).status(42,null,"proof").paymentStatus()).isEqualTo("PENDING");
+        org.mockito.Mockito.verify(authority).authorize(42,null,"proof");
+    }
+    @Test
+    void compactRouteReturnsOnlyMinimalContractAndLocalCacheBenchmark() throws Exception {
+        submitted();
+        var service=statusService(org.mockito.Mockito.mock(ReceiptService.class),statusCache);
+        var mvc=org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(new CompactPaymentStatusController(service)).build();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/payments/42/status?compact=true").header("X-Hold-Token","proof"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.paymentStatus").value("PENDING"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.id").doesNotExist())
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.receiptImageUrl").doesNotExist());
+        var nanos=new java.util.ArrayList<Long>();
+        for(int i=0;i<200;i++){long start=System.nanoTime();service.status(42,null,"proof");nanos.add(System.nanoTime()-start);}
+        nanos.sort(Long::compareTo);
+        java.nio.file.Files.writeString(java.nio.file.Path.of("target/status-cache-benchmark.json"),
+            "{\"samples\":200,\"p50ms\":"+nanos.get(100)/1e6+",\"p95ms\":"+nanos.get(190)/1e6+",\"note\":\"local warm guest service+Redis, excludes HTTP/TLS/JWT/upstream and production load\"}");
     }
 
 }
