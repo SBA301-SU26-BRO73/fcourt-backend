@@ -188,6 +188,41 @@ class PlanServiceTest {
         verify(plans, never()).softDelete(org.mockito.ArgumentMatchers.eq(9L), any());
     }
 
+    @Test
+    void findOnSaleReturnsAnActivePlanAndHidesInactiveOrMissingOnes() {
+        when(plans.find(1)).thenReturn(Optional.of(plan(1, "Basic", true)));
+        when(plans.find(2)).thenReturn(Optional.of(plan(2, "Retired", false)));
+        when(plans.find(3)).thenReturn(Optional.empty());
+
+        assertThat(service.findOnSale(1)).get().extracting(SubscriptionPlanResponse::name).isEqualTo("Basic");
+        assertThat(service.findOnSale(2)).isEmpty();
+        assertThat(service.findOnSale(3)).isEmpty();
+    }
+
+    @Test
+    void cheapestOnSaleIsTheFirstPlanTheRepositoryListsAsActive() {
+        when(plans.findActive()).thenReturn(List.of(plan(3, "Cheap", true), plan(1, "Pricey", true)));
+
+        assertThat(service.cheapestOnSale()).get().extracting(SubscriptionPlanResponse::name).isEqualTo("Cheap");
+    }
+
+    @Test
+    void cheapestOnSaleIsEmptyWhenNothingIsOnSale() {
+        when(plans.findActive()).thenReturn(List.of());
+
+        assertThat(service.cheapestOnSale()).isEmpty();
+    }
+
+    @Test
+    void describeStillWorksForAPlanThatWasDeletedAfterItWasBought() {
+        when(plans.findIncludingDeleted(5)).thenReturn(Optional.of(plan(5, "Old plan", false)));
+        when(plans.findIncludingDeleted(9)).thenReturn(Optional.empty());
+
+        assertThat(service.describe(5).name()).isEqualTo("Old plan");
+        assertThatThrownBy(() -> service.describe(9))
+                .satisfies(error -> assertApi(error, HttpStatus.NOT_FOUND, "Subscription plan not found"));
+    }
+
     static void assertApi(Throwable error, HttpStatus status, String detail) {
         assertThat(error).isInstanceOfSatisfying(ApiException.class, api -> {
             assertThat(api.status()).isEqualTo(status);
