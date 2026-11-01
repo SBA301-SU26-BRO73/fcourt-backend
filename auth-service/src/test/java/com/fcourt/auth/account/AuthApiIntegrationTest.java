@@ -162,6 +162,22 @@ class AuthApiIntegrationTest {
     }
 
     @Test
+    void aLoggedOutTokenPresentedAgainIsRefusedWithoutSigningOutOtherDevices() throws Exception {
+        String email = uniqueEmail();
+        String loggedOut = register(email, uniquePhone()).get("refreshToken").asText();
+        String otherDevice = body(mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content(credentials(email, PASSWORD))).andExpect(status().isOk())).get("refreshToken").asText();
+        mvc.perform(post("/api/auth/logout").contentType(MediaType.APPLICATION_JSON).content(refreshBody(loggedOut)))
+                .andExpect(status().isNoContent());
+
+        mvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON).content(refreshBody(loggedOut)))
+                .andExpect(status().isUnauthorized());
+        // Logout is not a rotation, so presenting the dead token is not treated as theft.
+        mvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON).content(refreshBody(otherDevice)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void lockedAccountCannotRefreshOrUseItsAccessTokenForTheProfile() throws Exception {
         var session = register(uniqueEmail(), uniquePhone());
         long id = session.get("user").get("id").asLong();
