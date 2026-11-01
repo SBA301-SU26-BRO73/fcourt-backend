@@ -92,7 +92,7 @@ Rules:
 | PUT | `/api/super-admin/court-admins/{id}/approve` | `{reason?}` (optional, max 500) | `CourtAdminResponse`, status `ACTIVE`, emits `OwnerApprovedEvent` |
 | PUT | `/api/super-admin/users/{id}/approve` | same | alias used by `tools/system_tests` |
 | PUT | `/api/super-admin/court-admins/{id}/reject` | `{reason}` (required, 1..500) | `CourtAdminResponse`, status `REJECTED` |
-| PUT | `/api/super-admin/users/{id}/toggle-status` | `{reason?}` | `{id, status}`: `ACTIVE` to `LOCKED` and back |
+| PUT | `/api/super-admin/users/{id}/toggle-status` | `{reason}` (required when locking, optional when unlocking) | `{id, status}`: `ACTIVE` to `LOCKED` and back |
 
 `CourtAdminResponse`: `{id, email, fullName, phone, role, status, createdAt, documents:[{id, url, docType}]}`,
 where `docType` is `LEGAL` (business licence or identity document) or `COURT_IMAGE`.
