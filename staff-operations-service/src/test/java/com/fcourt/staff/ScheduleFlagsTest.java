@@ -28,6 +28,12 @@ class ScheduleFlagsTest {
     }
 
     @Test
+    void confirmedSlotAlreadyEndedIsNotLateCheckIn() {
+        assertThat(flags.forSession(slot("CONFIRMED", "09:00", "09:30"), Instant.parse("2030-01-01T02:30:00Z")).lateCheckIn()).isFalse();
+        assertThat(flags.forSession(slot("CONFIRMED", "09:00", "09:30"), Instant.parse("2030-01-01T02:29:59Z")).lateCheckIn()).isTrue();
+    }
+
+    @Test
     void completedAndCancelledAreNeverPlayingOrLate() {
         for (String status : new String[]{"COMPLETED", "CANCELLED", "PENDING_PAYMENT"}) {
             var result = flags.forSession(slot(status, "09:00", "09:30"), Instant.parse("2030-01-01T02:25:00Z"));
