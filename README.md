@@ -25,8 +25,8 @@ fcourt-backend/
 |---|---|---|---|
 | `auth-service` | `auth_db` | `users`, `user_documents`, `user_account_action_logs` | _chưa điền_ |
 | `subscription-service` | `subscription_db` | `subscription_plans`, `plan_features`, `subscriptions`, `subscription_payments`, `court_types` | _chưa điền_ |
-| `facility-service` | `facility_db` | `branches`, `courts`, `time_slot_templates` | _chưa điền_ |
-| `reporting-service` | `reporting_db` | chưa có, owner tự thiết kế | _chưa điền_ |
+| `facility-service` | `facility_db` | `branches`, `courts`, `time_slot_templates` (+ `facility_outbox`, xem `facility-service/README.md`) | Tuấn |
+| `reporting-service` | `reporting_db` | read model `booking_facts`, `branch_snapshots`, `processed_events` (Flyway trong service) | Tuấn |
 | `discovery-service` | `discovery_db` | chưa có, owner tự thiết kế | _chưa điền_ |
 | `voucher-service` | `voucher_db` | `vouchers` | _chưa điền_ |
 | `slot-hold-engine` | `slot_hold_db` | `slot_holds` | _chưa điền_ |
@@ -34,7 +34,7 @@ fcourt-backend/
 | `payment-service` | `payment_db` | `payments`, `refund_requests` | _chưa điền_ |
 | `staff-operations-service` | `staff_db` | `staff` | _chưa điền_ |
 | `pos-retail-service` | `pos_retail_db` | `products`, `orders`, `order_items` | _chưa điền_ |
-| `notification-service` | `notification_db` | chưa có, owner tự thiết kế | _chưa điền_ |
+| `notification-service` | `notification_db` | `processed_events` (Flyway trong service, xem `notification-service/README.md`) | _chưa điền_ |
 
 ## Chạy database local
 
