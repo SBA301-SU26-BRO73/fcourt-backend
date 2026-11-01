@@ -29,7 +29,7 @@ Tests for components and services mirror their packages; the full integration te
 From this directory, with Docker Desktop running:
 
 ```powershell
-docker compose up -d postgres kafka topics
+docker compose up -d postgres kafka topics redis
 $env:DISCOVERY_DB_URL = 'jdbc:postgresql://localhost:5545/discovery_db'
 $env:DISCOVERY_DB_USER = 'discovery'
 $env:DISCOVERY_DB_PASSWORD = 'discovery_local'
@@ -94,10 +94,17 @@ Repeated popular searches are fast, but a cold broad fuzzy search can exceed 80 
 .\mvnw.cmd verify '-Ddiscovery.benchmark=true'
 ```
 
-On Linux/macOS use `sh mvnw`. Tests launch isolated PostgreSQL and Kafka processes on random ports; Docker is unnecessary. The first run downloads Maven, dependencies and platform-specific PostgreSQL binaries. Avoid running as root on Linux because PostgreSQL initdb rejects root.
+On Linux/macOS use `sh mvnw`. Tests launch isolated PostgreSQL and Kafka processes on random ports and Redis 7 through Testcontainers; Docker must be running. The first run downloads Maven, dependencies and platform-specific PostgreSQL binaries. Avoid running as root on Linux because PostgreSQL initdb rejects root.
 
 Coverage includes real Flyway/PostgreSQL queries, anonymous HTTP and validation, Vietnamese/fuzzy matching, price/type correlation, aggregate counts, Haversine ordering, pagination, cache invalidation and racing reads, atomic rollback, stale/deleted events and Kafka poison-message DLT recovery. The optional benchmark seeds 10,000 branches / 50,000 courts, warms 20 requests and measures 100 sequential HTTP requests per scenario, asserting warmed p95 <80 ms and reporting cold requests separately. It is a local single-client check, not a production concurrency SLA; see `VALIDATION.md` for measured evidence.
 
 ## Configuration
 
 `SERVER_PORT` (8085), `DISCOVERY_DB_URL` (localhost:5432/discovery_db), `DISCOVERY_DB_USER`, `DISCOVERY_DB_PASSWORD`, `KAFKA_BOOTSTRAP_SERVERS` (localhost:9092), `BRANCH_UPDATED_TOPIC`. Consumer group is `discovery-service-v1`, with earliest offset for a new group. Health endpoint: `/actuator/health`. No cross-service foreign keys, auth dependency or shared entity module.
+
+## Realtime court slots (SCRUM-22)
+
+See [SCRUM-22_AVAILABLE_SLOTS.md](SCRUM-22_AVAILABLE_SLOTS.md) for the public API,
+proposed upstream contracts, local fixtures, Redis setup and validation evidence.
+Slots read the upstream HTTP contracts and Redis on every request; the branch
+search cache does not apply to them.
