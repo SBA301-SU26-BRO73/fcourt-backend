@@ -56,6 +56,12 @@ class StaffController {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.disable(jwt, id, key));
     }
 
+    @PostMapping("/api/admin/staff/{id}/reactivate")
+    ResponseEntity<StaffView> reactivate(@AuthenticationPrincipal Jwt jwt, @PathVariable @Positive long id,
+            @RequestHeader("Idempotency-Key") UUID key) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.reactivate(jwt, id, key));
+    }
+
     @GetMapping("/api/staff/me")
     ResponseEntity<StaffView> assignment(@AuthenticationPrincipal Jwt jwt) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.assigned(jwt));

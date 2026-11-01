@@ -104,6 +104,22 @@ public class StaffService {
         return store.get(id, false);
     }
 
+    @Transactional(timeout = 15)
+    public StaffView reactivate(Jwt jwt, long id, UUID key) {
+        admin(jwt);
+        store.lockCommand(actor(jwt), key);
+        StaffView staff = owned(jwt, id);
+        String fingerprint = fingerprint(List.of(id));
+        Long replay = store.replay(actor(jwt), key, "REACTIVATE", fingerprint);
+        if (replay != null) return store.get(replay, false);
+        if (!staff.active()) {
+            upstream.reactivate(staff.userId(), staff.branchId(), upstreamKey(jwt, key), jwt.getTokenValue());
+            store.reactivate(id);
+        }
+        store.record(actor(jwt), key, "REACTIVATE", fingerprint, id);
+        return store.get(id, false);
+    }
+
     private StaffView owned(Jwt jwt, long id) {
         StaffView staff = store.get(id, true);
         upstream.ownedBranch(staff.branchId(), actor(jwt), jwt.getTokenValue());
