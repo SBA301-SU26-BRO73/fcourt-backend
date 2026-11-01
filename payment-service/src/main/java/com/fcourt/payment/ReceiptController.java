@@ -9,14 +9,17 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 class ReceiptController {
     private final ReceiptService service;
-    ReceiptController(ReceiptService service) { this.service=service; }
+    private final CustomerPayments customers;
+    ReceiptController(ReceiptService service,CustomerPayments customers) { this.service=service;this.customers=customers; }
     @PostMapping(value="/api/payments/{bookingId}/upload-receipt",consumes="multipart/form-data")
     ResponseEntity<ReceiptStatus> upload(@PathVariable @Positive long bookingId,
             @RequestHeader(value=HttpHeaders.AUTHORIZATION,required=false) String auth,
             @RequestHeader(value="X-Hold-Token",required=false) String hold,
             @RequestPart("file") MultipartFile file) {
+        Long customer=customers.identity(auth);
+        var payment=service.upload(bookingId,auth,hold,file,customer);
         return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
-                .body(ReceiptStatus.of(service.upload(bookingId,auth,hold,file)));
+                .body(ReceiptStatus.of(payment));
     }
     @GetMapping("/api/payments/{bookingId}/status")
     ResponseEntity<ReceiptStatus> status(@PathVariable @Positive long bookingId,

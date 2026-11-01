@@ -69,4 +69,15 @@ class ReceiptCleanupTest {
         service.upload(42, null, "guest", image());
         verify(storage, never()).delete(any());
     }
+
+    @Test
+    void ownershipConflictRollsBackSubmissionAndDeletesImage() throws Exception {
+        var service = service(CheckoutApiTest.NOW);
+        when(store.jdbc()).thenReturn(mock(JdbcTemplate.class, call -> call.getMethod().getName().equals("update") ? 0 : null));
+        when(store.find(42L)).thenReturn(null, null);
+        when(store.submit(any(), any())).thenReturn(new PaymentRecord(1, 42, 7, java.math.BigDecimal.TEN, "PENDING", URL, java.time.Instant.EPOCH, null, null, null, null));
+        assertThatThrownBy(() -> service.upload(42, null, "guest", image(), 9L))
+                .isInstanceOfSatisfying(ResponseStatusException.class, e -> org.assertj.core.api.Assertions.assertThat(e.getStatusCode().value()).isEqualTo(409));
+        verify(storage).delete(URL);
+    }
 }
