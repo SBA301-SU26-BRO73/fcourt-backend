@@ -60,15 +60,17 @@ def validate(manifest, allow_fixtures=False):
         raise SeedError("Invalid manifest collection types")
     if len(manifest["branches"]) != 3 or len(manifest["courtImages"]) != 10:
         raise SeedError("Exactly 3 branches and 10 court images are required")
-    branch_fields = {"name", "address", "ward", "city", "bankName", "bankAccountNumber", "bankAccountName", "bankQrImageUrl"}
+    branch_fields = {"name", "address", "ward", "city", "bankName", "bankBin", "bankAccountNumber", "bankAccountName", "bankQrImageUrl"}
     limits = {"name": 110, "address": 255, "ward": 100, "city": 100, "bankName": 100,
-              "bankAccountNumber": 50, "bankAccountName": 150, "bankQrImageUrl": 2000}
+              "bankBin": 6, "bankAccountNumber": 50, "bankAccountName": 150, "bankQrImageUrl": 2000}
     for branch in manifest["branches"]:
         if not isinstance(branch, dict) or set(branch) != branch_fields:
             raise SeedError("Invalid branch fields")
         for field, limit in limits.items():
             if not isinstance(branch[field], str) or not branch[field].strip() or len(branch[field]) > limit or "\0" in branch[field]:
                 raise SeedError("Invalid branch field: " + field)
+        if not re.fullmatch(r"[0-9]{6}", branch["bankBin"]):
+            raise SeedError("bankBin must be a six-digit string")
         if not manifest["demoOnly"] and not re.fullmatch(r"[0-9]{6,34}", branch["bankAccountNumber"]):
             raise SeedError("Real manifest requires numeric bank account strings, preserving leading zeros")
     assets = manifest["courtImages"] + [manifest["receiptImageUrl"]] + [b["bankQrImageUrl"] for b in manifest["branches"]]
@@ -115,7 +117,8 @@ def build_rows(m, hashed_password, plan_limits=(15, 3)):
     for i, branch in enumerate(m["branches"]):
         add("facility_db", "branches", id=base+i, admin_id=base, name=f"DEMO {key} {branch['name']}", address=branch["address"],
             ward=branch["ward"], city=branch["city"], open_time=time(6), close_time=time(22), bank_name=branch["bankName"],
-            bank_account_number=branch["bankAccountNumber"], bank_account_name=branch["bankAccountName"], bank_qr_image_url=branch["bankQrImageUrl"],
+            bank_bin=branch["bankBin"], bank_account_number=branch["bankAccountNumber"],
+            bank_account_name=branch["bankAccountName"], bank_qr_image_url=branch["bankQrImageUrl"],
             status="ACTIVE", slot_duration_minutes=30, created_at=stamp, updated_at=stamp, deleted_at=None)
         add("staff_db", "staff", id=base+i+1, user_id=base+i+1, branch_id=base+i,
             email=f"demo.{key}.{i+1}@demo.invalid", full_name=f"DEMO {key} STAFF {i+1}", phone=f"09{base:010d}{i+1:02d}",
@@ -218,6 +221,9 @@ class DockerDatabase:
 def apply(m, hashed_password, runner, allow_fixtures=False):
     validate(m, allow_fixtures)
     password_hash(hashed_password)
+    has_bank_bin = runner.execute("facility_db", "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='branches' AND column_name='bank_bin');")
+    if has_bank_bin != "t":
+        raise SeedError("Facility bank_bin column is missing; apply the owning service's V3 migration before seeding")
     plan_id = m["subscriptionPlanId"]
     raw = runner.execute("subscription_db", f"SELECT json_build_array(max_courts,max_branches) FROM subscription_plans WHERE id={plan_id} AND is_active AND deleted_at IS NULL;")
     try:

@@ -5,11 +5,44 @@
   "demoOnly": true,
   "slotPrice": "50000.00",
   "subscriptionPlanId": 1,
-  "courtTypeIds": {"badminton": 6, "pickleball": 1},
+  "courtTypeIds": {
+    "badminton": 6,
+    "pickleball": 1
+  },
   "branches": [
-    {"name":"Venue 1","address":"DEMO address - replace with authorized venue","ward":"DEMO ward","city":"Ha Noi","bankName":"DEMO BANK","bankAccountNumber":"DEMO-ACCOUNT-01","bankAccountName":"DEMO OWNER","bankQrImageUrl":"https://res.cloudinary.com/demo/image/upload/replace-qr-1.png"},
-    {"name":"Venue 2","address":"DEMO address - replace with authorized venue","ward":"DEMO ward","city":"Ho Chi Minh City","bankName":"DEMO BANK","bankAccountNumber":"DEMO-ACCOUNT-02","bankAccountName":"DEMO OWNER","bankQrImageUrl":"https://res.cloudinary.com/demo/image/upload/replace-qr-2.png"},
-    {"name":"Venue 3","address":"DEMO address - replace with authorized venue","ward":"DEMO ward","city":"Ho Chi Minh City","bankName":"DEMO BANK","bankAccountNumber":"DEMO-ACCOUNT-03","bankAccountName":"DEMO OWNER","bankQrImageUrl":"https://res.cloudinary.com/demo/image/upload/replace-qr-3.png"}
+    {
+      "name": "Venue 1",
+      "address": "DEMO address - replace with authorized venue",
+      "ward": "DEMO ward",
+      "city": "Ha Noi",
+      "bankName": "DEMO BANK",
+      "bankAccountNumber": "DEMO-ACCOUNT-01",
+      "bankAccountName": "DEMO OWNER",
+      "bankQrImageUrl": "https://res.cloudinary.com/demo/image/upload/replace-qr-1.png",
+      "bankBin": "000000"
+    },
+    {
+      "name": "Venue 2",
+      "address": "DEMO address - replace with authorized venue",
+      "ward": "DEMO ward",
+      "city": "Ho Chi Minh City",
+      "bankName": "DEMO BANK",
+      "bankAccountNumber": "DEMO-ACCOUNT-02",
+      "bankAccountName": "DEMO OWNER",
+      "bankQrImageUrl": "https://res.cloudinary.com/demo/image/upload/replace-qr-2.png",
+      "bankBin": "000000"
+    },
+    {
+      "name": "Venue 3",
+      "address": "DEMO address - replace with authorized venue",
+      "ward": "DEMO ward",
+      "city": "Ho Chi Minh City",
+      "bankName": "DEMO BANK",
+      "bankAccountNumber": "DEMO-ACCOUNT-03",
+      "bankAccountName": "DEMO OWNER",
+      "bankQrImageUrl": "https://res.cloudinary.com/demo/image/upload/replace-qr-3.png",
+      "bankBin": "000000"
+    }
   ],
   "receiptImageUrl": "https://res.cloudinary.com/demo/image/upload/replace-receipt.png",
   "courtImages": [
