@@ -77,6 +77,19 @@ class ManifestTest(unittest.TestCase):
         self.assertNotIn("DEMO-ACCOUNT", output.getvalue())
 
 
+    def test_fractional_discounts_use_half_up_cents_and_exact_totals(self):
+        for price, expected in [("10000.01", "2000.00"), ("10000.03", "2000.01"), ("49999.99", "10000.00")]:
+            m = copy.deepcopy(EXAMPLE); m["slotPrice"] = price
+            rows = seed.build_rows(seed.validate(m, True), PUBLIC_DEMO_HASH)
+            payment = rows["payment_db"]["payments"][1]
+            with self.subTest(price=price):
+                self.assertEqual(payment["discount_amount"], Decimal(expected))
+                for row in rows["payment_db"]["payments"]:
+                    self.assertGreaterEqual(row["amount"].as_tuple().exponent, -2)
+                    self.assertGreaterEqual(row["discount_amount"].as_tuple().exponent, -2)
+                    self.assertEqual(row["amount"] + row["discount_amount"], Decimal(price)*2)
+
+
 class PostgreSQLSeedTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -161,6 +174,20 @@ class PostgreSQLSeedTest(unittest.TestCase):
         m["branches"][0]["address"] = address
         seed.apply(m, PUBLIC_DEMO_HASH, self.db, allow_fixtures=True)
         self.assertEqual(self.db.execute("facility_db", "SELECT address FROM branches WHERE id=500000;"), address)
+
+
+    def test_fractional_price_apply_and_rerun_match_persisted_money(self):
+        for index, (price, discount) in enumerate([("10000.01", "2000.00"), ("10000.03", "2000.01"), ("49999.99", "10000.00")]):
+            base = 600000 + index*100000
+            m = self.manifest("test-fraction-"+str(index), base); m["slotPrice"] = price
+            with self.subTest(price=price):
+                first = seed.apply(m, PUBLIC_DEMO_HASH, self.db, allow_fixtures=True)
+                self.assertEqual(seed.apply(m, PUBLIC_DEMO_HASH, self.db, allow_fixtures=True), first)
+                actual = self.db.execute("payment_db", f"SELECT amount::text || '|' || discount_amount::text FROM payments WHERE id={base+1};")
+                amount, reduction = map(Decimal, actual.split("|"))
+                self.assertEqual(reduction, Decimal(discount))
+                self.assertEqual(amount+reduction, Decimal(price)*2)
+                self.assertEqual(self.db.execute("booking_db", f"SELECT count(*) FROM bookings WHERE id BETWEEN {base} AND {base+9999};"), "30")
 
 
 if __name__ == "__main__": unittest.main()
