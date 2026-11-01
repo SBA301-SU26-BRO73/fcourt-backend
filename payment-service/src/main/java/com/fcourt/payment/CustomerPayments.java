@@ -30,9 +30,8 @@ class CustomerPayments {
         try{return actor(decoder.decode(auth.substring(7)));}
         catch(JwtException e){throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"Invalid credentials");}
     }
-    // Called only after the booking authority accepts the very same Bearer credential.
-    void claim(long bookingId,Long customer){
-        if(customer==null)return;
+    // Runs inside the submission transaction, after the booking authority accepts the very same Bearer credential.
+    static void claim(JdbcTemplate jdbc,long bookingId,long customer){
         if(jdbc.update("UPDATE payments SET customer_id=? WHERE booking_id=? AND (customer_id IS NULL OR customer_id=?)",customer,bookingId,customer)!=1)
             throw new ResponseStatusException(HttpStatus.CONFLICT,"Payment ownership mismatch");
     }
@@ -88,7 +87,7 @@ class CustomerPayments {
             if(ids.size()!=total)throw PaymentUpstreams.unavailable();
         }catch(org.springframework.web.client.RestClientException e){throw PaymentUpstreams.unavailable();}
         tx.executeWithoutResult(s->{
-            for(long id:ids)jdbc.update("UPDATE payments SET customer_id=? WHERE booking_id=? AND customer_id IS NULL",customer,id);
+            jdbc.update("UPDATE payments SET customer_id=? WHERE booking_id=ANY(?) AND customer_id IS NULL",customer,ids.toArray(Long[]::new));
             jdbc.update("INSERT INTO payment_customer_sync(customer_id) VALUES (?) ON CONFLICT DO NOTHING",customer);
         });
     }
