@@ -83,7 +83,10 @@ Rules:
   one request per minute per account is honoured, and a new request invalidates the earlier token. The token
   is random, valid for 30 minutes, works once and is stored only as a SHA-256 hash in
   `password_reset_tokens`. It leaves the service only inside `PasswordResetRequestedEvent`; the notification
-  service builds the emailed link from it.
+  service builds the emailed link from it. Note that the event payload, token included, stays readable in
+  `auth_outbox` (published rows are not purged yet), so database read access there means access to tokens
+  that are still within their 30 minutes.
+- Passwords (`newPassword` included) must also fit BCrypt's 72 UTF-8 bytes, otherwise 400.
 - Reset sets the new password and revokes every refresh token of the user. Change password needs the current
   password, rejects reusing it, revokes every session and returns a fresh `AuthResponse` so the caller stays
   signed in on this device while other devices have to sign in again.
