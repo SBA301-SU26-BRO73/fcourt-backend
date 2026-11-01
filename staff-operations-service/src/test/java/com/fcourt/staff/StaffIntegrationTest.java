@@ -90,6 +90,8 @@ class StaffIntegrationTest {
 
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
+        registry.add("STAFF_OFFLINE_SIGNING_KEY",()->"fixture-offline-signing-key-not-for-production");
+        registry.add("STAFF_BOOKING_SERVICE_TOKEN",()->"fixture-staff-booking-token-not-for-production");
         registry.add("spring.datasource.url", DATABASE::getJdbcUrl);
         registry.add("spring.datasource.username", DATABASE::getUsername);
         registry.add("spring.datasource.password", DATABASE::getPassword);
@@ -165,6 +167,23 @@ class StaffIntegrationTest {
     }
 
     @Test
+    void offlineSnapshotHashesCodesAndReplayIsAtomicAndIdempotent() {
+        create(UUID.randomUUID(),body(7));
+        var snapshot=call(HttpMethod.GET,"/api/staff/offline/tickets",null,token("100","STAFF"),null);
+        assertThat(snapshot.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(snapshot.getBody().toString()).doesNotContain("offline-ticket");
+        String permit=snapshot.getBody().path("tickets").get(0).path("permit").asText();
+        var request=Map.of("permit",permit,"occurredAt",Instant.now().toString());
+        UUID key=UUID.randomUUID();
+        var first=call(HttpMethod.POST,"/api/staff/check-in/offline",request,token("100","STAFF"),key);
+        assertThat(first.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(call(HttpMethod.POST,"/api/staff/check-in/offline",request,token("100","STAFF"),key).getBody()).isEqualTo(first.getBody());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_check_in_audit WHERE channel='OFFLINE'",Integer.class)).isEqualTo(1);
+        assertThat(call(HttpMethod.POST,"/api/staff/check-in/offline",Map.of("permit",permit+"x","occurredAt",Instant.now().toString()),
+                token("100","STAFF"),UUID.randomUUID()).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
     void walkInForwardsAndFingerprintsGuestName() {
         create(UUID.randomUUID(), body(7));
         var request = new java.util.HashMap<>(walkInBody());
@@ -222,6 +241,10 @@ class StaffIntegrationTest {
     void reactivationRestoresOnlyTheOwnedAssignmentAndReplays() {
         long id = create(UUID.randomUUID(), body(7)).getBody().path("id").asLong();
         call(HttpMethod.DELETE, "/api/admin/staff/" + id, null, token("1", "ADMIN"), UUID.randomUUID());
+        var managed=call(HttpMethod.GET,"/api/admin/staff/accounts/100?branchId=7",null,token("1","ADMIN"),null);
+        assertThat(managed.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(managed.getBody().path("active").asBoolean()).isFalse();
+        assertThat(call(HttpMethod.GET,"/api/admin/staff/accounts/100?branchId=8",null,token("1","ADMIN"),null).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         UUID key = UUID.randomUUID();
         String path = "/api/admin/staff/" + id + "/reactivate";
         assertThat(call(HttpMethod.POST, path, null, token("2", "ADMIN"), UUID.randomUUID()).getStatusCode())
@@ -815,7 +838,15 @@ class StaffIntegrationTest {
         try {
             var jwt = SignedJWT.parse(exchange.getRequestHeaders().getFirst("Authorization").substring(7)).getJWTClaimsSet();
             long actor = Long.parseLong(jwt.getSubject());
-            if (path.startsWith("/api/internal/branches/")) {
+            if (path.endsWith("/offline-tickets")) {
+                send(exchange,200,Map.of("branchId",7,"tickets",List.of(Map.of("bookingId",42,"courtName","Court 1",
+                        "customerName","Guest","checkInCode","offline-ticket","date",LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).toString(),
+                        "slotStart","00:00","slotEnd","00:00","status","CONFIRMED"))));
+            } else if(path.equals("/api/internal/bookings/offline-check-in")) {
+                var request=JSON.readTree(exchange.getRequestBody());
+                send(exchange,200,Map.of("bookingId",request.path("bookingId").asLong(),"branchId",7,"date",request.path("date").asText(),
+                        "status","CHECKED_IN","checkedInAt",request.path("checkedInAt").asText()));
+            } else if (path.startsWith("/api/internal/branches/")) {
                 if (bookingFailure != 0) { send(exchange, bookingFailure, Map.of()); return; }
                 if (bulkSchedule) {
                     Map<String, String> query = new java.util.HashMap<>();
