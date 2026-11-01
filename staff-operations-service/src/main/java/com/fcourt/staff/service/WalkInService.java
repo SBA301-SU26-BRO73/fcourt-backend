@@ -51,7 +51,7 @@ public class WalkInService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Duplicate slot IDs");
         }
         var command = new BookingGateway.WalkInCommand(assignment.branchId(), actor, request.courtId(),
-                request.date(), request.slotIds(), request.guestPhone(), "CASH", clock.instant(), null);
+                request.date(), request.slotIds(), request.guestPhone(), "CASH", clock.instant(), null, request.guestName());
         String upstreamKey = "staff:walk-in:" + actor + ":" + key;
         BookingGateway.CashQuote expectedQuote = null;
         var result = booking.reconcileWalkIn(command, upstreamKey, jwt.getTokenValue());
@@ -62,7 +62,7 @@ public class WalkInService {
             expectedQuote = quote;
             safety.check(assignment.branchId(), request.courtId(), request.date(), request.slotIds(), actor, upstreamKey, jwt.getTokenValue());
             command = new BookingGateway.WalkInCommand(assignment.branchId(), actor, request.courtId(), request.date(),
-                    request.slotIds(), request.guestPhone(), "CASH", clock.instant(), quote);
+                    request.slotIds(), request.guestPhone(), "CASH", clock.instant(), quote, request.guestName());
             result = booking.walkIn(command, upstreamKey, jwt.getTokenValue());
             if (result.amount() == null || quote.totalAmount().compareTo(result.amount()) != 0) throw BookingGateway.unavailable();
         }
@@ -103,6 +103,15 @@ public class WalkInService {
                         || expected.price().compareTo(actual.price()) != 0) throw BookingGateway.unavailable();
             }
         }
+    }
+
+    public BookingGateway.CheckoutPreview checkoutPreview(Jwt jwt, long bookingId) {
+        var assignment = staff.assigned(jwt);
+        var result = booking.checkoutPreview(bookingId, assignment.branchId(), Long.parseLong(jwt.getSubject()), jwt.getTokenValue());
+        if (result.bookingId() != bookingId || result.branchId() != assignment.branchId() || result.totalAmount() == null
+                || result.surchargeAmount() == null || result.surchargeAmount().signum() < 0
+                || result.totalAmount().compareTo(result.surchargeAmount()) < 0) throw BookingGateway.unavailable();
+        return result;
     }
 
     @Transactional(timeout = 20)
