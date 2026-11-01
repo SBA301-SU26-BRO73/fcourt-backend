@@ -29,7 +29,7 @@ class PaymentDatabaseTest {
     @Autowired JdbcTemplate jdbc;
 
     @org.junit.jupiter.api.BeforeEach
-    void clear() { jdbc.execute("TRUNCATE payment_outbox,payments RESTART IDENTITY"); }
+    void clear() { jdbc.execute("TRUNCATE payment_customer_sync,payment_outbox,payments RESTART IDENTITY"); }
 
     @Autowired PaymentStore store;
     @Autowired org.springframework.transaction.support.TransactionTemplate tx;
@@ -94,7 +94,7 @@ class PaymentDatabaseTest {
     @Test
     void unauthorizedMultipartAndStatusReturn401() throws Exception {
         var service=receipts(fixed(), b -> "unused");
-        var mvc=org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(new ReceiptController(service)).build();
+        var mvc=org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(new ReceiptController(service,org.mockito.Mockito.mock(CustomerPayments.class))).build();
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/api/payments/42/upload-receipt").file(image()))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/payments/42/status"))
@@ -309,6 +309,60 @@ class PaymentDatabaseTest {
                 .isEqualByComparingTo("160000.00");
         assertThat(jdbc.queryForObject("SELECT status FROM payments", String.class)).isEqualTo("PENDING");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM refund_requests", Long.class)).isZero();
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success", Long.class)).isEqualTo(3);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success", Long.class)).isEqualTo(4);
     }
+    @Autowired CustomerPayments customerPayments;
+    @Test
+    void customerHistoryRejectsSpoofedHeadersAndOtherOwners() throws Exception {
+        submitted(); customerPayments.claim(42,10L);
+        jdbc.update("INSERT INTO payment_customer_sync(customer_id) VALUES (10),(20)");
+        securedMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/payments/my-transactions").header("X-User-Id","10"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
+        securedMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/payments/my-transactions")
+            .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt().jwt(j->j.subject("10"))))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Cache-Control","no-store"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items[0].bookingId").value(42))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items[0].amount").value(160000))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.items[0].status").value("PENDING"));
+        securedMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/payments/my-transactions")
+            .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt().jwt(j->j.subject("20"))))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.total").value(0));
+    }
+    @Test
+    void customerHistoryMapsExactAmountAndEmptyPages() throws Exception {
+        submitted();customerPayments.claim(42,9L);jdbc.update("INSERT INTO payment_customer_sync(customer_id) VALUES (9)");
+        jdbc.update("UPDATE payments SET status='CONFIRMED' WHERE booking_id=42");
+        var history=customerPayments.history(admin(),0,1);
+        assertThat(history.items().getFirst().amount()).isEqualByComparingTo("160000");
+        assertThat(history.items().getFirst().status()).isEqualTo("SUCCESS");
+        assertThat(history.items().getFirst().method()).isEqualTo("VIETQR");
+        assertThat(customerPayments.history(admin(),1,1).items()).isEmpty();
+        assertThat(customerPayments.history(admin(),1,1).total()).isEqualTo(1);
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->customerPayments.history(admin(),-1,20)).hasMessageContaining("400");
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->customerPayments.claim(42,20L)).hasMessageContaining("409");
+    }
+    @Test
+    void legacyHistoryReconcilesOnlyAuthoritativeOwnerBookings() throws Exception {
+        submitted();
+        var builder=org.springframework.web.client.RestClient.builder().baseUrl("http://booking");
+        var server=org.springframework.test.web.client.MockRestServiceServer.bindTo(builder).build();
+        server.expect(org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo("http://booking/api/bookings/my?status=ALL&page=0&size=100"))
+            .andExpect(org.springframework.test.web.client.match.MockRestRequestMatchers.header("Authorization","Bearer token"))
+            .andRespond(org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess("{\"items\":[{\"id\":42}],\"page\":0,\"size\":100,\"total\":1}",org.springframework.http.MediaType.APPLICATION_JSON));
+        var service=new CustomerPayments(jdbc,org.mockito.Mockito.mock(org.springframework.security.oauth2.jwt.JwtDecoder.class),builder.build(),tx);
+        assertThat(service.history(admin(),0,20).items()).hasSize(1);
+        assertThat(jdbc.queryForObject("SELECT customer_id FROM payments WHERE booking_id=42",Long.class)).isEqualTo(9);
+        service.history(admin(),0,20);server.verify(); // No second upstream read once legacy migration succeeds.
+    }
+    @Test
+    void unavailableLegacyAuthorityNeverReturnsFalseEmptyHistory() {
+        var builder=org.springframework.web.client.RestClient.builder().baseUrl("http://booking");
+        var server=org.springframework.test.web.client.MockRestServiceServer.bindTo(builder).build();
+        server.expect(org.springframework.test.web.client.match.MockRestRequestMatchers.anything()).andRespond(org.springframework.test.web.client.response.MockRestResponseCreators.withServerError());
+        var service=new CustomerPayments(jdbc,org.mockito.Mockito.mock(org.springframework.security.oauth2.jwt.JwtDecoder.class),builder.build(),tx);
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->service.history(admin(),0,20)).hasMessageContaining("503");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM payment_customer_sync",Long.class)).isZero();
+    }
+
 }
