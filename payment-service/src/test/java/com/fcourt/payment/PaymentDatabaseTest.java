@@ -34,7 +34,7 @@ class PaymentDatabaseTest {
 
     @org.junit.jupiter.api.BeforeEach
     void clear() {
-        jdbc.execute("TRUNCATE refund_requests,payment_customer_sync,payment_outbox,payments RESTART IDENTITY");
+        jdbc.execute("TRUNCATE walk_in_cash_ledger,refund_requests,payment_customer_sync,payment_outbox,payments RESTART IDENTITY");
         redis.execute((org.springframework.data.redis.core.RedisCallback<Object>)c->{c.serverCommands().flushDb();return null;});
     }
     @Autowired org.springframework.data.redis.core.StringRedisTemplate redis;
@@ -317,7 +317,7 @@ class PaymentDatabaseTest {
                 .isEqualByComparingTo("160000.00");
         assertThat(jdbc.queryForObject("SELECT status FROM payments", String.class)).isEqualTo("PENDING");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM refund_requests", Long.class)).isZero();
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success", Long.class)).isEqualTo(7);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success", Long.class)).isEqualTo(8);
     }
     @Autowired CustomerPayments customerPayments;
     @Test
@@ -571,6 +571,41 @@ class PaymentDatabaseTest {
         securedMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/api/admin/refunds/"+id+"/complete").with(r->{r.setMethod("PUT");return r;})
             .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt().authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN"))))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+    }
+
+    @Autowired UnifiedLedger unified;
+    String cashEvent(java.util.UUID eventId,String amount) {
+        return "{\"eventId\":\""+eventId+"\",\"type\":\"WalkInBookingCreatedEvent\",\"version\":1,\"data\":{\"actorId\":9,\"occurredAt\":\"2026-11-01T01:00:00Z\",\"booking\":{\"bookingId\":99,\"bookingCode\":\"CASH000099\",\"branchId\":7,\"courtId\":2,\"status\":\"CHECKED_IN\",\"paymentMethod\":\"CASH\",\"amount\":"+amount+",\"checkedInAt\":\"2026-11-01T01:00:00Z\",\"invoice\":{\"receiptCode\":\"CASH-99\",\"cashierUserId\":9,\"totalAmount\":"+amount+"}}}}";
+    }
+    void consumeCash(String payload){tx.executeWithoutResult(s->{try{new CashLedgerConsumer(jdbc,new com.fasterxml.jackson.databind.ObjectMapper()).accept(payload);}catch(Exception e){throw new RuntimeException(e);}});}
+    @Test
+    void cashEventReplayIsIdempotentAndChangedAmountCannotReplaceIt() {
+        var id=java.util.UUID.randomUUID();consumeCash(cashEvent(id,"50000"));consumeCash(cashEvent(id,"50000"));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM walk_in_cash_ledger",Long.class)).isEqualTo(1);
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->consumeCash(cashEvent(id,"60000"))).isInstanceOf(RuntimeException.class);
+        assertThat(jdbc.queryForObject("SELECT amount FROM walk_in_cash_ledger",java.math.BigDecimal.class)).isEqualByComparingTo("50000");
+    }
+    @Test
+    void unifiedLedgerBalancesPaymentRefundAndCashWithoutCountingPendingRefunds() throws Exception {
+        long id=pendingRefund();consumeCash(cashEvent(java.util.UUID.randomUUID(),"50000"));
+        assertThat(unified.history(7,null,null,"ALL","","ALL",0,1,admin()).summary().netRevenue()).isEqualByComparingTo("210000");
+        adminRefunds(bytes->"https://res.cloudinary.com/demo/proof.png").decide(id,"COMPLETED",null,image(),admin());
+        var result=unified.history(7,null,null,"ALL","","ALL",0,1,admin());
+        assertThat(result.total()).isEqualTo(3);assertThat(result.items()).hasSize(1);
+        assertThat(result.summary().received()).isEqualByComparingTo("210000");assertThat(result.summary().refunded()).isEqualByComparingTo("80000");
+        assertThat(result.summary().netRevenue()).isEqualByComparingTo("130000");
+        var refunds=unified.history(7,null,null,"SUCCESS","","REFUND",0,20,admin());
+        assertThat(refunds.items().getFirst().amount()).isEqualByComparingTo("-80000");
+        assertThat(unified.history(8,null,null,"ALL","","ALL",0,20,admin()).total()).isZero();
+    }
+    @Test
+    void unifiedFiltersAndKeysDoNotCollideWithLegacyIds() throws Exception {
+        pendingRefund();consumeCash(cashEvent(java.util.UUID.randomUUID(),"50000"));
+        var page=unified.history(7,null,null,"SUCCESS","","ALL",0,20,admin());
+        assertThat(page.items().stream().map(UnifiedLedger.Entry::transactionKey).distinct().count()).isEqualTo(page.items().size());
+        assertThat(unified.history(7,java.time.LocalDate.of(2026,11,1),java.time.LocalDate.of(2026,11,1),"ALL","CASH-99","WALK_IN_CASH",0,20,admin()).total()).isEqualTo(1);
+        assertThat(unified.history(7,null,null,"ALL","%","ALL",0,20,admin()).total()).isZero();
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->unified.history(7,null,null,"ALL","","UNKNOWN",0,20,admin())).hasMessageContaining("400");
     }
 
 }

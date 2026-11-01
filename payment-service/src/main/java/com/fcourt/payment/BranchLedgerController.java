@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 class BranchLedgerController {
     private final BranchLedger ledger;
     BranchLedgerController(BranchLedger ledger){this.ledger=ledger;}
-    @GetMapping("/api/admin/payments/transactions")
+    @GetMapping(value="/api/admin/payments/transactions",params="!transactionType")
     ResponseEntity<BranchLedger.Page> history(@RequestParam long branchId,
             @RequestParam(required=false) @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required=false) @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate toDate,
