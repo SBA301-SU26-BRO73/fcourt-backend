@@ -170,7 +170,7 @@ class SuperAdminApiIntegrationTest {
     /** SCRUM-40: the reset token reaches Kafka, then the delivered outbox row no longer holds it. */
     @Test
     void passwordResetEventIsDeliveredAndItsTokenIsScrubbedFromTheOutbox() throws Exception {
-        String email = unique("reset") + "@test.invalid";
+        String email = unique("reset");
         long user = jdbc.queryForObject("""
                 INSERT INTO users(email, password_hash, role, status, full_name)
                 VALUES (?, 'x', 'CUSTOMER', 'ACTIVE', 'Reset User') RETURNING id""", Long.class, email);
