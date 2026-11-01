@@ -20,6 +20,10 @@ spring:
   jdbc:
     template:
       query-timeout: 3s
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 30MB
   flyway:
     baseline-on-migrate: false
   kafka:
@@ -36,11 +40,24 @@ spring:
 
 auth:
   jwt:
-    # Until SCRUM-6 issues tokens, point these at an external JWKS (dev token tool).
-    # Once SCRUM-6 serves /.well-known/jwks.json the defaults validate auth-service's own tokens.
+    # The defaults validate the tokens auth-service issues itself via /.well-known/jwks.json.
+    # Other services point jwk-set-uri at this service.
     jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
     issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
     audience: ${AUTH_JWT_AUDIENCE:fcourt}
+    # PKCS8 PEM RSA private key used to sign tokens. Blank generates an ephemeral key (dev only).
+    private-key: ${AUTH_JWT_PRIVATE_KEY:}
+    key-id: ${AUTH_JWT_KEY_ID:}
+    access-ttl: ${AUTH_JWT_ACCESS_TTL:15m}
+    refresh-ttl: ${AUTH_JWT_REFRESH_TTL:30d}
+  cloudinary-url: ${AUTH_CLOUDINARY_URL:}
+  password-reset:
+    ttl: ${AUTH_PASSWORD_RESET_TTL:30m}
+  # Wrong passwords per email (login) or per user (change password) before a temporary 429 lock.
+  attempts:
+    max-failures: ${AUTH_ATTEMPTS_MAX_FAILURES:5}
+    window: ${AUTH_ATTEMPTS_WINDOW:15m}
+    lock: ${AUTH_ATTEMPTS_LOCK:15m}
   events:
     enabled: ${AUTH_EVENTS_ENABLED:true}
     topic: ${AUTH_EVENTS_TOPIC:fcourt.auth.events}

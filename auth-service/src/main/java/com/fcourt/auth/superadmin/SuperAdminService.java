@@ -57,7 +57,7 @@ public class SuperAdminService {
         users.updateStatus(ownerId, UserStatus.ACTIVE.name(), now);
         users.logAction(ownerId, actorId, APPROVE, owner.status(), UserStatus.ACTIVE.name(), normalise(reason), now);
         outbox.append(ownerId, OwnerApprovedEvent.TYPE, OwnerApprovedEvent.VERSION,
-                new OwnerApprovedEvent(ownerId, actorId, now));
+                new OwnerApprovedEvent(ownerId, actorId, now, owner.email(), owner.fullName()));
         return reload(ownerId);
     }
 
