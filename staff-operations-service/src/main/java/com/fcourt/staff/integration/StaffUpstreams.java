@@ -1,5 +1,6 @@
 package com.fcourt.staff.integration;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.Objects;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -108,7 +109,9 @@ public class StaffUpstreams {
     @FunctionalInterface
     private interface Call<T> { T run(); }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record Account(Long id, String email, String fullName, String phone, String role, String status) { }
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record Branch(Long id, Long adminId, String status) { }
     public record CreateAccount(long branchId, String email, String password, String fullName, String phone) {
         @Override public String toString() { return "CreateAccount[credentials=REDACTED]"; }
