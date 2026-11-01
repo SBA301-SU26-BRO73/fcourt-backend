@@ -40,7 +40,7 @@ class BookingQueries {
         }
         long total=Objects.requireNonNull(jdbc.queryForObject("SELECT count(*) FROM bookings b WHERE b.customer_id=?"+condition,Long.class,args.toArray()));
         args.add(size);args.add((long)page*size);
-        var items=jdbc.query("SELECT b.* FROM bookings b WHERE b.customer_id=?"+condition+" ORDER BY b.created_at DESC,b.id DESC LIMIT ? OFFSET ?",this::row,args.toArray());
+        var items=withSlots(jdbc.query("SELECT b.* FROM bookings b WHERE b.customer_id=?"+condition+" ORDER BY b.created_at DESC,b.id DESC LIMIT ? OFFSET ?",this::row,args.toArray()));
         return new BookingView.Page(items,page,size,total);
     }
     @Transactional(readOnly=true)
@@ -54,20 +54,27 @@ class BookingQueries {
         boolean guest=row.get("customer_id")==null && holdToken!=null && row.get("hold_token_hash") instanceof String hash
             && MessageDigest.isEqual(hash.getBytes(StandardCharsets.US_ASCII),hash(holdToken).getBytes(StandardCharsets.US_ASCII));
         if(!owner && !guest) throw missing();
-        return jdbc.query("SELECT * FROM bookings WHERE id=?",this::row,id).getFirst();
+        return withSlots(jdbc.query("SELECT * FROM bookings WHERE id=?",this::row,id)).getFirst();
     }
     static String hash(String token) {
         try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8))); }
         catch(NoSuchAlgorithmException e) { throw new IllegalStateException(e); }
     }
     static ResponseStatusException missing() { return new ResponseStatusException(HttpStatus.NOT_FOUND,"Booking not found"); }
+    private List<BookingView> withSlots(List<BookingView> bookings) {
+        if(bookings.isEmpty()) return bookings;
+        var slots=new HashMap<Long,List<BookingView.Slot>>();
+        jdbc.query("SELECT booking_id,slot_start,slot_end,price_at_booking FROM booking_slots WHERE booking_id=ANY(?) ORDER BY booking_id,slot_start,id",
+            rs -> { slots.computeIfAbsent(rs.getLong(1),k -> new ArrayList<>())
+                .add(new BookingView.Slot(rs.getObject(2,LocalTime.class),rs.getObject(3,LocalTime.class),rs.getBigDecimal(4))); },
+            (Object) bookings.stream().map(BookingView::id).toArray(Long[]::new));
+        return bookings.stream().map(b -> b.withSlots(slots.getOrDefault(b.id(),List.of()))).toList();
+    }
     private BookingView row(ResultSet r,int index) throws SQLException {
         long id=r.getLong("id");
-        var slots=jdbc.query("SELECT slot_start,slot_end,price_at_booking FROM booking_slots WHERE booking_id=? ORDER BY slot_start,id",
-            (s,n) -> new BookingView.Slot(s.getObject(1,LocalTime.class),s.getObject(2,LocalTime.class),s.getBigDecimal(3)),id);
         var expiry=r.getTimestamp("hold_expires_at");
         return new BookingView(id,r.getString("booking_code"),r.getObject("branch_id",Long.class),r.getString("branch_name"),
-            r.getString("branch_address"),r.getString("branch_phone"),r.getString("court_name"),r.getObject("date",LocalDate.class),slots,
+            r.getString("branch_address"),r.getString("branch_phone"),r.getString("court_name"),r.getObject("date",LocalDate.class),List.of(),
             r.getBigDecimal("total_price"),r.getString("status"),r.getString("customer_name"),expiry==null?null:expiry.toInstant(),
             r.getString("checkin_code"),r.getString("qr_image_url"),r.getString("receipt_image_url"),r.getString("payment_status"),r.getTimestamp("created_at").toInstant(),r.getBigDecimal("refund_amount"),r.getString("cancellation_reason"));
     }
