@@ -28,6 +28,9 @@ Copy manifest.example.json to manifest.local.json (ignored). Replace venue
 addresses, numeric bank accounts/QR images, 10 authorized Cloudinary court images,
 receipt asset and demoDate. Set demoOnly=false for your real-asset demo. The
 example intentionally contains placeholders and is not real/verified venue data.
+Each branch also requires `bankBin`, the bank's six-digit identifier as a string.
+Leading zeros are preserved. Example `000000` is a format-only fixture, not a
+verified bank code. A QR image URL cannot replace bankBin for payment checkout.
 
 ```powershell
 python tools/demo_seed/seed.py --manifest tools/demo_seed/manifest.local.json
@@ -40,9 +43,17 @@ Default is dry-run: validates/counts only, never connects or writes. --apply
 requires an explicit container. --user defaults postgres. Run after service
 schemas/catalogs have been initialized. Plan/court type IDs are validated against
 subscription_db; no silent replacement of another owner's catalog is attempted.
-The staff schema must include Flyway V2 (profile columns) from SCRUM-26. Fixture
-tests apply the inherited V1 schemas plus this migration before seeding; profile
+The staff schema must include Flyway V2 (profile columns) from SCRUM-26. Facility
+must include its owning service's V3 migration (`bank_bin`, facility PR #20).
+The seeder checks for bank_bin before writing any seed rows and never adds or
+baselines another service's schema itself. Fixture tests apply the inherited V1
+schemas plus staff V2 and facility V3 before seeding; profile
 email/name/phone match the corresponding IAM fixture accounts.
+
+Tests vendor the exact facility V3 SQL from commit
+`5fc2ffe83226b90dd23e2cf31782534ec9099545` in `fixtures/facility_v3.sql`.
+This is a test-only compatibility snapshot, not a runtime migration. Update the
+fixture against the owning service when its contract changes.
 
 For explicitly fake local fixture data only:
 
@@ -80,17 +91,30 @@ completed demo actions. Run on a designated demo/test database container.
 Runtime services pointed at legacy bootstrap DBs still need their documented
 reviewed Flyway baseline/migrations.
 
+Percentage discounts are capped and rounded once to 0.01 using ROUND_HALF_UP
+before subtracting from the two-slot total. Payment amount + discount equals the
+original booking total exactly, including prices such as 10000.01 or 10000.03.
+Stored-row verification uses these rounded values, not fractions PostgreSQL
+would silently round during insertion.
+
+Manifests made before the bankBin requirement must be updated. Use a new seedKey
+and free idBase for an existing older dataset: changed manifest fingerprints
+remain rejected; the tool does not rewrite old seed rows or banking details.
+
 ## Verification
 
 ```powershell
 python -m unittest discover -s tools/demo_seed -p test_seed.py -v
 ```
 
-**12 tests pass, no skips**, including original service SQL schemas and seeds on
+**17 tests pass, no skips**, including original service SQL schemas and seeds on
 a real PostgreSQL 16 container with no external port/user data volume. Verifies
 rerun, partial failure/resume, ownership collisions, changed-manifest/data refusal,
 sequence advancement, quote/dollar-value roundtrip, CLI dry-run and credential
 redaction. Unit checks also validate references, totals and non-overlapping slots.
+Regression checks cover fractional discounts rounded down/up and at the cap,
+actual apply/rerun against numeric(10,2), bankBin format/leading-zero persistence
+with facility V3, and refusal of a missing bank schema before any seed writes.
 Docker absence fails tests rather than silently skipping database verification.
 
 **Actual venue/bank/Cloudinary acceptance is NOT RUN:** the owner has not supplied
