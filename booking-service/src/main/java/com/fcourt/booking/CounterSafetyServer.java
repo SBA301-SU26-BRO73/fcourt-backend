@@ -113,7 +113,7 @@ class CounterSafetyServer implements SmartLifecycle {
                             default -> Status.UNAVAILABLE;
                         };
                 observer.onError(status.asRuntimeException());
-            } catch (IllegalArgumentException e) {
+            } catch (IllegalArgumentException | java.time.DateTimeException e) {
                 observer.onError(Status.INVALID_ARGUMENT.asRuntimeException());
             } catch (Exception e) {
                 observer.onError(Status.UNAVAILABLE.asRuntimeException());
