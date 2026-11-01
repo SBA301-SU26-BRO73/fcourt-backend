@@ -11,7 +11,7 @@ record BookingView(long id,String bookingCode,Long branchId,String branchName,St
     record Slot(LocalTime startTime,LocalTime endTime,BigDecimal price) {}
     BookingView withSlots(List<Slot> loaded) {
         return new BookingView(id,bookingCode,branchId,branchName,branchAddress,branchPhone,courtName,date,loaded,totalPrice,
-            status,customerName,holdExpiresAt,checkInCode,qrImageUrl,receiptImageUrl,paymentStatus,createdAt);
+            status,customerName,holdExpiresAt,checkInCode,qrImageUrl,receiptImageUrl,paymentStatus,createdAt,refundAmount,cancellationReason);
     }
     record Page(List<BookingView> items,int page,int size,long total) {}
 }
