@@ -3,7 +3,7 @@ package com.fcourt.subscription.plan;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -22,8 +22,10 @@ public final class PlanDtos {
             @NotBlank(message = "name is required")
             @Size(max = 100, message = "name must be at most 100 characters") String name,
             @Size(max = 255, message = "tagline must be at most 255 characters") String tagline,
-            @PositiveOrZero(message = "monthlyPrice must not be negative") Long monthlyPrice,
-            @PositiveOrZero(message = "yearlyPrice must not be negative") Long yearlyPrice,
+            @Positive(message = "monthlyPrice must be positive; omit it if the plan is not sold monthly")
+            Long monthlyPrice,
+            @Positive(message = "yearlyPrice must be positive; omit it if the plan is not sold yearly")
+            Long yearlyPrice,
             @NotNull(message = "maxBranches is required")
             @Min(value = 1, message = "maxBranches must be at least 1") Integer maxBranches,
             @NotNull(message = "maxCourts is required")

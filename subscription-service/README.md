@@ -78,12 +78,14 @@ active? (default true on create, unchanged on update when omitted)}`
 | PUT | `/api/subscription-plans/{id}` | `SubscriptionPlanRequest` | `SubscriptionPlanResponse` (full replacement) |
 | DELETE | `/api/subscription-plans/{id}` | | `204` (soft delete) |
 
-`SubscriptionPlanRequest`: `{name (required, max 100), tagline? (max 255), monthlyPrice? (>= 0, VND), yearlyPrice? (>= 0, VND),
+`SubscriptionPlanRequest`: `{name (required, max 100), tagline? (max 255), monthlyPrice? (> 0, VND), yearlyPrice? (> 0, VND),
 maxBranches (required, >= 1), maxCourts (required, >= 1), features? (max 30 strings of max 255), color? (max 20),
 popular? (default false), active? (default true on create, unchanged on update when omitted)}`
 
 `SubscriptionPlanResponse`: `{id, name, tagline, monthlyPrice, yearlyPrice, maxCourts, maxBranches, active, color, popular,
 features:[string], createdAt, updatedAt}`. A null price means the plan is not sold for that cycle.
+A price of 0 is refused (400, and a database CHECK): PayOS cannot charge 0, and the free tier is the starter
+subscription, not a plan priced 0.
 
 ### Subscriptions and payments (court owner)
 
@@ -135,7 +137,7 @@ out of range values are clamped (`page >= 0`, `1 <= size <= 100`) instead of rej
 
 ## Rules
 
-- Names are trimmed and unique among rows that are not deleted (409 `Court type name already exists` /
+- Names are trimmed and unique, ignoring case, among rows that are not deleted (409 `Court type name already exists` /
   `Subscription plan name already exists`). A deleted row frees its name.
 - Delete is a soft delete (`deleted_at`): subscriptions that already bought a plan keep resolving it.
 - Plan features: blank entries are dropped, the rest are trimmed and de-duplicated in the order given; PUT replaces
@@ -147,5 +149,6 @@ out of range values are clamped (`page >= 0`, `1 <= size <= 100`) instead of rej
 
 - `V1`, `V2`: ported from `database/V1__init_schema.sql` and `V2__seed_sample_data.sql`, with the psql-only
   `\restrict` / `\unrestrict` lines removed (Flyway cannot run them). The seed has 6 court types and 3 plans.
-- `subscriptions` and `subscription_payments` (unique `order_code`) are used by the purchase flow. Start new migrations at `V3`.
+- `subscriptions` and `subscription_payments` (unique `order_code`) are used by the purchase flow.
 - `admin_id` is the auth-service user id from the token's `sub`; there is no foreign key across services.
+- `V3`: name uniqueness on `lower(name)` (partial unique indexes rebuilt) and a CHECK that a plan price is null or positive.
