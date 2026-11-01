@@ -131,7 +131,7 @@ facility/subscription services can consume it to enable branch creation for the 
 
 - Leave `AUTH_JWK_SET_URI` at its default so the service validates its own tokens against its own JWKS.
 - Everything not listed in `SecurityConfiguration` is `denyAll`: add new routes there.
-- `V5` creates `refresh_tokens`; start new migrations at `V6`. `UserRole` / `UserStatus` in
+- `V5` creates `refresh_tokens` and `V6` creates `failed_attempts`; start new migrations at `V7`. `UserRole` / `UserStatus` in
   `com.fcourt.auth.user` are shared.
 - `SessionService.closeAll(userId)` revokes every session of a user (use it when the password changes).
 - Expired and revoked `refresh_tokens` rows and old `failed_attempts` rows are not purged yet.
