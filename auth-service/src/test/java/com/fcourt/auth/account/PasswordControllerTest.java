@@ -87,6 +87,24 @@ class PasswordControllerTest {
         verify(passwords, never()).reset(any(), any());
     }
 
+    /** 30 characters but 90 UTF-8 bytes: BCrypt would throw, so validation must refuse it first. */
+    @Test
+    void resetAndChangeRejectANewPasswordOverBcryptsByteLimit() throws Exception {
+        String accented = "ệ".repeat(30);
+        mvc.perform(post("/api/auth/password/reset").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"abc\",\"newPassword\":\"%s\"}".formatted(accented)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].message").value(AccountDtos.NEW_PASSWORD_BYTES_MESSAGE));
+        authenticateAs(7);
+        mvc.perform(patch("/api/auth/password").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"Current-pass1\",\"newPassword\":\"%s\"}".formatted(accented)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].message").value(AccountDtos.NEW_PASSWORD_BYTES_MESSAGE));
+
+        verify(passwords, never()).reset(any(), any());
+        verify(passwords, never()).change(org.mockito.ArgumentMatchers.anyLong(), any(), any());
+    }
+
     @Test
     void invalidTokenComesBackAsABadRequestProblem() throws Exception {
         org.mockito.Mockito.doThrow(ApiException.badRequest(PasswordService.INVALID_TOKEN))
