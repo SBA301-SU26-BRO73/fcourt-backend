@@ -124,6 +124,9 @@ class PostgreSQLSeedTest(unittest.TestCase):
                 cls.db.execute(db, (ROOT / service / "database/V1__init_schema.sql").read_text(encoding="utf-8"))
             cls.db.execute("staff_db", (ROOT / "staff-operations-service/src/main/resources/db/migration/V2__staff_management.sql").read_text(encoding="utf-8"))
             cls.db.execute("facility_db", (HERE / "fixtures/facility_v3.sql").read_text(encoding="utf-8"))
+            for service, db, script in [("booking-service", "booking_db", "V2__booking_read_model.sql"),
+                                        ("payment-service", "payment_db", "V2__receipt_submission.sql")]:
+                cls.db.execute(db, (ROOT / service / "src/main/resources/db/migration" / script).read_text(encoding="utf-8"))
             for service, db in [("auth-service", "auth_db"), ("subscription-service", "subscription_db")]:
                 cls.db.execute(db, (ROOT / service / "database/V2__seed_sample_data.sql").read_text(encoding="utf-8"))
         except BaseException:
@@ -151,6 +154,26 @@ class PostgreSQLSeedTest(unittest.TestCase):
         self.assertEqual(self.db.execute("auth_db", "SELECT count(*) FROM users WHERE id BETWEEN 1 AND 15;"), "15")
         next_id = int(self.db.execute("auth_db", "SELECT nextval('users_id_seq');"))
         self.assertGreaterEqual(next_id, 110000)
+
+    def test_bookings_and_payments_populate_service_read_model_columns(self):
+        m = self.manifest("test-read-model", 1200000)
+        seed.apply(m, PUBLIC_DEMO_HASH, self.db, allow_fixtures=True)
+        self.assertEqual(self.db.execute("booking_db", "SELECT count(*) FROM bookings WHERE id BETWEEN 1200000 AND 1209999 AND (branch_id IS NULL OR branch_name IS NULL OR court_name IS NULL OR payment_status IS NULL);"), "0")
+        self.assertEqual(self.db.execute("booking_db", "SELECT count(*) FROM bookings WHERE id BETWEEN 1200000 AND 1209999 AND customer_id IS NOT NULL AND customer_name IS NULL;"), "0")
+        self.assertEqual(self.db.execute("booking_db", "SELECT payment_status FROM bookings WHERE id=700025;"), "REJECTED")
+        self.assertEqual(self.db.execute("booking_db", "SELECT qr_image_url FROM bookings WHERE id=1200000;"), "/api/payments/1200000/ticket/qr")
+        self.assertEqual(self.db.execute("payment_db", "SELECT count(*) FROM payments WHERE id BETWEEN 1200000 AND 1209999 AND booking_id=id;"), "30")
+        self.assertEqual(self.db.execute("payment_db", "SELECT count(*) FROM payments WHERE id BETWEEN 1200000 AND 1209999 AND bill_image_url IS NOT NULL AND submitted_at IS NULL;"), "0")
+
+    def test_missing_read_model_schema_fails_before_writing_any_seed_rows(self):
+        m = self.manifest("test-missing-read-model", 1300000)
+        self.db.execute("booking_db", "ALTER TABLE bookings RENAME COLUMN branch_name TO hidden_branch_name;")
+        try:
+            with self.assertRaisesRegex(seed.SeedError, "V2 migration"):
+                seed.apply(m, PUBLIC_DEMO_HASH, self.db, allow_fixtures=True)
+            self.assertEqual(self.db.execute("auth_db", "SELECT count(*) FROM users WHERE id BETWEEN 1300000 AND 1309999;"), "0")
+        finally:
+            self.db.execute("booking_db", "ALTER TABLE bookings RENAME COLUMN hidden_branch_name TO branch_name;")
 
     def test_partial_failure_resumes_without_duplicate_rows(self):
         m = self.manifest("test-resume", 200000)
