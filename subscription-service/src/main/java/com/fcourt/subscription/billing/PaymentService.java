@@ -102,7 +102,7 @@ public class PaymentService {
     }
 
     /**
-     * Handles a PayOS webhook. Throws {@link IllegalArgumentException} for payloads that must not be trusted
+     * Handles a PayOS webhook. Throws {@link WebhookRejectedException} for payloads that must not be trusted
      * (bad signature, unknown order code, amount mismatch); any other exception is a server fault, so the
      * caller answers 5xx and PayOS retries. A verified success is honoured even when our own checkout timer
      * has run out, because PayOS only reports code 00 after the money arrived.
@@ -113,23 +113,23 @@ public class PaymentService {
         String signature = text(payload, "signature");
         String checksumKey = properties.checksumKey();
         if (checksumKey == null || checksumKey.isBlank()) {
-            throw new IllegalArgumentException("PayOS checksum key is not configured");
+            throw new WebhookRejectedException("PayOS checksum key is not configured");
         }
         if (!PayosSignature.verifyWebhook(checksumKey, data, signature)) {
-            throw new IllegalArgumentException("Invalid PayOS webhook signature");
+            throw new WebhookRejectedException("Invalid PayOS webhook signature");
         }
         if (!PAYOS_SUCCESS.equals(text(data, "code"))) {
             return WebhookOutcome.IGNORED;
         }
         long orderCode = data.path("orderCode").asLong(0);
         var payment = payments.findByOrderCode(orderCode)
-                .orElseThrow(() -> new IllegalArgumentException("Unknown PayOS order code"));
+                .orElseThrow(() -> new WebhookRejectedException("Unknown PayOS order code"));
         if (PaymentRepository.PAID.equals(payment.status())) {
             return WebhookOutcome.ALREADY_PROCESSED;
         }
         JsonNode amount = data.path("amount");
         if (!amount.canConvertToLong() || amount.asLong() != payment.amount()) {
-            throw new IllegalArgumentException("PayOS amount does not match the payment");
+            throw new WebhookRejectedException("PayOS amount does not match the payment");
         }
         if (!payments.markPaid(orderCode, text(data, "reference"), clock.instant(), payload.toString())) {
             // Either a concurrent delivery got there first or the payment is FAILED or CANCELLED.
@@ -160,16 +160,14 @@ public class PaymentService {
         throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "Could not allocate an order code, try again");
     }
 
+    /** The sandbox override only replaces the price; a cycle the plan is not sold with stays refused. */
     private long amountFor(SubscriptionPlanResponse plan, BillingCycle cycle) {
-        Long override = properties.amountOverride();
-        if (override != null && override > 0) {
-            return override;
-        }
         Long price = cycle == BillingCycle.YEARLY ? plan.yearlyPrice() : plan.monthlyPrice();
         if (price == null || price <= 0) {
             throw ApiException.badRequest("This plan is not sold with the " + cycle + " billing cycle");
         }
-        return price;
+        Long override = properties.amountOverride();
+        return override != null && override > 0 ? override : price;
     }
 
     /** PayOS limits the bank transfer description to 25 characters. */

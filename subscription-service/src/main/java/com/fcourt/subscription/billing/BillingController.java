@@ -64,7 +64,7 @@ class BillingController {
         try {
             var outcome = payments.handleWebhook(payload);
             log.info("PayOS webhook handled: {}", outcome);
-        } catch (IllegalArgumentException rejected) {
+        } catch (WebhookRejectedException rejected) {
             log.warn("PayOS webhook rejected: {}", rejected.getMessage());
         }
         return new WebhookAck(true);

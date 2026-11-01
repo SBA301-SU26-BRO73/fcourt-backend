@@ -117,6 +117,17 @@ class PaymentServiceTest {
     }
 
     @Test
+    void theAmountOverrideDoesNotSellACycleThePlanHasNoPriceFor() {
+        service = newService(properties(10_000L));
+        when(plans.findOnSale(3)).thenReturn(Optional.of(plan(3, "Monthly only", 100_000L, null)));
+
+        assertThatThrownBy(() -> service.checkout(ADMIN, new CheckoutRequest(3L, "YEARLY")))
+                .satisfies(error -> assertApi(error, HttpStatus.BAD_REQUEST,
+                        "This plan is not sold with the YEARLY billing cycle"));
+        verifyNoInteractions(payments, payos);
+    }
+
+    @Test
     void anUnknownBillingCycleIsABadRequest() {
         assertThatThrownBy(() -> service.checkout(ADMIN, new CheckoutRequest(2L, "weekly")))
                 .satisfies(error -> assertApi(error, HttpStatus.BAD_REQUEST, "billingCycle must be MONTHLY or YEARLY"));
@@ -331,7 +342,7 @@ class PaymentServiceTest {
         var forged = WebhookFixtures.paid("not-the-checksum-key", ORDER, 299_000);
 
         assertThatThrownBy(() -> service.handleWebhook(forged))
-                .isInstanceOf(IllegalArgumentException.class).hasMessage("Invalid PayOS webhook signature");
+                .isInstanceOf(WebhookRejectedException.class).hasMessage("Invalid PayOS webhook signature");
         verifyNoInteractions(payments, subscriptions);
     }
 
@@ -341,17 +352,17 @@ class PaymentServiceTest {
         var payload = WebhookFixtures.signed(KEY, data);
         ((ObjectNode) payload.get("data")).put("amount", 1);
 
-        assertThatThrownBy(() -> service.handleWebhook(payload)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.handleWebhook(payload)).isInstanceOf(WebhookRejectedException.class);
         verifyNoInteractions(payments, subscriptions);
     }
 
     @Test
     void aPayloadWithoutDataOrSignatureIsRejected() throws Exception {
         assertThatThrownBy(() -> service.handleWebhook(WebhookFixtures.JSON.readTree("{}")))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> service.handleWebhook(null)).isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(WebhookRejectedException.class);
+        assertThatThrownBy(() -> service.handleWebhook(null)).isInstanceOf(WebhookRejectedException.class);
         assertThatThrownBy(() -> service.handleWebhook(WebhookFixtures.JSON.readTree("{\"data\":{\"orderCode\":1}}")))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(WebhookRejectedException.class);
         verifyNoInteractions(payments);
     }
 
@@ -361,7 +372,7 @@ class PaymentServiceTest {
                 Duration.ofMinutes(15), null));
 
         assertThatThrownBy(() -> service.handleWebhook(WebhookFixtures.paid(KEY, ORDER, 299_000)))
-                .isInstanceOf(IllegalArgumentException.class).hasMessage("PayOS checksum key is not configured");
+                .isInstanceOf(WebhookRejectedException.class).hasMessage("PayOS checksum key is not configured");
         verifyNoInteractions(payments, subscriptions);
     }
 
@@ -370,7 +381,7 @@ class PaymentServiceTest {
         when(payments.findByOrderCode(ORDER)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.handleWebhook(WebhookFixtures.paid(KEY, ORDER, 299_000)))
-                .isInstanceOf(IllegalArgumentException.class).hasMessage("Unknown PayOS order code");
+                .isInstanceOf(WebhookRejectedException.class).hasMessage("Unknown PayOS order code");
     }
 
     @Test
@@ -378,7 +389,7 @@ class PaymentServiceTest {
         when(payments.findByOrderCode(ORDER)).thenReturn(Optional.of(record(PaymentRepository.PENDING, 299_000, null, null)));
 
         assertThatThrownBy(() -> service.handleWebhook(WebhookFixtures.paid(KEY, ORDER, 1_000)))
-                .isInstanceOf(IllegalArgumentException.class).hasMessage("PayOS amount does not match the payment");
+                .isInstanceOf(WebhookRejectedException.class).hasMessage("PayOS amount does not match the payment");
         verify(payments, never()).markPaid(anyLong(), any(), any(), anyString());
         verifyNoInteractions(subscriptions);
     }

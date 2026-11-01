@@ -143,7 +143,7 @@ class BillingControllerTest {
 
     @Test
     void anUntrustedWebhookIsStillAcknowledgedSoCallersLearnNothing() throws Exception {
-        when(payments.handleWebhook(any())).thenThrow(new IllegalArgumentException("Invalid PayOS webhook signature"));
+        when(payments.handleWebhook(any())).thenThrow(new WebhookRejectedException("Invalid PayOS webhook signature"));
 
         mvc.perform(post("/api/subscriptions/payment-webhook").contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isOk())
@@ -157,6 +157,15 @@ class BillingControllerTest {
         assertThatThrownBy(() -> mvc.perform(post("/api/subscriptions/payment-webhook")
                         .contentType(MediaType.APPLICATION_JSON).content("{}")))
                 .hasRootCauseInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void aGenericIllegalArgumentFromAFrameworkIsAServerFaultNotARejectedPayload() {
+        when(payments.handleWebhook(any())).thenThrow(new IllegalArgumentException("bad SQL parameter"));
+
+        assertThatThrownBy(() -> mvc.perform(post("/api/subscriptions/payment-webhook")
+                        .contentType(MediaType.APPLICATION_JSON).content("{}")))
+                .hasRootCauseInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
