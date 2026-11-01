@@ -21,7 +21,7 @@ class ReceiptController {
         return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
                 .body(ReceiptStatus.of(payment));
     }
-    @GetMapping("/api/payments/{bookingId}/status")
+    @GetMapping(value="/api/payments/{bookingId}/status",params="!compact")
     ResponseEntity<ReceiptStatus> status(@PathVariable @Positive long bookingId,
             @RequestHeader(value=HttpHeaders.AUTHORIZATION,required=false) String auth,
             @RequestHeader(value="X-Hold-Token",required=false) String hold) {

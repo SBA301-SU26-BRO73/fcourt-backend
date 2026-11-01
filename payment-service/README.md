@@ -193,3 +193,33 @@ checks cover cross-branch exclusion/ownership denial, pagination-independent sum
 status/phone/order search, literal wildcard escaping, Vietnam dates/range validation,
 ADMIN role and total headers. Java 21 Maven verify runs 38 tests with five migrations.
 Refund/cash/net reporting is added separately in SCRUM-98.
+
+## Compact cached polling — SCRUM-72
+
+GET `/api/payments/{bookingId}/status?compact=true` returns only bookingId,
+paymentStatus (PENDING/SUCCESS/REJECTED), rejectReason and updatedAt, with no-store.
+The endpoint without `compact` preserves the existing receipt DTO for old clients;
+new Flutter SCRUM-73 requests compact. Unsubmitted receipts are 404, expired checkout
+sessions 410. A Bearer is always verified locally. Cold reads authorize through booking
+then read payment status. Warm reads reuse only the exact verified owner/guest-proof
+binding stored server-side. Raw hold tokens never go into Redis. No ID-only access.
+
+Redis values last five seconds; version fences last one day. Flyway V6 increments
+status_version atomically when payment state/submission/rejection changes. After-commit
+submit/confirm/reject/expiry events invalidate entries and advance the Redis version
+fence. Lua refuses a delayed cold-read write older than that fence, preventing it from
+repopulating old status after admin confirmation. Invalidation is synchronous in the
+normal commit path. Redis outage/malformed cache falls back to authority+PostgreSQL;
+failed invalidation can leave an existing entry stale for at most five seconds. Do not
+claim strict cross-system atomic freshness under a Redis/network outage.
+
+Local compose adds isolated Redis on 127.0.0.1:6399. Configure REDIS_HOST/REDIS_PORT;
+connect/command timeout is 200ms. `payment.status-cache-enabled=false` disables the cache.
+Redis is private infrastructure, never expose its unauthenticated local setup publicly.
+
+Validation: 42 tests on PostgreSQL 16 + Redis 7 with six migrations, including proof
+isolation, cache reuse, confirm invalidation, delayed-write fencing, Redis-failure
+fallback and minimal DTO. A 200-sample local warm guest service+Redis microbenchmark
+reports p50 0.87ms, p95 2.51ms (target/status-cache-benchmark.json). It excludes HTTP,
+TLS, JWT verification, cold reads and production contention; production <30ms/high-load
+acceptance remains unverified and needs deployment load testing.
