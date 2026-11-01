@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Testcontainers
 @SpringBootTest(properties="booking.events-enabled=false")
+@org.springframework.test.annotation.DirtiesContext(classMode=org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 @AutoConfigureMockMvc
 class BookingApiTest {
     @Container static PostgreSQLContainer<?> db=new PostgreSQLContainer<>("postgres:16-alpine").withDatabaseName("booking_db");
@@ -32,7 +33,7 @@ class BookingApiTest {
     @Autowired TransactionTemplate tx;
     @Autowired ObjectMapper json;
     @BeforeEach void seed() {
-        jdbc.execute("TRUNCATE booking_inbox,bookings CASCADE");
+        jdbc.execute("TRUNCATE booking_outbox,booking_inbox,bookings CASCADE");
         for(int i=1;i<=4;i++) jdbc.update("""
           INSERT INTO bookings(id,court_id,customer_id,guest_phone,date,status,total_price,booking_code,branch_id,branch_name,branch_address,branch_phone,court_name,hold_token_hash,created_at)
           OVERRIDING SYSTEM VALUE VALUES (?,1,?,?,?::date,?,100000,?,7,'Thu Duc','123 Street','0901234567','Court 1',?,?::timestamptz)
