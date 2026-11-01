@@ -1,0 +1,56 @@
+server:
+  port: ${SERVER_PORT:8081}
+  error:
+    include-message: never
+    include-stacktrace: never
+
+spring:
+  application:
+    name: auth-service
+  mvc:
+    problemdetails:
+      enabled: true
+  datasource:
+    url: ${AUTH_DATABASE_URL:jdbc:postgresql://localhost:5432/auth_db}
+    username: ${AUTH_DATABASE_USER:postgres}
+    password: ${AUTH_DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 3000
+  jdbc:
+    template:
+      query-timeout: 3s
+  flyway:
+    baseline-on-migrate: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+        delivery.timeout.ms: 10000
+        request.timeout.ms: 5000
+        max.block.ms: 5000
+
+auth:
+  jwt:
+    # Until SCRUM-6 issues tokens, point these at an external JWKS (dev token tool).
+    # Once SCRUM-6 serves /.well-known/jwks.json the defaults validate auth-service's own tokens.
+    jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+    issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
+    audience: ${AUTH_JWT_AUDIENCE:fcourt}
+  events:
+    enabled: ${AUTH_EVENTS_ENABLED:true}
+    topic: ${AUTH_EVENTS_TOPIC:fcourt.auth.events}
+    delay-ms: ${AUTH_EVENTS_DELAY_MS:1000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
