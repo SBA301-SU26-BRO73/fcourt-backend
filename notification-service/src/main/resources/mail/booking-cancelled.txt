@@ -1,0 +1,9 @@
+Xin chào {{name}},
+
+Đơn đặt sân {{bookingCode}} của bạn đã bị hủy.
+
+Lý do: {{reason}}
+
+{{details}}
+
+{{note}}
