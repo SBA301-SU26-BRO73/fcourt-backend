@@ -154,9 +154,14 @@ def build_rows(m, hashed_password, plan_limits=(15, 3)):
         add("payment_db", "payments", id=base+i, branch_id=base+branch_index, amount=total-discount,
             status=payment_state, confirmed_at=created+timedelta(minutes=5) if confirmed else None,
             confirmed_by=base if confirmed else None, bill_image_url=m["receiptImageUrl"] if confirmed or state == "AWAITING_CONFIRMATION" else None,
-            voucher_id=base+i if i < 2 else None, discount_amount=discount, created_at=created, updated_at=created+timedelta(minutes=5))
+            voucher_id=base+i if i < 2 else None, discount_amount=discount, created_at=created, updated_at=created+timedelta(minutes=5),
+            booking_id=base+i, submitted_at=created if confirmed or state == "AWAITING_CONFIRMATION" else None)
         add("booking_db", "bookings", id=base+i, court_id=base+court, customer_id=None if i % 5 == 4 else base+10+i%5,
             guest_phone=f"08{base:010d}{i:02d}" if i % 5 == 4 else None, payment_id=base+i, date=booking_day,
+            branch_id=base+branch_index, branch_name=f"DEMO {key} {m['branches'][branch_index]['name']}", branch_address=m["branches"][branch_index]["address"],
+            court_name=f"DEMO {key} Court {court+1}", customer_name=None if i % 5 == 4 else f"DEMO {key} CUSTOMER {i%5}", payment_status=payment_state,
+            qr_image_url=f"/api/payments/{base+i}/ticket/qr" if confirmed else None,
+            receipt_image_url=m["receiptImageUrl"] if confirmed or state == "AWAITING_CONFIRMATION" else None,
             status=state, total_price=total, booking_code=f"D{base36(base)}{i:02d}", checkin_code=f"DS-{base36(base)}-{i:02d}" if confirmed else None,
             checked_in_at=start if state in {"CHECKED_IN", "COMPLETED"} else None,
             completed_at=start+timedelta(hours=1) if state == "COMPLETED" else None, created_at=created,
@@ -224,6 +229,9 @@ def apply(m, hashed_password, runner, allow_fixtures=False):
     has_bank_bin = runner.execute("facility_db", "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='branches' AND column_name='bank_bin');")
     if has_bank_bin != "t":
         raise SeedError("Facility bank_bin column is missing; apply the owning service's V3 migration before seeding")
+    for db, table, column, owner in [("booking_db", "bookings", "branch_name", "booking"), ("payment_db", "payments", "booking_id", "payment")]:
+        if runner.execute(db, f"SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='{table}' AND column_name='{column}');") != "t":
+            raise SeedError(f"{owner}-service read-model columns are missing; apply its V2 migration before seeding")
     plan_id = m["subscriptionPlanId"]
     raw = runner.execute("subscription_db", f"SELECT json_build_array(max_courts,max_branches) FROM subscription_plans WHERE id={plan_id} AND is_active AND deleted_at IS NULL;")
     try:
