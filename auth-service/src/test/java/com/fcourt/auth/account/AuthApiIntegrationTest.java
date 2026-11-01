@@ -334,6 +334,25 @@ class AuthApiIntegrationTest {
     }
 
     @Test
+    void accessTokensIssuedBeforeAPasswordChangeStopWorking() throws Exception {
+        String email = uniqueEmail();
+        var before = register(email, uniquePhone());
+        // iat has whole seconds; let the change happen in a later second than the old token.
+        Thread.sleep(1100);
+        var changed = body(mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .patch("/api/auth/password")
+                        .header("Authorization", "Bearer " + before.get("accessToken").asText())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"%s\",\"newPassword\":\"Brand-new-pass1\"}".formatted(PASSWORD)))
+                .andExpect(status().isOk()));
+
+        mvc.perform(get("/api/auth/profile").header("Authorization", "Bearer " + before.get("accessToken").asText()))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/auth/profile").header("Authorization", "Bearer " + changed.get("accessToken").asText()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void repeatedWrongCurrentPasswordsThrottleChangePassword() throws Exception {
         String access = register(uniqueEmail(), uniquePhone()).get("accessToken").asText();
         var wrong = org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/auth/password")

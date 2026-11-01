@@ -2,9 +2,11 @@ package com.fcourt.auth.config;
 
 import com.fcourt.auth.common.ProblemResponses;
 import com.fcourt.auth.user.UserRole;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import jakarta.servlet.DispatcherType;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,16 +35,20 @@ import org.springframework.security.web.SecurityFilterChain;
  */
 @Configuration
 public class SecurityConfiguration {
+    /** {@code extraValidators}: service-specific checks, e.g. auth-service refusing tokens older than a password change. */
     @Bean
     JwtDecoder jwtDecoder(@Value("${auth.jwt.jwk-set-uri}") String jwks,
                           @Value("${auth.jwt.issuer}") String issuer,
-                          @Value("${auth.jwt.audience}") String audience) {
+                          @Value("${auth.jwt.audience}") String audience,
+                          ObjectProvider<OAuth2TokenValidator<Jwt>> extraValidators) {
         var decoder = NimbusJwtDecoder.withJwkSetUri(jwks).build();
         OAuth2TokenValidator<Jwt> claims = jwt -> isValidSubjectAndAudience(jwt, audience)
                 ? OAuth2TokenValidatorResult.success()
                 : OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token"));
-        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
-                JwtValidators.createDefaultWithIssuer(issuer), claims));
+        var validators = new ArrayList<OAuth2TokenValidator<Jwt>>(
+                List.of(JwtValidators.createDefaultWithIssuer(issuer), claims));
+        extraValidators.orderedStream().forEach(validators::add);
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(validators));
         return decoder;
     }
 
