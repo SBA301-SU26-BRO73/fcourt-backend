@@ -165,6 +165,30 @@ class StaffIntegrationTest {
     }
 
     @Test
+    void walkInForwardsAndFingerprintsGuestName() {
+        create(UUID.randomUUID(), body(7));
+        var request = new java.util.HashMap<>(walkInBody());
+        request.put("guestName", "Counter Guest");
+        UUID key = UUID.randomUUID();
+        assertThat(walkIn(key, request).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(WALK_IN_REQUESTS.values()).anyMatch(value -> value.contains("Counter Guest"));
+        request.put("guestName", "Another Guest");
+        assertThat(walkIn(key, request).getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void checkoutPreviewIsScopedAndDoesNotCompleteBooking() {
+        create(UUID.randomUUID(), body(7));
+        var result = call(HttpMethod.GET, "/api/staff/bookings/43/checkout-preview", null, token("100", "STAFF"), null);
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody().path("surchargeAmount").decimalValue()).isEqualByComparingTo("5000");
+        assertThat(COMPLETED.get()).isFalse();
+        wrongBranch = true;
+        assertThat(call(HttpMethod.GET, "/api/staff/bookings/43/checkout-preview", null,
+                token("100", "STAFF"), null).getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    @Test
     void ticketPreviewIsReadOnlyAndScopedToActiveStaff() {
         create(UUID.randomUUID(), body(7));
         var response = call(HttpMethod.POST, "/api/staff/check-in/preview",
@@ -890,6 +914,9 @@ class StaffIntegrationTest {
                 send(exchange, 200, Map.of("id", branch, "adminId", branch == 7 ? 1 : 2,
                         "status", branchActive ? "ACTIVE" : "INACTIVE", "name", "Fixture venue",
                         "address", "Fixture address", "bankBin", "000000"));
+            } else if (path.equals("/api/internal/bookings/43/checkout-preview")) {
+                send(exchange, 200, Map.of("bookingId", 43, "branchId", wrongBranch ? 8 : 7,
+                        "surchargeAmount", 5000, "totalAmount", 205000));
             } else if (path.equals("/api/internal/bookings/check-in/preview")) {
                 send(exchange, 200, Map.of("bookingId", 42, "branchId", wrongBranch ? 8 : 7,
                         "courtId", 21, "courtName", "Court 1", "date", LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).toString(),
