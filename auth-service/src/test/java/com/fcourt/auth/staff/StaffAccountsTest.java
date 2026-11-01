@@ -120,6 +120,9 @@ class StaffAccountsTest {
                                             "{\"branchId\":7,\"fullName\":\"Edited\",\"phone\":\"0912345681\"}"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.fullName").value("Edited"));
+        jdbc.update(
+                "INSERT INTO refresh_tokens(user_id,token_hash,expires_at) VALUES (101,repeat('a',64),now()"
+                    + " + interval '1 day')");
         String disable = key();
         for (int n = 0; n < 2; n++)
             mvc.perform(
@@ -134,6 +137,12 @@ class StaffAccountsTest {
                                     + " action='STAFF_DISABLE'",
                                 Integer.class))
                 .isEqualTo(1);
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT count(*) FROM refresh_tokens WHERE user_id=101 AND revoked_at"
+                                    + " IS NULL",
+                                Integer.class))
+                .isZero();
         verify(boundary, atLeastOnce()).require(101, 0, "token");
         jdbc.update("UPDATE users SET status='LOCKED' WHERE id=101");
         mvc.perform(

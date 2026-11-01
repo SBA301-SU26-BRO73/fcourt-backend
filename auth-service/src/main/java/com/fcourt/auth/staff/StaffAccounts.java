@@ -1,13 +1,17 @@
 package com.fcourt.auth.staff;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fcourt.auth.account.AccountDtos;
+import com.fcourt.auth.account.SessionService;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.charset.StandardCharsets;
@@ -19,18 +23,32 @@ class StaffAccounts {
     private final JdbcTemplate jdbc;
     private final ManagedStaffBoundary boundary;
     private final ObjectMapper json;
+    private final SessionService sessions;
+    private final TransactionTemplate transaction;
     private final BCryptPasswordEncoder passwords = new BCryptPasswordEncoder(12);
 
-    StaffAccounts(JdbcTemplate jdbc, ManagedStaffBoundary boundary, ObjectMapper json) {
+    StaffAccounts(
+            JdbcTemplate jdbc,
+            ManagedStaffBoundary boundary,
+            ObjectMapper json,
+            SessionService sessions,
+            PlatformTransactionManager transactions) {
         this.jdbc = jdbc;
         this.boundary = boundary;
         this.json = json;
+        this.sessions = sessions;
+        this.transaction = new TransactionTemplate(transactions);
+        this.transaction.setTimeout(15);
     }
 
-    @Transactional(timeout = 15)
     StaffReactivation.Account create(Jwt jwt, String key, Create request) {
-        long actor = admin(jwt);
+        admin(jwt);
         boundary.requireBranch(request.branchId(), jwt.getTokenValue());
+        return transaction.execute(status -> createOnce(jwt, key, request));
+    }
+
+    private StaffReactivation.Account createOnce(Jwt jwt, String key, Create request) {
+        long actor = admin(jwt);
         String email = request.email().strip().toLowerCase(Locale.ROOT);
         String fingerprint =
                 hash(
@@ -57,25 +75,34 @@ class StaffAccounts {
                         email,
                         request.phone())
                 .isEmpty()) throw conflict();
-        long user =
-                Objects.requireNonNull(
-                        jdbc.queryForObject(
-                                "INSERT INTO users(email,password_hash,full_name,phone,role,status)"
-                                    + " VALUES (?,?,?,?,'STAFF','ACTIVE') RETURNING id",
-                                Long.class,
-                                email,
-                                passwords.encode(request.password()),
-                                request.fullName().strip(),
-                                request.phone()));
+        long user;
+        try {
+            user =
+                    Objects.requireNonNull(
+                            jdbc.queryForObject(
+                                    "INSERT INTO users(email,password_hash,full_name,phone,role,status)"
+                                        + " VALUES (?,?,?,?,'STAFF','ACTIVE') RETURNING id",
+                                    Long.class,
+                                    email,
+                                    passwords.encode(request.password()),
+                                    request.fullName().strip(),
+                                    request.phone()));
+        } catch (DuplicateKeyException e) {
+            throw conflict();
+        }
         record(actor, command, "CREATE", fingerprint, user);
         audit(actor, user, "STAFF_CREATE", null, "ACTIVE");
         return account(user);
     }
 
-    @Transactional(timeout = 15)
     StaffReactivation.Account update(Jwt jwt, long user, String key, Update request) {
-        long actor = admin(jwt);
+        admin(jwt);
         boundary.require(user, request.branchId(), jwt.getTokenValue());
+        return transaction.execute(status -> updateOnce(jwt, user, key, request));
+    }
+
+    private StaffReactivation.Account updateOnce(Jwt jwt, long user, String key, Update request) {
+        long actor = admin(jwt);
         UUID command = command(actor, key);
         String fingerprint =
                 hash(
@@ -104,10 +131,14 @@ class StaffAccounts {
         return account(user);
     }
 
-    @Transactional(timeout = 15)
     StaffReactivation.Account disable(Jwt jwt, long user, String key) {
-        long actor = admin(jwt);
+        admin(jwt);
         boundary.require(user, 0, jwt.getTokenValue());
+        return transaction.execute(status -> disableOnce(jwt, user, key));
+    }
+
+    private StaffReactivation.Account disableOnce(Jwt jwt, long user, String key) {
+        long actor = admin(jwt);
         UUID command = command(actor, key);
         String fingerprint = hash(List.of(user));
         Long replay = replay(actor, command, "DISABLE", fingerprint);
@@ -119,6 +150,7 @@ class StaffAccounts {
             jdbc.update("UPDATE users SET status='INACTIVE',updated_at=now() WHERE id=?", user);
             audit(actor, user, "STAFF_DISABLE", "ACTIVE", "INACTIVE");
         }
+        sessions.closeAll(user);
         record(actor, command, "DISABLE", fingerprint, user);
         return account(user);
     }
@@ -248,7 +280,7 @@ class StaffAccounts {
             @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max = 150)
                     String fullName,
             @jakarta.validation.constraints.NotNull
-                    @jakarta.validation.constraints.Pattern(regexp = "\\+?[0-9]{9,15}")
+                    @jakarta.validation.constraints.Pattern(regexp = AccountDtos.PHONE)
                     String phone) {
         @Override
         public String toString() {
@@ -261,7 +293,6 @@ class StaffAccounts {
             @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max = 150)
                     String fullName,
             @jakarta.validation.constraints.NotNull
-                    @jakarta.validation.constraints.NotNull
-                    @jakarta.validation.constraints.Pattern(regexp = "\\+?[0-9]{9,15}")
+                    @jakarta.validation.constraints.Pattern(regexp = AccountDtos.PHONE)
                     String phone) {}
 }

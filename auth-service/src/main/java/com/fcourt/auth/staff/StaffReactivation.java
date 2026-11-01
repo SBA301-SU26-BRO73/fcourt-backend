@@ -4,7 +4,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Clock;
@@ -17,30 +18,48 @@ public class StaffReactivation {
     private final JdbcTemplate jdbc;
     private final ManagedStaffBoundary staff;
     private final Clock clock;
+    private final TransactionTemplate transaction;
 
-    public StaffReactivation(JdbcTemplate jdbc, ManagedStaffBoundary staff, Clock clock) {
+    public StaffReactivation(
+            JdbcTemplate jdbc,
+            ManagedStaffBoundary staff,
+            Clock clock,
+            PlatformTransactionManager transactions) {
         this.jdbc = jdbc;
         this.staff = staff;
         this.clock = clock;
+        this.transaction = new TransactionTemplate(transactions);
+        this.transaction.setTimeout(15);
     }
 
     public Account me(Jwt jwt) {
         return account(Long.parseLong(jwt.getSubject()), false);
     }
 
-    @Transactional(timeout = 15)
     public Account reactivate(Jwt jwt, long user, long branch, String key) {
         long actor = Long.parseLong(jwt.getSubject());
-        var admin = account(actor, false);
-        if (!"ADMIN".equals(admin.role()) || !"ACTIVE".equals(admin.status())) throw forbidden();
-        UUID command;
+        requireAdmin(actor);
+        UUID command = command(actor, key);
+        staff.require(user, branch, jwt.getTokenValue());
+        return transaction.execute(status -> reactivateOnce(actor, command, user, branch));
+    }
+
+    private static UUID command(long actor, String key) {
         try {
             if (!key.startsWith("staff:" + actor + ":")) throw new IllegalArgumentException();
-            command = UUID.fromString(key.substring(key.lastIndexOf(':') + 1));
+            return UUID.fromString(key.substring(key.lastIndexOf(':') + 1));
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid command key");
         }
-        staff.require(user, branch, jwt.getTokenValue());
+    }
+
+    private void requireAdmin(long actor) {
+        var admin = account(actor, false);
+        if (!"ADMIN".equals(admin.role()) || !"ACTIVE".equals(admin.status())) throw forbidden();
+    }
+
+    private Account reactivateOnce(long actor, UUID command, long user, long branch) {
+        requireAdmin(actor);
         jdbc.queryForList(
                 "SELECT pg_advisory_xact_lock(hashtextextended(?,0))", actor + ":" + command);
         var replay =
