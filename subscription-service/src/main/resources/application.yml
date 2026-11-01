@@ -1,0 +1,40 @@
+server:
+  port: ${SERVER_PORT:8082}
+  error:
+    include-message: never
+    include-stacktrace: never
+
+spring:
+  application:
+    name: subscription-service
+  mvc:
+    problemdetails:
+      enabled: true
+  datasource:
+    url: ${SUBSCRIPTION_DATABASE_URL:jdbc:postgresql://localhost:5432/subscription_db}
+    username: ${SUBSCRIPTION_DATABASE_USER:postgres}
+    password: ${SUBSCRIPTION_DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 3000
+  jdbc:
+    template:
+      query-timeout: 3s
+  flyway:
+    baseline-on-migrate: false
+
+auth:
+  jwt:
+    # Tokens are issued by auth-service; this service only validates them against its JWKS.
+    jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+    issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
+    audience: ${AUTH_JWT_AUDIENCE:fcourt}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
