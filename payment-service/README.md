@@ -276,3 +276,35 @@ metadata fail closed pending reconciliation.
 Java 21 verify passes 50 tests on PostgreSQL+Redis/seven migrations, including required
 proof/magic-byte validation, idempotent immutable proof, decision race, rollback when
 outbox insertion fails, ADMIN/branch scope and required multipart input.
+
+## Unified cash flow — SCRUM-98
+
+`GET /api/admin/payments/transactions?branchId=7&transactionType=ALL` selects unified
+reporting; supported types ALL/BOOKING_PAYMENT/REFUND/WALK_IN_CASH. Omitting the parameter
+preserves the SCRUM-70 legacy DTO/query for older clients. Date/status/search/pagination
+and verified ADMIN/branch ownership still apply. Unified dates use recognition time
+(payment confirmedAt or submission fallback, refund completedAt, cash checkedInAt), in
+Vietnam timezone. Historical branch/court snapshots missing from cash events use explicit
+ID labels, not invented names. Literal wildcard search is escaped.
+
+Rows have globally distinct transactionKey (P:/R:/C: + local id), transactionType and
+signed exact decimal amount. Refunds appear only after COMPLETED, as negative outflows.
+Summary/header received/refunded/netRevenue covers all filtered rows in one statement;
+netRevenue is successful inflows minus completed refunds. Pending/unapproved refunds do
+not reduce revenue. This is service-recorded receipt/attestation data, not bank settlement.
+
+Flyway V8 creates an indexed cash projection. The consumer reads the existing staff
+`fcourt.staff.events` version-1 WalkInBookingCreatedEvent envelope (data.booking, actorId,
+occurredAt), verifies CASH/CHECKED_IN, booking/branch/court, cashier, invoice total and
+matching timestamp. Unique event/booking IDs plus immutable replay checks prevent double
+counting. Unknown event types are ignored; supported invalid events retry indefinitely
+and block that partition until operational repair. Restrict producers with Kafka ACLs.
+No cross-service DB reads or synthetic cash records. Replay past staff events from the
+configured consumer group/offset policy when deploying the projection. `payment.events-enabled`
+controls the listener/outbox; live Kafka ingestion and accounting reconciliation remain
+acceptance checks. Indexes support branch/date reporting; high-volume query plans need
+production-like data before an optimization claim.
+
+Java 21 verify passes 53 tests on PostgreSQL+Redis/eight migrations. Added checks cover
+cash replay/conflicting replays, exact signed payment/refund/cash sums, pending refund
+exclusion, pagination-independent totals, type/date/search/branch scope and unique row keys.
