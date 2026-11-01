@@ -249,3 +249,30 @@ Java 21 verify passes 46 tests with PostgreSQL+Redis/seven migrations. New check
 server-derived amount, duplicated/concurrent requests, owner isolation, ineligible
 states/unpaid/over-refund rejection, authentication and malformed bank fields.
 Live cancellation/booking/auth integration remains required before acceptance.
+
+## Admin refund decisions — SCRUM-96
+
+All `/api/admin/refunds/**` endpoints require verified ADMIN + authoritative branch
+ownership. GET `/pending?branchId=&page=0&size=20` returns pending/approved oldest first.
+PUT `/{id}/approve` records reception; PUT `/{id}/reject` requires `{reason}`. PUT
+`/{id}/complete` requires multipart `file`: actual JPEG/PNG up to 5MB/25MP, uploaded
+server-side to Cloudinary. A client URL alone is never accepted as transfer proof.
+
+Decisions lock the booking/payment domain and refund row, recheck confirmed payment /
+amount, save actor/timestamps and cannot overwrite a final state or completed proof.
+Repeated same decisions are idempotent. Competing completion/rejection has one winner.
+Database completion and a durable RefundCompletedEvent commit atomically. Existing
+outbox relay publishes to fcourt.payment.events; notification-service must consume /
+deduplicate the event and send email (that consumer is a separate owner integration).
+Event fields: eventId/type/refund{id,bookingId,branchId,customerId,amount,status,
+transferProofUrl}; beneficiary banking details are intentionally omitted.
+
+This is an admin attestation of a manual transfer, not a banking API. External transfer
+execution is outside this service. If DB commit loses a race/fails after proof upload,
+a Cloudinary orphan can remain and should be cleaned by the storage retention process;
+financial state/event still roll back together. Legacy refunds without branch ownership
+metadata fail closed pending reconciliation.
+
+Java 21 verify passes 50 tests on PostgreSQL+Redis/seven migrations, including required
+proof/magic-byte validation, idempotent immutable proof, decision race, rollback when
+outbox insertion fails, ADMIN/branch scope and required multipart input.
