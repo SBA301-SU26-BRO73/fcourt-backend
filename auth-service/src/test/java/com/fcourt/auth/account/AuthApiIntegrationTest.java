@@ -230,6 +230,159 @@ class AuthApiIntegrationTest {
     }
 
     @Test
+    void forgotPasswordPublishesTheEventAndTheEmailedTokenResetsThePasswordExactlyOnce() throws Exception {
+        String email = uniqueEmail();
+        var session = register(email, uniquePhone());
+        long id = session.get("user").get("id").asLong();
+
+        mvc.perform(post("/api/auth/password/forgot").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"%s\"}".formatted(email)))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.message").value(PasswordService.FORGOT_MESSAGE));
+
+        String payload = jdbc.queryForObject("""
+                SELECT payload FROM auth_outbox
+                WHERE aggregate_id = ? AND event_type = 'PasswordResetRequestedEvent'""", String.class, id);
+        JsonNode data = json.readTree(payload).get("data");
+        assertThat(data.get("email").asText()).isEqualTo(email);
+        String token = data.get("token").asText();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM password_reset_tokens WHERE token_hash = ?",
+                Integer.class, token)).isZero();
+
+        mvc.perform(post("/api/auth/password/reset").contentType(MediaType.APPLICATION_JSON)
+                        .content(resetBody(token, "Brand-new-pass1")))
+                .andExpect(status().isOk());
+
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content(credentials(email, PASSWORD)))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content(credentials(email, "Brand-new-pass1")))
+                .andExpect(status().isOk());
+        // Every session from before the reset is gone, and the token cannot be spent twice.
+        mvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                        .content(refreshBody(session.get("refreshToken").asText())))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/auth/password/reset").contentType(MediaType.APPLICATION_JSON)
+                        .content(resetBody(token, "Another-pass1")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value(PasswordService.INVALID_TOKEN));
+    }
+
+    @Test
+    void forgotPasswordForAnUnknownEmailAnswersTheSameAndPublishesNothing() throws Exception {
+        String email = uniqueEmail();
+
+        mvc.perform(post("/api/auth/password/forgot").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"%s\"}".formatted(email)))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.message").value(PasswordService.FORGOT_MESSAGE));
+
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM auth_outbox WHERE payload LIKE ?", Integer.class,
+                "%" + email + "%")).isZero();
+    }
+
+    @Test
+    void aNewResetRequestInvalidatesTheEarlierToken() throws Exception {
+        String email = uniqueEmail();
+        long id = register(email, uniquePhone()).get("user").get("id").asLong();
+        mvc.perform(post("/api/auth/password/forgot").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"%s\"}".formatted(email))).andExpect(status().isAccepted());
+        String first = json.readTree(jdbc.queryForObject("""
+                SELECT payload FROM auth_outbox WHERE aggregate_id = ? AND event_type = 'PasswordResetRequestedEvent'
+                ORDER BY created_at DESC LIMIT 1""", String.class, id)).get("data").get("token").asText();
+        // Move the first request out of the cooldown window, then ask again.
+        jdbc.update("UPDATE password_reset_tokens SET created_at = now() - interval '5 minutes' WHERE user_id = ?", id);
+        mvc.perform(post("/api/auth/password/forgot").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"%s\"}".formatted(email))).andExpect(status().isAccepted());
+
+        mvc.perform(post("/api/auth/password/reset").contentType(MediaType.APPLICATION_JSON)
+                        .content(resetBody(first, "Brand-new-pass1")))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void changePasswordKeepsTheCallerSignedInAndRevokesOtherSessions() throws Exception {
+        String email = uniqueEmail();
+        register(email, uniquePhone());
+        var otherDevice = body(mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content(credentials(email, PASSWORD))).andExpect(status().isOk()));
+        var thisDevice = body(mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content(credentials(email, PASSWORD))).andExpect(status().isOk()));
+
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/auth/password")
+                        .header("Authorization", "Bearer " + thisDevice.get("accessToken").asText())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"wrong\",\"newPassword\":\"Brand-new-pass1\"}"))
+                .andExpect(status().isBadRequest());
+        var changed = body(mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .patch("/api/auth/password")
+                        .header("Authorization", "Bearer " + thisDevice.get("accessToken").asText())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"%s\",\"newPassword\":\"Brand-new-pass1\"}".formatted(PASSWORD)))
+                .andExpect(status().isOk()));
+
+        mvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                        .content(refreshBody(otherDevice.get("refreshToken").asText())))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                        .content(refreshBody(changed.get("refreshToken").asText())))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content(credentials(email, "Brand-new-pass1")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void accessTokensIssuedBeforeAPasswordChangeStopWorking() throws Exception {
+        String email = uniqueEmail();
+        var before = register(email, uniquePhone());
+        // iat has whole seconds; let the change happen in a later second than the old token.
+        Thread.sleep(1100);
+        var changed = body(mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .patch("/api/auth/password")
+                        .header("Authorization", "Bearer " + before.get("accessToken").asText())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"%s\",\"newPassword\":\"Brand-new-pass1\"}".formatted(PASSWORD)))
+                .andExpect(status().isOk()));
+
+        mvc.perform(get("/api/auth/profile").header("Authorization", "Bearer " + before.get("accessToken").asText()))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/auth/profile").header("Authorization", "Bearer " + changed.get("accessToken").asText()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void repeatedWrongCurrentPasswordsThrottleChangePassword() throws Exception {
+        String access = register(uniqueEmail(), uniquePhone()).get("accessToken").asText();
+        var wrong = org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/auth/password")
+                .header("Authorization", "Bearer " + access).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"currentPassword\":\"wrong-password\",\"newPassword\":\"Brand-new-pass1\"}");
+        for (int attempt = 0; attempt < 5; attempt++) {
+            mvc.perform(wrong).andExpect(status().isBadRequest());
+        }
+
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/auth/password")
+                        .header("Authorization", "Bearer " + access).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"%s\",\"newPassword\":\"Brand-new-pass1\"}".formatted(PASSWORD)))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .exists("Retry-After"));
+    }
+
+    @Test
+    void changePasswordNeedsAnAccessToken() throws Exception {
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/auth/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"a\",\"newPassword\":\"Brand-new-pass1\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    static String resetBody(String token, String newPassword) {
+        return "{\"token\":\"%s\",\"newPassword\":\"%s\"}".formatted(token, newPassword);
+    }
+
+    @Test
     void failedDocumentUploadLeavesNoHalfRegisteredOwner() throws Exception {
         String email = uniqueEmail();
         when(storage.store(any(), org.mockito.ArgumentMatchers.anyString()))

@@ -68,7 +68,7 @@ class SuperAdminServiceTest {
         assertThat(approved.status()).isEqualTo("ACTIVE");
         verify(users).updateStatus(17, "ACTIVE", NOW);
         verify(users).logAction(17, ACTOR, "APPROVE", "PENDING_APPROVAL", "ACTIVE", "documents verified", NOW);
-        verify(outbox).append(17, "OwnerApprovedEvent", 1, new OwnerApprovedEvent(17, ACTOR, NOW));
+        verify(outbox).append(17, "OwnerApprovedEvent", 1, new OwnerApprovedEvent(17, ACTOR, NOW, "user17@demo.com", "User 17"));
     }
 
     @Test

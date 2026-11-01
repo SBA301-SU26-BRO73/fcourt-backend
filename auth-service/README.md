@@ -30,6 +30,7 @@ stable key once with
 | `AUTH_JWT_PRIVATE_KEY` / `AUTH_JWT_KEY_ID` | PKCS8 PEM RSA key (ephemeral when blank) / thumbprint of the key |
 | `AUTH_JWT_ACCESS_TTL` / `AUTH_JWT_REFRESH_TTL` | `15m` / `30d` |
 | `AUTH_CLOUDINARY_URL` | `cloudinary://key:secret@cloud` for court owner documents; uploads give 503 when blank |
+| `AUTH_PASSWORD_RESET_TTL` | `30m` |
 | `AUTH_EVENTS_ENABLED` / `AUTH_EVENTS_TOPIC` / `AUTH_EVENTS_DELAY_MS` | `true` / `fcourt.auth.events` / `1000` |
 
 Tests: `./mvnw clean verify` (Docker required: Testcontainers Postgres and Kafka).
@@ -54,6 +55,9 @@ comes from the `roles` array or a single `role` claim. `/api/super-admin/**` req
 | POST | `/api/auth/logout` | `{refreshToken}` | `204`, idempotent |
 | GET | `/api/auth/profile` | | `UserResponse` (needs a Bearer token) |
 | PATCH | `/api/auth/profile` | `{fullName, phone}` | `UserResponse` |
+| POST | `/api/auth/password/forgot` | `{email}` | `202 {message}`, the same answer for any email |
+| POST | `/api/auth/password/reset` | `{token, newPassword}` | `200 {message}`; 400 when the token is unknown, used or expired |
+| PATCH | `/api/auth/password` | `{currentPassword, newPassword}` | `AuthResponse` (needs a Bearer token) |
 | GET | `/.well-known/jwks.json` | | public keys, `Cache-Control: max-age=300` |
 
 `AuthResponse`: `{accessToken, refreshToken, tokenType:"Bearer", expiresIn (seconds), user:{id, email, fullName, phone, role, status, createdAt}}`.
@@ -80,6 +84,22 @@ Rules:
   once. Presenting a token that was already rotated by a refresh is treated as theft and revokes every
   session of that user. A token ended by logout, a password change or a lock is only refused (401), so a
   stale device cannot sign out newer sessions. Refreshing for a locked account also revokes its sessions.
+- Forgot password never reveals whether an email is registered. Only `ACTIVE` accounts get a token, at most
+  one request per minute per account is honoured, and a new request invalidates the earlier token. The token
+  is random, valid for 30 minutes, works once and is stored only as a SHA-256 hash in
+  `password_reset_tokens`. It leaves the service only inside `PasswordResetRequestedEvent`; the notification
+  service builds the emailed link from it. The outbox row is written as `sensitive`: once Kafka acknowledged
+  it, the relay replaces its payload with `{eventId, type, scrubbed: true}`, so the token is readable in
+  `auth_outbox` only until delivery (normally about a second, longer while Kafka is down or events are off).
+- Passwords (`newPassword` included) must also fit BCrypt's 72 UTF-8 bytes, otherwise 400.
+- Reset sets the new password and revokes every refresh token of the user. Change password needs the current
+  password, rejects reusing it, revokes every session and returns a fresh `AuthResponse` so the caller stays
+  signed in on this device while other devices have to sign in again. Wrong current passwords are throttled
+  per user like login (5 per 15 minutes, then 429 with `Retry-After`).
+- Both reset and change set `users.password_changed_at`; access tokens issued before it (compared to the
+  second, the precision of `iat`) are refused with 401 on every route of this service, at the cost of one
+  primary key lookup per authenticated request. Other services do not run this check, so there an older
+  access token stays valid until it expires (15 minutes).
 - An access token that is already issued stays valid until it expires even if the account is locked later,
   except on `/api/auth/profile` and `/api/super-admin/**`, which re-check the account in the database.
 
@@ -108,16 +128,25 @@ Rules:
 
 ## Events
 
-Approval appends to the `auth_outbox` table in the same transaction; `OutboxRelay` publishes pending
-rows to Kafka topic `fcourt.auth.events` (key = userId, acks=all) and marks them published only after
-the broker acknowledges them. Delivery is at-least-once, so consumers must dedupe on `eventId`.
+Approval and password reset requests append to the `auth_outbox` table in the same transaction;
+`OutboxRelay` publishes pending rows to Kafka topic `fcourt.auth.events` (key = userId, acks=all) and marks
+them published only after the broker acknowledges them. Delivery is at-least-once, so consumers must
+dedupe on `eventId`.
 
 ```json
 {"eventId":"b6c9aabf-...","type":"OwnerApprovedEvent","version":1,
- "data":{"userId":17,"approvedBy":16,"approvedAt":"2026-10-31T10:01:52.342Z"}}
+ "data":{"userId":17,"approvedBy":16,"approvedAt":"2026-10-31T10:01:52.342Z",
+         "email":"owner06@demo.com","fullName":"Chu San Sau"}}
+
+{"eventId":"0f3c1d52-...","type":"PasswordResetRequestedEvent","version":1,
+ "data":{"userId":7,"email":"customer@demo.com","fullName":"An Nguyen",
+         "token":"<url-safe random, 43 chars>","expiresAt":"2026-11-01T10:30:00Z"}}
 ```
 
-facility/subscription services can consume it to enable branch creation for the owner.
+facility/subscription services can consume `OwnerApprovedEvent` to enable branch creation for the owner.
+`email` and `fullName` were added to it for the notification service (additive, still version 1).
+`PasswordResetRequestedEvent.token` is a secret: consumers must not log it, and topic access should be
+restricted to the notification service.
 
 ## Database (Flyway)
 
@@ -131,7 +160,8 @@ facility/subscription services can consume it to enable branch creation for the 
 
 - Leave `AUTH_JWK_SET_URI` at its default so the service validates its own tokens against its own JWKS.
 - Everything not listed in `SecurityConfiguration` is `denyAll`: add new routes there.
-- `V5` creates `refresh_tokens` and `V6` creates `failed_attempts`; start new migrations at `V7`. `UserRole` / `UserStatus` in
-  `com.fcourt.auth.user` are shared.
-- `SessionService.closeAll(userId)` revokes every session of a user (use it when the password changes).
-- Expired and revoked `refresh_tokens` rows and old `failed_attempts` rows are not purged yet.
+- `V5` creates `refresh_tokens`, `V6` creates `failed_attempts`, `V7` creates `password_reset_tokens`, `V8`
+  adds `auth_outbox.sensitive` and `V9` adds `users.password_changed_at`; start new migrations at `V10`. `UserRole` / `UserStatus` in `com.fcourt.auth.user` are shared.
+- `SessionService.closeAll(userId)` revokes every session of a user.
+- Expired and revoked `refresh_tokens` rows, used or expired `password_reset_tokens` rows and old
+  `failed_attempts` rows are not purged yet.

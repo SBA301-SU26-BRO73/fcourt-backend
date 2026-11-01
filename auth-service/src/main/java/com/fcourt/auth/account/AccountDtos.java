@@ -18,6 +18,8 @@ public final class AccountDtos {
     static final int PASSWORD_MAX = 72;
     static final String PASSWORD_BYTES_MESSAGE =
             "password is too long: at most 72 bytes, and accented letters take 2 to 3 bytes each";
+    static final String NEW_PASSWORD_BYTES_MESSAGE =
+            "newPassword is too long: at most 72 bytes, and accented letters take 2 to 3 bytes each";
 
     private AccountDtos() {
     }
@@ -59,6 +61,27 @@ public final class AccountDtos {
             @NotBlank(message = "fullName is required")
             @Size(max = 150, message = "fullName must be at most 150 characters") String fullName,
             @NotBlank(message = "phone is required") @Pattern(regexp = PHONE, message = PHONE_MESSAGE) String phone) {
+    }
+
+    public record ForgotPasswordRequest(
+            @NotBlank(message = "email is required") @Email(message = "email is invalid") String email) {
+    }
+
+    public record ResetPasswordRequest(
+            @NotBlank(message = "token is required") String token,
+            @NotBlank(message = "newPassword is required")
+            @Size(min = PASSWORD_MIN, max = PASSWORD_MAX, message = "newPassword must be 8 to 72 characters")
+            @MaxUtf8Bytes(value = PASSWORD_MAX, message = NEW_PASSWORD_BYTES_MESSAGE) String newPassword) {
+    }
+
+    public record ChangePasswordRequest(
+            @NotBlank(message = "currentPassword is required") String currentPassword,
+            @NotBlank(message = "newPassword is required")
+            @Size(min = PASSWORD_MIN, max = PASSWORD_MAX, message = "newPassword must be 8 to 72 characters")
+            @MaxUtf8Bytes(value = PASSWORD_MAX, message = NEW_PASSWORD_BYTES_MESSAGE) String newPassword) {
+    }
+
+    public record MessageResponse(String message) {
     }
 
     public record UserResponse(long id, String email, String fullName, String phone, String role, String status,

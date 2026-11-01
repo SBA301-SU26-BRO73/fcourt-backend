@@ -51,6 +51,8 @@ auth:
     access-ttl: ${AUTH_JWT_ACCESS_TTL:15m}
     refresh-ttl: ${AUTH_JWT_REFRESH_TTL:30d}
   cloudinary-url: ${AUTH_CLOUDINARY_URL:}
+  password-reset:
+    ttl: ${AUTH_PASSWORD_RESET_TTL:30m}
   # Wrong passwords per email (login) or per user (change password) before a temporary 429 lock.
   attempts:
     max-failures: ${AUTH_ATTEMPTS_MAX_FAILURES:5}

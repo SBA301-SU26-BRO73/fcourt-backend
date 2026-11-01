@@ -62,6 +62,18 @@ class AccountRepository {
                 userId, url, docType, Timestamp.from(at));
     }
 
+    void updatePassword(long id, String passwordHash, Instant at) {
+        jdbc.update("UPDATE users SET password_hash = ?, password_changed_at = ?, updated_at = ? WHERE id = ?",
+                passwordHash, Timestamp.from(at), Timestamp.from(at), id);
+    }
+
+    /** Empty when the account is unknown or its password never changed. */
+    Optional<Instant> passwordChangedAt(long id) {
+        return jdbc.query("SELECT password_changed_at FROM users WHERE id = ?",
+                        (row, index) -> row.getObject("password_changed_at", OffsetDateTime.class), id)
+                .stream().filter(java.util.Objects::nonNull).findFirst().map(OffsetDateTime::toInstant);
+    }
+
     void updateProfile(long id, String fullName, String phone, Instant at) {
         jdbc.update("UPDATE users SET full_name = ?, phone = ?, updated_at = ? WHERE id = ?",
                 fullName, phone, Timestamp.from(at), id);

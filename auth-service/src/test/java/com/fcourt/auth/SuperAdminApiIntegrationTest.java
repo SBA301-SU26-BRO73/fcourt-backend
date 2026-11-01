@@ -167,6 +167,38 @@ class SuperAdminApiIntegrationTest {
                 .andExpect(jsonPath("$.detail").isNotEmpty());
     }
 
+    /** SCRUM-40: the reset token reaches Kafka, then the delivered outbox row no longer holds it. */
+    @Test
+    void passwordResetEventIsDeliveredAndItsTokenIsScrubbedFromTheOutbox() throws Exception {
+        String email = unique("reset");
+        long user = jdbc.queryForObject("""
+                INSERT INTO users(email, password_hash, role, status, full_name)
+                VALUES (?, 'x', 'CUSTOMER', 'ACTIVE', 'Reset User') RETURNING id""", Long.class, email);
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/auth/password/forgot")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"%s\"}".formatted(email)))
+                .andExpect(status().isAccepted());
+
+        JsonNode event = json.readTree(consume(user));
+        assertThat(event.get("type").asText()).isEqualTo("PasswordResetRequestedEvent");
+        String token = event.get("data").get("token").asText();
+        assertThat(token).isNotBlank();
+
+        // The row is marked published right after the broker acknowledged it.
+        Instant deadline = Instant.now().plusSeconds(10);
+        String stored;
+        do {
+            stored = jdbc.queryForObject("SELECT CASE WHEN published_at IS NULL THEN NULL ELSE payload END "
+                    + "FROM auth_outbox WHERE aggregate_id = ? AND event_type = 'PasswordResetRequestedEvent'",
+                    String.class, user);
+            if (stored == null) {
+                Thread.sleep(100);
+            }
+        } while (stored == null && Instant.now().isBefore(deadline));
+        assertThat(stored).isNotNull().doesNotContain(token);
+        assertThat(json.readTree(stored).get("scrubbed").asBoolean()).isTrue();
+        assertThat(json.readTree(stored).get("eventId").asText()).isEqualTo(event.get("eventId").asText());
+    }
+
     @Test
     void usersApproveAliasApprovesWithoutBody() throws Exception {
         long owner = pendingOwner();

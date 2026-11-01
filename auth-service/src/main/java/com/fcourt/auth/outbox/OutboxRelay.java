@@ -18,6 +18,13 @@ import org.springframework.transaction.annotation.Transactional;
 @ConditionalOnProperty(name = "auth.events.enabled", havingValue = "true", matchIfMissing = true)
 public class OutboxRelay {
     private static final int BATCH = 10;
+    /** Sensitive rows (see {@link OutboxWriter#appendSensitive}) keep only their metadata once delivered. */
+    static final String MARK_PUBLISHED = """
+            UPDATE auth_outbox SET published_at = now(),
+                payload = CASE WHEN sensitive
+                    THEN json_build_object('eventId', event_id, 'type', event_type, 'scrubbed', true)::text
+                    ELSE payload END
+            WHERE event_id = ?""";
 
     private final JdbcTemplate jdbc;
     private final KafkaTemplate<String, String> kafka;
@@ -49,7 +56,7 @@ public class OutboxRelay {
             } catch (Exception error) {
                 throw new IllegalStateException("Outbox acknowledgement unavailable; events retained", error);
             }
-            jdbc.update("UPDATE auth_outbox SET published_at = now() WHERE event_id = ?", row.get("event_id"));
+            jdbc.update(MARK_PUBLISHED, row.get("event_id"));
         }
     }
 }
