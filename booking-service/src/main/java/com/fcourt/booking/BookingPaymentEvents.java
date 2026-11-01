@@ -45,12 +45,13 @@ class BookingPaymentEvents {
         if(confirm && (!code.matches("[0-9]{32}") || !p.path("qrImageUrl").asText().equals("/api/payments/"+id+"/ticket/qr")))
             throw new IllegalArgumentException("Invalid ticket identity");
         // Late events cannot resurrect a cancelled/completed booking or regress a confirmed payment.
-        String paymentStatus=next.equals("CANCELLED")?"REJECTED":Set.of("CONFIRMED","CHECKED_IN","COMPLETED").contains(next)?"CONFIRMED":p.path("status").asText();
+        String paymentStatus="CONFIRMED".equals(b.get("payment_status"))?"CONFIRMED":next.equals("CANCELLED")?"REJECTED":Set.of("CONFIRMED","CHECKED_IN","COMPLETED").contains(next)?"CONFIRMED":p.path("status").asText();
         jdbc.update("""
             UPDATE bookings SET status=?,payment_id=?,payment_status=?,
               checkin_code=COALESCE(checkin_code,?),qr_image_url=COALESCE(qr_image_url,?),
               receipt_image_url=COALESCE(receipt_image_url,?),updated_at=now() WHERE id=?
             """,next,p.path("id").asLong(),paymentStatus,code,confirm?p.path("qrImageUrl").asText():null,
             p.path("receiptImageUrl").isTextual()?p.path("receiptImageUrl").asText():null,id);
+        if(next.equals("CANCELLED"))jdbc.update("UPDATE booking_slots SET active=false WHERE booking_id=?",id);
     }
 }
