@@ -71,6 +71,10 @@ aggregate versions; delivery across retries/instances can duplicate/reorder.
 
 POS commits its outbox with inventory/order state and marks only acknowledged
 Kafka deliveries. Partial worker failures retain failed rows without undoing
-other independently committed dispatches. Consumers, actual booking charge and
+other independently committed dispatches. Each drain processes up to 10 EVENT
+rows first and up to 10 CHARGE rows separately; failed booking commands cannot
+consume the event batch. Errors in one batch do not prevent attempts in the
+other. Each kind remains ordered by creation time/event ID, with stable retry
+keys and the existing per-row transaction boundary. Consumers, actual booking charge and
 settlement implementation, physical goods handoff and production networking
 remain integration acceptance items, not established by contract fixtures.

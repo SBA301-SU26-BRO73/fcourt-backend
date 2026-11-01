@@ -30,3 +30,16 @@ booking charge/checkout atomicity, deployed credential/TLS enforcement, reportin
 consumers and Flutter goods handoff/UI still need owning-service integration.
 No real bank transfer, external Cloudinary call, production deployment, Jira
 status change or peer approval has been performed/claimed.
+
+## Review follow-up: outbox fairness (2026-11-01)
+
+Independent EVENT and CHARGE quotas prevent a full batch of unavailable booking
+commands from starving CASH events. Events are attempted before remote booking
+calls, and per-row transactions/ambiguous-result retention are unchanged.
+
+Re-executed `mvn -f pos-retail-service/pom.xml -B -ntp clean verify`:
+**42 tests passed, zero failures/errors/skips**, executable JAR and coverage gate
+passed; service line coverage **98.35%**. New PostgreSQL/Kafka regressions cover
+12 failed booking attachments with an acknowledged CASH event, no accidental
+restock, subsequent complete recovery, and the reverse case where failed Kafka
+delivery must not prevent an independent booking attachment.
