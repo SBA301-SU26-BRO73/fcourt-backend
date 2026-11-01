@@ -7,6 +7,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fcourt.notification.event.EmailPlan.Ignore;
 import com.fcourt.notification.event.EmailPlan.NoRecipient;
 import com.fcourt.notification.event.EmailPlan.Send;
+import com.fcourt.notification.event.EmailPlan.Expired;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -16,7 +20,10 @@ class EmailPlannerTest {
     static final ObjectMapper JSON = new ObjectMapper();
     static final String RESET_URL = "https://fcourt.example/reset-password";
 
-    EmailPlanner planner = new EmailPlanner(RESET_URL);
+    // Before the 10:30Z expiry the reset events below carry.
+    static final Clock CLOCK = Clock.fixed(Instant.parse("2026-11-01T10:00:00Z"), ZoneOffset.UTC);
+
+    EmailPlanner planner = new EmailPlanner(RESET_URL, CLOCK);
 
     @Test
     void ownerApprovalMailsTheOwnerOnce() {
@@ -68,7 +75,7 @@ class EmailPlannerTest {
 
     @Test
     void passwordResetAppendsToAnExistingQueryAndEncodesTheToken() {
-        var send = (Send) new EmailPlanner("app://reset?lang=vi").plan(event("""
+        var send = (Send) new EmailPlanner("app://reset?lang=vi", CLOCK).plan(event("""
                 {"eventId":"%s","type":"PasswordResetRequestedEvent","version":1,
                  "data":{"userId":7,"email":"customer@demo.com","token":"a b&c","expiresAt":"2026-11-01T10:30:00Z"}}"""));
 
@@ -84,6 +91,17 @@ class EmailPlannerTest {
                 .replace("TOKEN", token));
 
         assertThatThrownBy(() -> planner.plan(event)).isInstanceOf(PoisonEventException.class);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"2026-11-01T10:00:00Z", "2026-11-01T09:59:59Z", "2026-10-01T00:00:00Z"})
+    void aPasswordResetConsumedAfterItsLinkExpiredIsNotMailed(String expiresAt) {
+        var plan = planner.plan(event("""
+                {"eventId":"%s","type":"PasswordResetRequestedEvent","version":1,
+                 "data":{"userId":7,"email":"customer@demo.com","token":"t","expiresAt":"EXPIRES"}}"""
+                .replace("EXPIRES", expiresAt)));
+
+        assertThat(plan).isEqualTo(new Expired());
     }
 
     @Test
@@ -132,7 +150,8 @@ class EmailPlannerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"not-an-address", "a@b.com\\nBcc: victim@x.com", "a@b.com, c@d.com", "<a@b.com>", ""})
+    @ValueSource(strings = {"not-an-address", "a@b.com\\nBcc: victim@x.com", "a@b.com, c@d.com", "<a@b.com>", "",
+            "a\\\"b@c.com", "a(b@c.com"})
     void anythingButOneWellFormedAddressIsRefusedWhichBlocksHeaderInjection(String address) {
         var plan = planner.plan(event(confirmedPayment(address)));
 
@@ -175,6 +194,15 @@ class EmailPlannerTest {
         assertThat(model.get("details")).isEqualTo("Khung giờ: 05/11/2026 18:00 - 18:30");
         assertThat(model.get("note")).startsWith("Số tiền hoàn lại dự kiến:").contains("150.000");
         assertThat(send.businessKey()).isEqualTo("booking-cancelled:42");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"\"\"", "\"   \"", "null"})
+    void aCustomerCancellationWithoutAReasonGetsTheGenericOne(String reason) {
+        var send = (Send) planner.plan(event(customerCancellation(0)
+                .replace("\"Bận việc đột xuất\"", reason)));
+
+        assertThat(send.email().model()).containsEntry("reason", "Đơn đặt sân đã được hủy");
     }
 
     @Test

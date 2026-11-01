@@ -88,6 +88,15 @@ class NotificationServiceTest {
     }
 
     @Test
+    void anExpiredEventSendsNothingAndIsNotRecorded() {
+        when(planner.plan(any())).thenReturn(new EmailPlan.Expired());
+
+        service.handle(PAYLOAD);
+
+        verifyNoInteractions(processed, sender);
+    }
+
+    @Test
     void aMailServerFailurePropagatesSoTheClaimRollsBackAndKafkaRetries() {
         when(planner.plan(any())).thenReturn(new EmailPlan.Send(EMAIL, null));
         when(processed.claim(any(), anyString(), any(), any())).thenReturn(true);

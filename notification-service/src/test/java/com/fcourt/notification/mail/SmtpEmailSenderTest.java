@@ -77,6 +77,14 @@ class SmtpEmailSenderTest {
                 .satisfies(error -> assertThat(error.getMessage()).doesNotContain("Chu San", "owner@demo.com"));
     }
 
+    @Test
+    void aMalformedSenderAddressFailsAtStartupInsteadOfOnEverySend() {
+        assertThatThrownBy(() -> new SmtpEmailSender(new JavaMailSenderImpl(), new TemplateRenderer(),
+                "FCOURT <no-reply@fcourt.example"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("notification.mail.from");
+    }
+
     private static void collect(Part part, List<String> bodies) throws Exception {
         if (part.isMimeType("text/plain") || part.isMimeType("text/html")) {
             bodies.add((String) part.getContent());

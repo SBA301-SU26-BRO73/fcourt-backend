@@ -5,7 +5,10 @@ import com.fcourt.notification.mail.OutgoingEmail;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import jakarta.mail.internet.AddressException;
+import jakarta.mail.internet.InternetAddress;
 import java.text.NumberFormat;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -48,9 +51,11 @@ public class EmailPlanner {
     private static final String DEFAULT_NAME = "Quý khách";
 
     private final String resetPasswordUrl;
+    private final Clock clock;
 
-    public EmailPlanner(@Value("${notification.links.reset-password-url}") String resetPasswordUrl) {
+    public EmailPlanner(@Value("${notification.links.reset-password-url}") String resetPasswordUrl, Clock clock) {
         this.resetPasswordUrl = resetPasswordUrl;
+        this.clock = clock;
     }
 
     public EmailPlan plan(EventEnvelope event) {
@@ -77,12 +82,17 @@ public class EmailPlanner {
         if (token.isBlank()) {
             throw new PoisonEventException("PasswordResetRequestedEvent has no token");
         }
+        Instant expiresAt = instant(data.path("expiresAt"), event);
+        if (!expiresAt.isAfter(clock.instant())) {
+            // The link no longer works and would only confuse; the user can request a new one.
+            return new EmailPlan.Expired();
+        }
         String link = resetPasswordUrl + (resetPasswordUrl.contains("?") ? "&" : "?")
                 + "token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
         var model = new LinkedHashMap<String, String>();
         model.put("name", name(data.path("fullName")));
         model.put("resetLink", link);
-        model.put("expiresAt", dateTime(data.path("expiresAt"), event));
+        model.put("expiresAt", DATE_TIME.format(expiresAt.atZone(VIETNAM)));
         // No business key: every request is legitimate and the eventId already dedupes redelivery.
         return build(address(data.path("email")), null, "Đặt lại mật khẩu FCOURT", "password-reset", model);
     }
@@ -119,7 +129,8 @@ public class EmailPlanner {
             BigDecimal refund = booking.path("refundAmount").isNumber()
                     ? booking.path("refundAmount").decimalValue() : BigDecimal.ZERO;
             String note = refund.signum() > 0 ? "Số tiền hoàn lại dự kiến: " + money(booking.path("refundAmount")) : "";
-            return cancelled(event, bookingId, booking, booking.path("reason").asText("Đơn đặt sân đã được hủy"),
+            String reason = booking.path("reason").asText("").strip();
+            return cancelled(event, bookingId, booking, reason.isEmpty() ? "Đơn đặt sân đã được hủy" : reason,
                     bookingSlots(booking, event), note);
         }
         // Published by payment-service when an unpaid checkout expires.
@@ -164,10 +175,22 @@ public class EmailPlanner {
         return name(source.path("customerName"));
     }
 
-    /** Only well-formed single addresses pass, which also rules out header injection. */
+    /**
+     * Only a single bare address that JavaMail also accepts passes. This rules out header injection, and an
+     * address the mail library would reject (for example {@code a"b@c.com}) is skipped here instead of
+     * failing every retry and ending in the DLT.
+     */
     private static String address(JsonNode node) {
         String value = node.asText("").strip();
-        return ADDRESS.matcher(value).matches() ? value : null;
+        if (!ADDRESS.matcher(value).matches()) {
+            return null;
+        }
+        try {
+            new InternetAddress(value, true).validate();
+            return value;
+        } catch (AddressException error) {
+            return null;
+        }
     }
 
     private static String name(JsonNode node) {
@@ -236,9 +259,9 @@ public class EmailPlanner {
         }
     }
 
-    private static String dateTime(JsonNode node, EventEnvelope event) {
+    private static Instant instant(JsonNode node, EventEnvelope event) {
         try {
-            return DATE_TIME.format(Instant.parse(node.asText()).atZone(VIETNAM));
+            return Instant.parse(node.asText());
         } catch (DateTimeParseException error) {
             throw new PoisonEventException(event.type() + " has a malformed expiresAt");
         }

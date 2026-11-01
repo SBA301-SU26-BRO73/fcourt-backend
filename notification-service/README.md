@@ -90,7 +90,11 @@ malformed value in a field that is used (date, time, expiry) is a poison record,
   the original payload, including password reset tokens, so restrict access to those topics.
 - **Logging.** Logs hold the event id, type and outcome only, never the recipient, the body or a reset token.
 - A new deployment starts from the earliest offset of its consumer group, so it mails events published
-  before it was running (an old `OwnerApprovedEvent` without `email` is recorded as skipped).
+  before it was running (an old `OwnerApprovedEvent` without `email` is recorded as skipped). A
+  `PasswordResetRequestedEvent` whose `expiresAt` has already passed when it is consumed is not mailed (the
+  link would no longer work); this is logged with the event id and not recorded.
+- **Addresses.** A recipient is used only if it is one bare address that JavaMail also accepts; anything else
+  counts as no recipient instead of failing every retry. `NOTIFICATION_MAIL_FROM` is checked at startup.
 
 ## Database (Flyway)
 

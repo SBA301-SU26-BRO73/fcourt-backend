@@ -41,6 +41,8 @@ public class NotificationService {
         EventEnvelope event = EventEnvelope.parse(json, payload);
         switch (planner.plan(event)) {
             case EmailPlan.Ignore ignored -> log.debug("Ignoring event {} of type {}", event.eventId(), event.type());
+            case EmailPlan.Expired expired -> log.info("Event {} of type {} expired before it was handled; no email sent",
+                    event.eventId(), event.type());
             case EmailPlan.NoRecipient none -> {
                 if (processed.claim(event.eventId(), event.type(), none.businessKey(), Outcome.SKIPPED_NO_RECIPIENT)) {
                     log.warn("Event {} of type {} has no usable recipient; no email sent", event.eventId(),

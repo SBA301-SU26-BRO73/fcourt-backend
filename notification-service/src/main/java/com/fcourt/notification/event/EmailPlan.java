@@ -8,6 +8,13 @@ public sealed interface EmailPlan {
     record Ignore() implements EmailPlan {
     }
 
+    /**
+     * A mail would be useless by now, for example a password reset link that already expired because the
+     * event was consumed late (outage, new deployment reading from the earliest offset).
+     */
+    record Expired() implements EmailPlan {
+    }
+
     /** A mail is due but the event carries no usable recipient address. */
     record NoRecipient(String businessKey) implements EmailPlan {
     }
