@@ -165,6 +165,22 @@ class StaffIntegrationTest {
     }
 
     @Test
+    void ticketPreviewIsReadOnlyAndScopedToActiveStaff() {
+        create(UUID.randomUUID(), body(7));
+        var response = call(HttpMethod.POST, "/api/staff/check-in/preview",
+                Map.of("checkInCode", "ticket"), token("100", "STAFF"), null);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().path("bookingId").asLong()).isEqualTo(42);
+        assertThat(CHECKED_IN.get()).isFalse();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_booking_commands", Integer.class)).isZero();
+        wrongBranch = true;
+        assertThat(call(HttpMethod.POST, "/api/staff/check-in/preview", Map.of("checkInCode", "ticket"),
+                token("100", "STAFF"), null).getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(call(HttpMethod.POST, "/api/staff/check-in/preview", Map.of("checkInCode", "ticket"),
+                token("1", "ADMIN"), null).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
     void repeatedCreateIsIdempotentAndDoesNotStoreCredentials() {
         UUID command = UUID.randomUUID();
         var first = create(command, body(7));
@@ -874,6 +890,10 @@ class StaffIntegrationTest {
                 send(exchange, 200, Map.of("id", branch, "adminId", branch == 7 ? 1 : 2,
                         "status", branchActive ? "ACTIVE" : "INACTIVE", "name", "Fixture venue",
                         "address", "Fixture address", "bankBin", "000000"));
+            } else if (path.equals("/api/internal/bookings/check-in/preview")) {
+                send(exchange, 200, Map.of("bookingId", 42, "branchId", wrongBranch ? 8 : 7,
+                        "courtId", 21, "courtName", "Court 1", "date", LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).toString(),
+                        "slotStart", "09:00", "slotEnd", "09:30", "status", "CONFIRMED", "customerName", "Guest"));
             } else if (path.equals("/api/internal/staff-accounts")) {
                 CREATES.incrementAndGet();
                 JsonNode body = JSON.readTree(exchange.getRequestBody());

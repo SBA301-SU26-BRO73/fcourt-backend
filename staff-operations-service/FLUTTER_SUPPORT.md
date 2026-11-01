@@ -17,6 +17,25 @@ follows validated IAM success. Retry the same key after ambiguous failures.
 
 ## Verification
 
+## SCRUM-29 read-only preview
+
+`POST /api/staff/check-in/preview`, body `{"checkInCode":"opaque code"}`,
+STAFF Bearer; no idempotency header because it must not mutate state. Returns
+bookingId/branchId/courtId/courtName/date/slotStart/slotEnd/status/customerName/
+guestPhone. Only today's CONFIRMED ticket can be previewed. Explicit confirmation
+continues to use the existing verify command, which rechecks authoritative state.
+
+Booking boundary: `POST /api/internal/bookings/check-in/preview`, body branchId,
+actorId, checkInCode, date and forwarded STAFF Bearer. Authority must verify the
+active assignment/branch and resolve the exact code without state mutation or
+logging it; unknown/foreign code returns 404, used/wrong-date ticket 409.
+This branch supplies the staff endpoint/adapter; the authority implementation
+remains a named integration dependency. Preview never guarantees later admission.
+
+Full staff verify passes with 117 tests (no failures/skips), including a read-only
+preview assertion, branch mismatch and role rejection. This adds no booking DB
+access or cached admission authority.
+
 2026-11-01: `mvn -f staff-operations-service/pom.xml verify` passes, including
 real PostgreSQL and Kafka containers, HTTP/JWT fixtures and JaCoCo's >=80% service
 coverage gate. Reactivation tests cover owner/role rejection, active assignment,
