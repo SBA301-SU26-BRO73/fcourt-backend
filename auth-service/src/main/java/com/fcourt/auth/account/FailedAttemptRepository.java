@@ -3,6 +3,7 @@ package com.fcourt.auth.account;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import java.util.Optional;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -22,7 +23,8 @@ class FailedAttemptRepository {
     Optional<Instant> lockedUntil(String key) {
         return jdbc.query("SELECT locked_until FROM failed_attempts WHERE attempt_key = ?",
                         (row, index) -> row.getObject("locked_until", OffsetDateTime.class), key)
-                .stream().findFirst().map(at -> at == null ? null : at.toInstant());
+                // An unlocked row maps to null, which findFirst() would reject with an NPE.
+                .stream().filter(Objects::nonNull).findFirst().map(OffsetDateTime::toInstant);
     }
 
     /** Creates the row if missing, then locks it so concurrent failures for one key are counted one by one. */
