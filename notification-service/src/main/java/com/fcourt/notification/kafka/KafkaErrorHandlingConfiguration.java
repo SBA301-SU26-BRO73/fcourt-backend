@@ -10,7 +10,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.util.backoff.FixedBackOff;
 
@@ -19,7 +18,8 @@ import org.springframework.util.backoff.FixedBackOff;
  * times, then published to {@code <topic>.DLT} and the consumer moves on, so one bad record never blocks
  * the topic. A {@link PoisonEventException} can never succeed and goes to the DLT without retries.
  * Records in a DLT are not replayed automatically: someone has to look at them. They hold the original
- * payload (including password reset tokens), so treat the DLT topics as sensitive.
+ * payload with password reset tokens redacted, but still names and addresses, so treat the DLT topics as
+ * sensitive.
  */
 @Configuration
 class KafkaErrorHandlingConfiguration {
@@ -29,7 +29,7 @@ class KafkaErrorHandlingConfiguration {
     DefaultErrorHandler kafkaErrorHandler(KafkaTemplate<String, String> template,
                                           @Value("${notification.retry.attempts}") long attempts,
                                           @Value("${notification.retry.interval-ms}") long intervalMs) {
-        var recoverer = new DeadLetterPublishingRecoverer(template,
+        var recoverer = new RedactingDeadLetterPublishingRecoverer(template,
                 (record, error) -> new TopicPartition(record.topic() + DLT_SUFFIX, -1));
         var handler = new DefaultErrorHandler(recoverer, new FixedBackOff(intervalMs, attempts));
         handler.addNotRetryableExceptions(PoisonEventException.class);
