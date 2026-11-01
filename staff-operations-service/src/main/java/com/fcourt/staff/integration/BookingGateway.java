@@ -83,9 +83,14 @@ public class BookingGateway {
                                  Instant checkedInAt, String channel) { }
     public record CheckInResult(long bookingId, long branchId, LocalDate date, String status, Instant checkedInAt) { }
     public record WalkInCommand(long branchId, long actorId, long courtId, LocalDate date, List<Long> slotIds,
-                                String guestPhone, String paymentMethod, Instant checkedInAt) { }
+                                String guestPhone, String paymentMethod, Instant checkedInAt, CashQuote quote) { }
     public record WalkInResult(long bookingId, String bookingCode, long branchId, long courtId, LocalDate date,
-                               String status, String paymentMethod, BigDecimal amount, Instant checkedInAt) { }
+                               String status, String paymentMethod, BigDecimal amount, Instant checkedInAt, CashInvoice invoice) { }
+    public record ChargedSlot(long slotId, LocalTime startTime, LocalTime endTime, BigDecimal price) { }
+    public record CashQuote(BigDecimal baseAmount, BigDecimal surchargeAmount, BigDecimal totalAmount,
+                            String policyVersion, List<ChargedSlot> items) { }
+    public record CashInvoice(String receiptCode, long cashierUserId, BigDecimal baseAmount,
+                              BigDecimal surchargeAmount, BigDecimal totalAmount, String policyVersion, List<ChargedSlot> items) { }
     public record CheckoutCommand(long branchId, long actorId, Instant completedAt) { }
     public record CheckoutResult(long bookingId, long branchId, String status, Instant completedAt) { }
 }
