@@ -55,6 +55,10 @@ public class StaffStore {
         jdbc.update("UPDATE staff SET deleted_at = now(), updated_at = now() WHERE id = ? AND deleted_at IS NULL", id);
     }
 
+    public void reactivate(long id) {
+        jdbc.update("UPDATE staff SET deleted_at = NULL, updated_at = now() WHERE id = ?", id);
+    }
+
     public void replaceShifts(long id, List<Shift> shifts) {
         jdbc.update("DELETE FROM staff_work_shifts WHERE staff_id = ?", id);
         jdbc.batchUpdate("INSERT INTO staff_work_shifts(staff_id, day_of_week, start_time, end_time) VALUES (?, ?, ?, ?)",
