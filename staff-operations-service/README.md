@@ -138,3 +138,22 @@ No live auth/facility/Flutter acceptance is claimed by stub-based tests.
 See CONTRACTS.md for the proposed booking API, consumer groups, at-least-once
 deduplication and integration limits. Tests include actual Kafka/PostgreSQL
 outbox acknowledgement, retained failure and same-ID duplicate after DB rollback.
+
+## Walk-in / checkout — SCRUM-30
+
+POST /api/staff/walk-in accepts courtId, date (today), slotIds (one slot in
+SCRUM-30; multiple contiguous slots are SCRUM-61), guestPhone. Requires STAFF
+Bearer + UUID Idempotency-Key. Branch/actor/status/price/payment method are
+server-derived. Returns 201 with authoritative CASH CHECKED_IN booking result.
+
+PUT /api/staff/bookings/{id}/checkout uses the same security/key headers and no
+body; returns COMPLETED with completedAt. Booking authority performs the atomic
+state and occupancy transition. Same-key replay is safe; new-key wrong state
+returns 409. Local success results and events commit atomically in staff_db.
+
+DISCOVERY_URL defaults http://localhost:8085 and uses SCRUM-22's public slot
+contract. Facility court ownership and availability are checked for new walk-ins;
+the authoritative booking command still must guard against races. Remote-success
+reconciliation runs before availability so an already-created booking can recover
+from a local transaction failure. See CONTRACTS.md for required cash/booking and
+read-only reconcile endpoints; live integration is not claimed.

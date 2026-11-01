@@ -35,6 +35,8 @@ staff:
   time-zone: ${STAFF_TIME_ZONE:Asia/Ho_Chi_Minh}
   booking:
     url: ${BOOKING_URL:http://localhost:8088}
+  discovery:
+    url: ${DISCOVERY_URL:http://localhost:8085}
   events:
     enabled: ${STAFF_EVENTS_ENABLED:true}
     topic: ${STAFF_EVENTS_TOPIC:fcourt.staff.events}
