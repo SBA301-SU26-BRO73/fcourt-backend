@@ -9,7 +9,10 @@ public final class CourtTypeDtos {
     private CourtTypeDtos() {
     }
 
-    /** Full replacement on PUT. {@code active} defaults to true when omitted. */
+    /**
+     * Full replacement on PUT. {@code active} defaults to true on create and keeps the current value on
+     * update when omitted, so a client that does not send it cannot re-enable a disabled type by accident.
+     */
     public record CourtTypeRequest(
             @NotBlank(message = "name is required")
             @Size(max = 100, message = "name must be at most 100 characters") String name,

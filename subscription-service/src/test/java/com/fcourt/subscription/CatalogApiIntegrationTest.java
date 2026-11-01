@@ -168,6 +168,11 @@ class CatalogApiIntegrationTest {
                 .andExpect(jsonPath("$.content[*].id").value(hasItem((int) id)));
         mvc.perform(get("/api/court-types").param("active", "true"))
                 .andExpect(jsonPath("$.content[*].id").value(not(hasItem((int) id))));
+        // A PUT that leaves out the flag keeps the type disabled.
+        mvc.perform(put("/api/court-types/" + id).header("Authorization", bearer(SUPER_ADMIN, "SUPER_ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON).content(courtTypeJson(name)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").value(false));
 
         mvc.perform(delete("/api/court-types/" + id).header("Authorization", bearer(SUPER_ADMIN, "SUPER_ADMIN")))
                 .andExpect(status().isNoContent());

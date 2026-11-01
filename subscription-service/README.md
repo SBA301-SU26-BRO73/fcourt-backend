@@ -51,7 +51,8 @@ database), so a super admin that gets locked keeps write access until the token 
 | PUT | `/api/court-types/{id}` | `CourtTypeRequest` | `CourtTypeResponse` (full replacement) |
 | DELETE | `/api/court-types/{id}` | | `204` (soft delete) |
 
-`CourtTypeRequest`: `{name (required, max 100), nameEn?, description? (max 2000), icon? (max 50), color? (max 20), active? (default true)}`
+`CourtTypeRequest`: `{name (required, max 100), nameEn? (max 100), description? (max 2000), icon? (max 50), color? (max 20),
+active? (default true on create, unchanged on update when omitted)}`
 
 `CourtTypeResponse`: `{id, name, nameEn, description, icon, color, active, createdAt, updatedAt}`
 
