@@ -21,7 +21,7 @@ public class ScheduleFlags {
         var endDate = slot.slotEnd().isAfter(slot.slotStart()) ? slot.date() : slot.date().plusDays(1);
         Instant end = endDate.atTime(slot.slotEnd()).atZone(zone).toInstant();
         boolean playing = "CHECKED_IN".equals(slot.status());
-        boolean late = "CONFIRMED".equals(slot.status()) && now.isAfter(start.plusSeconds(15 * 60));
+        boolean late = "CONFIRMED".equals(slot.status()) && now.isAfter(start.plusSeconds(15 * 60)) && now.isBefore(end);
         boolean ending = playing && !now.isBefore(end.minusSeconds(endingMinutes * 60L)) && now.isBefore(end);
         return new Flags(late, playing, ending);
     }
