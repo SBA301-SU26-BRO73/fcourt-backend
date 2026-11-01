@@ -108,10 +108,11 @@ class CourtSlotServiceTest {
     }
 
     @Test
-    void rejectsUnknownBookingsAndMissingOccupancy() {
-        schedule(DATE, false, slot(1, "11:00", false));
-        when(source.occupancy(1, DATE)).thenReturn(new Occupancy(1L, DATE, List.of(99L)));
-        assert503(() -> service.find(1, DATE));
+    void ignoresBookingsForRetiredSlotsAndRejectsMissingOccupancy() {
+        schedule(DATE, false, slot(1, "11:00", false), slot(2, "11:30", false));
+        when(source.occupancy(1, DATE)).thenReturn(new Occupancy(1L, DATE, List.of(2L, 99L)));
+        assertThat(service.find(1, DATE)).extracting(r -> r.status())
+                .containsExactly(Status.AVAILABLE, Status.BOOKED);
         when(source.occupancy(1, DATE)).thenReturn(null);
         assert503(() -> service.find(1, DATE));
     }
