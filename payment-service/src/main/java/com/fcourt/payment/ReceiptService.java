@@ -38,10 +38,13 @@ class ReceiptService {
         return payment;
     }
     PaymentRecord upload(long id, String auth, String hold, MultipartFile file) {
+        return upload(id,auth,hold,file,null);
+    }
+    PaymentRecord upload(long id, String auth, String hold, MultipartFile file, Long customer) {
         authorize(id,auth,hold);
         var previous=store.find(id);
         if (previous != null && "CANCELLED".equals(previous.status())) throw new ResponseStatusException(HttpStatus.GONE,"Checkout expired");
-        if (previous != null && previous.submittedAt()!=null) return previous; // Lost HTTP response: retry is safe and never replaces a bill.
+        if (previous != null && previous.submittedAt()!=null) return tx.execute(ignored -> { claim(id,customer); return previous; }); // Lost HTTP response: retry is safe and never replaces a bill.
         byte[] bytes=ReceiptValidator.read(file);
         var info=checkout.checkout(id,auth,hold);
         String url=storage.upload(bytes);
@@ -52,12 +55,13 @@ class ReceiptService {
                 store.jdbc().queryForObject("SELECT pg_advisory_xact_lock(?)", Object.class,id);
                 var existing=store.find(id);
                 if (existing != null && "CANCELLED".equals(existing.status())) throw new ResponseStatusException(HttpStatus.GONE,"Checkout expired");
-                if (existing != null && existing.submittedAt()!=null) return existing;
+                if (existing != null && existing.submittedAt()!=null) { claim(id,customer); return existing; }
                 if (!info.expiresAt().isAfter(clock.instant())) {
                     throw new ResponseStatusException(HttpStatus.GONE,"Hold expired during upload");
                 }
                 var saved=store.submit(info,url);
                 store.event("PaymentSubmittedEvent",saved);
+                claim(id,customer);
                 return saved;
             });
         } catch (RuntimeException e) {
@@ -66,6 +70,9 @@ class ReceiptService {
         }
         if (!url.equals(result.receiptImageUrl())) storage.delete(url);
         return result;
+    }
+    private void claim(long bookingId, Long customer) {
+        if (customer != null) CustomerPayments.claim(store.jdbc(),bookingId,customer);
     }
     PaymentUpstreams.Booking authorize(long id, String auth, String hold) {
         if ((auth == null || !auth.startsWith("Bearer ") || auth.length() <= 7)
