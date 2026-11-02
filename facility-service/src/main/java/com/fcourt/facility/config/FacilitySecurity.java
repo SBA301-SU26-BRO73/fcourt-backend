@@ -75,7 +75,7 @@ class FacilitySecurity {
                         .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
                         // Service-to-service read used by discovery-service; restrict at the network layer.
                         .requestMatchers(HttpMethod.GET, "/api/internal/**").permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/staff/**").hasRole("STAFF")
                         .anyRequest().denyAll())
                 .oauth2ResourceServer(oauth -> oauth

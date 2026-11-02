@@ -28,6 +28,10 @@ public class BranchStore {
         return jdbc.query(SELECT + " WHERE b.admin_id = ? AND b.deleted_at IS NULL ORDER BY b.id", this::row, adminId);
     }
 
+    public List<BranchResponse> listAll() {
+        return jdbc.query(SELECT + " WHERE b.deleted_at IS NULL ORDER BY b.id", this::row);
+    }
+
     /** Live (not deleted) branch regardless of owner. */
     public Optional<BranchResponse> find(long id) {
         return jdbc.query(SELECT + " WHERE b.id = ? AND b.deleted_at IS NULL", this::row, id).stream().findFirst();

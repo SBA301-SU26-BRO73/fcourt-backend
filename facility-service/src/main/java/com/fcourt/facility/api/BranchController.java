@@ -14,14 +14,17 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 /** Branch API (SCRUM-14). The owner is always the JWT subject, never a request field. */
 @RestController
 class BranchController {
     private final BranchService branches;
+    private final Owners owners;
 
-    BranchController(BranchService branches) {
+    BranchController(BranchService branches, Owners owners) {
         this.branches = branches;
+        this.owners = owners;
     }
 
     static long owner(Jwt jwt) {
@@ -30,30 +33,33 @@ class BranchController {
 
     @GetMapping("/api/admin/branches")
     List<BranchResponse> list(@AuthenticationPrincipal Jwt jwt) {
-        return branches.list(owner(jwt));
+        return Owners.isSuperAdmin() ? branches.listAll() : branches.list(owner(jwt));
     }
 
     @PostMapping("/api/admin/branches")
     @ResponseStatus(HttpStatus.CREATED)
     BranchResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody BranchRequest request) {
+        if (Owners.isSuperAdmin()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "SUPER_ADMIN cannot own branches");
+        }
         return branches.create(owner(jwt), jwt.getTokenValue(), request);
     }
 
     @GetMapping("/api/admin/branches/{id}")
     BranchResponse get(@AuthenticationPrincipal Jwt jwt, @PathVariable long id) {
-        return branches.get(owner(jwt), id);
+        return branches.get(owners.forBranch(jwt, id), id);
     }
 
     @PutMapping("/api/admin/branches/{id}")
     BranchResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable long id,
                           @Valid @RequestBody BranchRequest request) {
-        return branches.update(owner(jwt), id, request);
+        return branches.update(owners.forBranch(jwt, id), id, request);
     }
 
     @DeleteMapping("/api/admin/branches/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void delete(@AuthenticationPrincipal Jwt jwt, @PathVariable long id) {
-        branches.delete(owner(jwt), id);
+        branches.delete(owners.forBranch(jwt, id), id);
     }
 
     /** Bank details for payment-service's VietQR checkout; no authentication. */

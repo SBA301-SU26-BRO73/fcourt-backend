@@ -328,6 +328,39 @@ class FacilityApiIntegrationTest {
         postJson("/api/admin/branches", branchBody("Unique Hall", "06:00", "22:00"), other).andExpect(status().isCreated());
     }
 
+    @Test
+    void superAdminManagesAnyOwnersFacilitiesButCannotOwnBranchesAndOthersStayDenied() throws Exception {
+        long owner = 9301;
+        long superAdmin = 9302;
+        long branchId = id(postJson("/api/admin/branches", branchBody("Super Hall", "06:00", "22:00"), owner)
+                .andExpect(status().isCreated()));
+
+        mvc.perform(get("/api/admin/branches").with(as(superAdmin, "SUPER_ADMIN")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[?(@.id==" + branchId + ")]").exists());
+        mvc.perform(get("/api/admin/branches/{id}", branchId).with(as(superAdmin, "SUPER_ADMIN")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.adminId").value(owner));
+        mvc.perform(put("/api/admin/branches/{id}", branchId).with(as(superAdmin, "SUPER_ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON).content(branchBody("Super Hall 2", "05:00", "23:00")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Super Hall 2"));
+
+        long courtId = id(mvc.perform(post("/api/admin/branches/{id}/courts", branchId).with(as(superAdmin, "SUPER_ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON).content(courtBody("Court S1", "100000")))
+                .andExpect(status().isCreated()));
+        mvc.perform(get("/api/admin/courts/{id}", courtId).with(as(superAdmin, "SUPER_ADMIN")))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/admin/courts/{id}/time-slot-templates", courtId).with(as(superAdmin, "SUPER_ADMIN")))
+                .andExpect(status().isOk());
+
+        mvc.perform(post("/api/admin/branches").with(as(superAdmin, "SUPER_ADMIN")).contentType(MediaType.APPLICATION_JSON)
+                        .content(branchBody("Super Owned", "06:00", "22:00")))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/admin/branches").with(as(55, "STAFF"))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/admin/branches/{id}", branchId).with(as(9999, "ADMIN"))).andExpect(status().isNotFound());
+
+        mvc.perform(delete("/api/admin/branches/{id}", branchId).with(as(superAdmin, "SUPER_ADMIN")))
+                .andExpect(status().isNoContent());
+    }
+
     /** Reads the topic until the snapshot with the expected version of the branch arrives. */
     private JsonNode awaitLatestSnapshot(long branchId, long expectedVersion) throws Exception {
         Map<String, Object> props = KafkaTestUtils.consumerProps("facility-test-" + branchId, "false", broker);

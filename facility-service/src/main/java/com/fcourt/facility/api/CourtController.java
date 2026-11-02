@@ -22,9 +22,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 class CourtController {
     private final CourtService courts;
+    private final Owners owners;
 
-    CourtController(CourtService courts) {
+    CourtController(CourtService courts, Owners owners) {
         this.courts = courts;
+        this.owners = owners;
     }
 
     @GetMapping("/api/staff/branches/{branchId}/courts")
@@ -34,37 +36,37 @@ class CourtController {
 
     @GetMapping("/api/admin/branches/{branchId}/courts")
     List<CourtResponse> list(@AuthenticationPrincipal Jwt jwt, @PathVariable long branchId) {
-        return courts.list(owner(jwt), branchId);
+        return courts.list(owners.forBranch(jwt, branchId), branchId);
     }
 
     @PostMapping("/api/admin/branches/{branchId}/courts")
     @ResponseStatus(HttpStatus.CREATED)
     CourtResponse create(@AuthenticationPrincipal Jwt jwt, @PathVariable long branchId,
                          @Valid @RequestBody CourtRequest request) {
-        return courts.create(owner(jwt), jwt.getTokenValue(), branchId, request);
+        return courts.create(owners.forBranch(jwt, branchId), jwt.getTokenValue(), branchId, request);
     }
 
     @GetMapping("/api/admin/courts/{id}")
     CourtResponse get(@AuthenticationPrincipal Jwt jwt, @PathVariable long id) {
-        return courts.get(owner(jwt), id);
+        return courts.get(owners.forCourt(jwt, id), id);
     }
 
     @PutMapping("/api/admin/courts/{id}")
     CourtResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable long id,
                          @Valid @RequestBody CourtRequest request) {
-        return courts.update(owner(jwt), id, request);
+        return courts.update(owners.forCourt(jwt, id), id, request);
     }
 
     @PatchMapping("/api/admin/courts/{id}/status")
     CourtResponse changeStatus(@AuthenticationPrincipal Jwt jwt, @PathVariable long id,
                                @Valid @RequestBody CourtRequest.StatusChange request) {
-        return courts.changeStatus(owner(jwt), id, request.status());
+        return courts.changeStatus(owners.forCourt(jwt, id), id, request.status());
     }
 
     @DeleteMapping("/api/admin/courts/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void delete(@AuthenticationPrincipal Jwt jwt, @PathVariable long id) {
-        courts.delete(owner(jwt), id);
+        courts.delete(owners.forCourt(jwt, id), id);
     }
 
     @GetMapping("/api/staff/courts/{id}")

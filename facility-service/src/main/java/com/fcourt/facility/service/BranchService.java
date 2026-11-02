@@ -32,6 +32,10 @@ public class BranchService {
         return branches.listOwned(adminId);
     }
 
+    public List<BranchResponse> listAll() {
+        return branches.listAll();
+    }
+
     public BranchResponse get(long adminId, long branchId) {
         return branches.findOwned(branchId, adminId).orElseThrow(BranchService::notFound);
     }
