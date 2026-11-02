@@ -54,8 +54,7 @@ public class DashboardService {
             counts.put(status, totals.counts().getOrDefault(status, 0L));
         }
         long totalBookings = counts.values().stream().mapToLong(Long::longValue).sum();
-        BigDecimal todayRevenue = store.revenueBetween(ids, today.atStartOfDay(zone).toInstant(),
-                today.plusDays(1).atStartOfDay(zone).toInstant());
+        BigDecimal todayRevenue = store.revenueOnBookingDate(ids, today);
 
         Map<Long, Integer> active = store.activeCourts(ids);
         Map<Long, Long> booked = store.bookedSlots(ids, today);

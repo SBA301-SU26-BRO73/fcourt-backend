@@ -31,40 +31,42 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 class TemplateController {
     private final TemplateService templates;
+    private final Owners owners;
 
-    TemplateController(TemplateService templates) {
+    TemplateController(TemplateService templates, Owners owners) {
         this.templates = templates;
+        this.owners = owners;
     }
 
     @PostMapping("/api/admin/courts/{courtId}/time-slot-templates/preview")
     PreviewResponse preview(@AuthenticationPrincipal Jwt jwt, @PathVariable long courtId,
                             @Valid @RequestBody ApplyTemplateRequest request) {
-        return templates.preview(owner(jwt), courtId, request);
+        return templates.preview(owners.forCourt(jwt, courtId), courtId, request);
     }
 
     @PostMapping("/api/admin/courts/{courtId}/apply-template")
     ApplyResponse apply(@AuthenticationPrincipal Jwt jwt, @PathVariable long courtId,
                         @Valid @RequestBody ApplyTemplateRequest request) {
-        return templates.apply(owner(jwt), courtId, request);
+        return templates.apply(owners.forCourt(jwt, courtId), courtId, request);
     }
 
     @GetMapping("/api/admin/courts/{courtId}/time-slot-templates")
     List<TemplateSlot> list(@AuthenticationPrincipal Jwt jwt, @PathVariable long courtId,
                             @RequestParam(required = false) Integer dayOfWeek) {
-        return templates.list(owner(jwt), courtId, dayOfWeek);
+        return templates.list(owners.forCourt(jwt, courtId), courtId, dayOfWeek);
     }
 
     @PostMapping("/api/admin/courts/{courtId}/time-slot-templates")
     @ResponseStatus(HttpStatus.CREATED)
     TemplateSlot create(@AuthenticationPrincipal Jwt jwt, @PathVariable long courtId,
                         @Valid @RequestBody SingleTemplateRequest request) {
-        return templates.createOne(owner(jwt), courtId, request);
+        return templates.createOne(owners.forCourt(jwt, courtId), courtId, request);
     }
 
     @DeleteMapping("/api/admin/time-slot-templates/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void delete(@AuthenticationPrincipal Jwt jwt, @PathVariable long id) {
-        templates.delete(owner(jwt), id);
+        templates.delete(owners.forTemplate(jwt, id), id);
     }
 
     /** discovery-service contract (SCRUM-22_AVAILABLE_SLOTS.md); restrict to the service network. */
