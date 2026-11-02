@@ -39,9 +39,13 @@ public class ReadModelStore {
                     slot_count, last_event_type)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (booking_id) DO UPDATE SET
-                    status = CASE WHEN booking_facts.status = 'PENDING' THEN EXCLUDED.status ELSE booking_facts.status END,
+                    status = CASE WHEN booking_facts.status = 'PENDING' THEN EXCLUDED.status
+                        WHEN booking_facts.status = 'CONFIRMED' AND EXCLUDED.last_event_type = 'BookingCancelledEvent'
+                            THEN 'CANCELLED'
+                        ELSE booking_facts.status END,
                     amount = CASE WHEN EXCLUDED.amount > 0 THEN EXCLUDED.amount ELSE booking_facts.amount END,
-                    revenue = CASE WHEN booking_facts.revenue_at IS NULL AND EXCLUDED.revenue_at IS NOT NULL
+                    revenue = CASE WHEN booking_facts.status = 'CONFIRMED' AND EXCLUDED.last_event_type = 'BookingCancelledEvent' THEN 0
+                        WHEN booking_facts.revenue_at IS NULL AND EXCLUDED.revenue_at IS NOT NULL
                         AND booking_facts.status <> 'CANCELLED' THEN EXCLUDED.revenue ELSE booking_facts.revenue END,
                     revenue_at = CASE WHEN booking_facts.revenue_at IS NULL AND EXCLUDED.revenue_at IS NOT NULL
                         AND booking_facts.status <> 'CANCELLED' THEN EXCLUDED.revenue_at ELSE booking_facts.revenue_at END,
@@ -83,15 +87,15 @@ public class ReadModelStore {
         return new StatusTotals(counts, revenue[0]);
     }
 
-    public BigDecimal revenueBetween(Collection<Long> branchIds, Instant from, Instant to) {
+    /** Revenue of live bookings dated on the given day (monolith: by booking date, cancelled excluded). */
+    public BigDecimal revenueOnBookingDate(Collection<Long> branchIds, LocalDate day) {
         return jdbc.query(con -> {
             var statement = con.prepareStatement("""
                     SELECT COALESCE(sum(revenue), 0) FROM booking_facts
-                    WHERE branch_id = ANY (?) AND revenue_at >= ? AND revenue_at < ?
+                    WHERE branch_id = ANY (?) AND booking_date = ? AND status = 'CONFIRMED'
                     """);
             statement.setArray(1, ids(con, branchIds));
-            statement.setTimestamp(2, Timestamp.from(from));
-            statement.setTimestamp(3, Timestamp.from(to));
+            statement.setDate(2, Date.valueOf(day));
             return statement;
         }, rs -> rs.next() ? rs.getBigDecimal(1) : BigDecimal.ZERO);
     }

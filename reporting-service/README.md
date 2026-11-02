@@ -40,7 +40,7 @@ services). `branchId` omitted = aggregate over all branches of the caller.
   re-checked against `sub`; every read-model query is filtered by exactly those ids. Another
   owner's branch → 403; facility unavailable → 503.
 - `totalRevenue`: recognized revenue (confirmed online payments + cash walk-ins), all time.
-- `todayRevenue`: revenue recognized today in `REPORTING_TIME_ZONE`.
+- `todayRevenue`: revenue of CONFIRMED bookings dated today in `REPORTING_TIME_ZONE` (booking date, not payment time).
 - `bookingStatusCounts`: PENDING (payment submitted), CONFIRMED (payment confirmed, walk-in,
   checked-in, completed), CANCELLED (payment rejected, unpaid hold expired).
 - `activeCourts`: courts in the latest `facility.branch-updated.v1` snapshot (0 for inactive/deleted
@@ -61,8 +61,8 @@ The stats query is a few indexed aggregates on the read model plus one facility 
 
 - Deduplication: `processed_events(event_id)` is written in the same transaction as the fact,
   so redelivered events are ignored. Branch snapshots use the per-branch version instead.
-- Booking status only leaves PENDING; CONFIRMED/CANCELLED are final, so reordered/late events
-  cannot regress it. Revenue is recognized once, by the first money event (confirmation or cash
+- Booking status leaves PENDING; CONFIRMED changes only on `BookingCancelledEvent` (revenue dropped,
+  as in the monolith); CANCELLED is final, so reordered/late events cannot regress it. Revenue is recognized once, by the first money event (confirmation or cash
   walk-in; payment confirmation uses the Kafka record timestamp because the payload has no
   confirmation time).
 - Unknown event types are recorded and skipped. Invalid records go straight to `<topic>.DLT`;

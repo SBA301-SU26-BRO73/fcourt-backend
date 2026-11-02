@@ -135,9 +135,44 @@ class ReportingIntegrationTest {
         assertThat(dltValue("fcourt.payment.events.DLT")).isEqualTo("{not json");
     }
 
+    @Test
+    void todayRevenueFollowsBookingDateAndCancelledConfirmedBookingLeavesRevenue() throws Exception {
+        long owner = 8;
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        var branch = new OwnedBranch(3L, owner, "ACTIVE", LocalTime.of(6, 0), LocalTime.of(22, 0), 1);
+        when(facility.ownedBranches(eq(owner), anyString())).thenReturn(List.of(branch));
+
+        kafka.send("fcourt.payment.events", "400", payment("q-1", "PaymentConfirmedEvent", 400, 3, 30000, today.plusDays(1), 1));
+        kafka.send("fcourt.payment.events", "401", payment("q-2", "PaymentConfirmedEvent", 401, 3, 80000, today, 1));
+        kafka.send("fcourt.payment.events", "402", payment("q-3", "PaymentConfirmedEvent", 402, 3, 50000, today, 1));
+        kafka.send("fcourt.payment.events", "402", payment("q-4", "BookingCancelledEvent", 402, 3, 50000, today, 1));
+        kafka.flush();
+
+        JsonNode stats = awaitStats(owner, 3, "CANCELLED", 1);
+        assertThat(stats.at("/bookingStatusCounts/CONFIRMED").asLong()).isEqualTo(2);
+        assertThat(stats.get("todayRevenue").decimalValue()).isEqualByComparingTo("80000");
+        assertThat(stats.get("totalRevenue").decimalValue()).isEqualByComparingTo("110000");
+    }
+
     static org.springframework.test.web.servlet.request.RequestPostProcessor owner(long id) {
         return jwt().jwt(t -> t.subject(Long.toString(id)).claim("roles", List.of("ADMIN")))
                 .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
+    }
+
+    private JsonNode awaitStats(long owner, long expectedBookings, String status, long expectedStatusCount) throws Exception {
+        Instant deadline = Instant.now().plusSeconds(30);
+        JsonNode last = null;
+        while (Instant.now().isBefore(deadline)) {
+            String body = mvc.perform(get("/api/admin/dashboard/stats").with(owner(owner)))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            last = json.readTree(body);
+            if (last.get("totalBookings").asLong() == expectedBookings
+                    && last.at("/bookingStatusCounts/" + status).asLong() == expectedStatusCount) {
+                return last;
+            }
+            Thread.sleep(200);
+        }
+        throw new AssertionError("Read model not updated in time: " + last);
     }
 
     private JsonNode awaitStats(long expectedBookings) throws Exception {
