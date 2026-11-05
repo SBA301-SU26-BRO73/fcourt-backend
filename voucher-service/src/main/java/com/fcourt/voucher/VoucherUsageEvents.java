@@ -52,16 +52,16 @@ class VoucherUsageEvents {
                 || positive(data, "voucherId") != application.voucherId() || positive(data, "customerId") != application.customerId()
                 || !same(data, "originalAmount", application.originalAmount()) || !same(data, "discountAmount", application.discountAmount())
                 || !same(data, "finalAmount", application.finalAmount())) throw invalid();
-        if ("APPLIED".equals(application.status())) {
-            if (!Long.valueOf(paymentId).equals(application.paymentId())) throw invalid();
-            return;
-        }
-        if (!"RESERVED".equals(application.status())) throw invalid();
         java.time.Instant usedAt = null;
         if (data.has("usedAt")) {
             if (!data.path("usedAt").isTextual()) throw invalid();
             usedAt = java.time.Instant.parse(data.path("usedAt").textValue());
         }
+        if ("APPLIED".equals(application.status())) {
+            if (!Long.valueOf(paymentId).equals(application.paymentId())) throw invalid();
+            return;
+        }
+        if (!"RESERVED".equals(application.status())) throw invalid();
         history.record(application, paymentId, usedAt);
         if (jdbc.update("UPDATE vouchers SET used_count=used_count+1,updated_at=now() WHERE id=? AND used_count<usage_limit", application.voucherId()) != 1)
             throw new IllegalStateException("Reserved voucher quota is inconsistent");
