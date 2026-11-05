@@ -28,7 +28,7 @@ public class DiscoverySecurity {
     }
 
     @Bean
-    SecurityFilterChain discoverySecurity(HttpSecurity http) throws Exception {
+    SecurityFilterChain discoveryFilterChain(HttpSecurity http) throws Exception {
         var bearer = new DefaultBearerTokenResolver();
         return http.csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
