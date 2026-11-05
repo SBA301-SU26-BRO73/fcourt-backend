@@ -48,6 +48,21 @@ class AdminBranchAuthorityTest {
     }
 
     @Test
+    void rejectsUnauthenticatedAndForeignRolesBeforeContactingFacility() {
+        assertThatThrownBy(() -> authority.ownedBranches(null)).isInstanceOfSatisfying(
+                ResponseStatusException.class, error -> assertThat(error.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED));
+        for (String role : List.of("CUSTOMER", "STAFF", "SUPER_ADMIN")) {
+            assertThatThrownBy(() -> authority.ownedBranches(token(role))).isInstanceOfSatisfying(
+                    ResponseStatusException.class, error -> assertThat(error.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN));
+        }
+        var invalid = Jwt.withTokenValue("bad-subject").header("alg", "RS256").subject("abc")
+                .claim("roles", List.of("ADMIN")).build();
+        assertThatThrownBy(() -> authority.ownedBranches(invalid)).isInstanceOfSatisfying(
+                ResponseStatusException.class, error -> assertThat(error.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED));
+        assertThat(calls.get()).isZero();
+    }
+
+    @Test
     void forwardsCallerTokenAndRechecksOwnershipOnEveryRead() {
         assertThat(authority.ownedBranches(token("ADMIN"))).containsExactly(7L);
         assertThat(authorization.get()).isEqualTo("Bearer fixture-token");
