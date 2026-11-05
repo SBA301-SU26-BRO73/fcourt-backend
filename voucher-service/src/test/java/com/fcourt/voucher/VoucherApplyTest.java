@@ -203,6 +203,8 @@ class VoucherApplyTest {
         org.awaitility.Awaitility.await().atMost(Duration.ofSeconds(15)).untilAsserted(()->
                 assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_inbox",Long.class)).isEqualTo(2));
         assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_usages",Long.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT used_at_source FROM voucher_usages",String.class)).isEqualTo("RECORDED_AT");
     }
 
     @Test void uncertainAttachmentIsRetainedForSafeRetryAndDiscountNeverGoesNegative() throws Exception {
@@ -242,5 +244,34 @@ class VoucherApplyTest {
         events.accept(applied(application,UUID.randomUUID()).toString());
         assertThat(applications.booking(1,false).orElseThrow().status()).isEqualTo("APPLIED");
         assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isEqualTo(1);
+    }
+
+    @Test void paidUsagePreservesOriginalTimestampAndReplayCannotRewriteIt() throws Exception {
+        voucher("SAVE",10);var application=apply(1,10);
+        var paymentTime=Instant.parse("2030-01-09T23:00:00.123456Z");
+        var event=applied(application,UUID.randomUUID());((ObjectNode)event.path("voucher")).put("usedAt",paymentTime.toString());
+        events.accept(event.toString());events.accept(event.toString());
+        var replay=applied(application,UUID.randomUUID());((ObjectNode)replay.path("voucher")).put("usedAt",NOW.toString());events.accept(replay.toString());
+        var usage=jdbc.queryForMap("SELECT * FROM voucher_usages");
+        assertThat(usage.get("user_id")).isEqualTo(10L);assertThat(usage.get("booking_id")).isEqualTo(1L);
+        assertThat((java.math.BigDecimal)usage.get("discount_amount")).isEqualByComparingTo("20000");
+        assertThat(((java.sql.Timestamp)usage.get("used_at")).toInstant()).isEqualTo(paymentTime);
+        assertThat(usage.get("used_at_source")).isEqualTo("PAYMENT_CONFIRMED");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_usages",Long.class)).isEqualTo(1);
+    }
+
+    @Test void invalidTimestampOrFailedCounterRollsBackHistoryInboxAndApplication() throws Exception {
+        voucher("SAVE",10);var application=apply(1,10);
+        var event=applied(application,UUID.randomUUID());((ObjectNode)event.path("voucher")).put("usedAt","not-a-date");
+        assertThatThrownBy(()->events.accept(event.toString())).isInstanceOf(java.time.DateTimeException.class);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_usages",Long.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_inbox",Long.class)).isZero();
+        jdbc.update("UPDATE vouchers SET used_count=usage_limit");
+        ((ObjectNode)event.path("voucher")).put("usedAt",NOW.toString());
+        assertThatThrownBy(()->events.accept(event.toString())).isInstanceOf(IllegalStateException.class);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_usages",Long.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_inbox",Long.class)).isZero();
+        assertThat(applications.booking(1,false).orElseThrow().status()).isEqualTo("RESERVED");
+        assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isEqualTo(10);
     }
 }

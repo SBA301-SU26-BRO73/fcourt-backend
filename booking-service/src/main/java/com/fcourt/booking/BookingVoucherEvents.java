@@ -22,6 +22,9 @@ final class BookingVoucherEvents {
         voucher.put("originalAmount", booking.get("original_amount"));
         voucher.put("discountAmount", booking.get("discount_amount"));
         voucher.put("finalAmount", booking.get("total_price"));
+        if (payment.hasNonNull("confirmedAt")) {
+            voucher.put("usedAt", java.time.Instant.parse(payment.path("confirmedAt").asText()).toString());
+        }
         try {
             jdbc.update("INSERT INTO booking_outbox(event_id,booking_id,payload) VALUES (?,?,?::jsonb)",
                     eventId, booking.get("id"), json.writeValueAsString(Map.of("eventId", eventId,

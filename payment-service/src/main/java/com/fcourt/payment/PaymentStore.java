@@ -54,12 +54,13 @@ class PaymentStore {
     PaymentRecord row(ResultSet rs, int n) throws SQLException {
         try {
             var time = rs.getTimestamp("submitted_at");
+            var confirmed = rs.getTimestamp("confirmed_at");
             var checkout = rs.getString("checkout");
             return new PaymentRecord(rs.getLong("id"),rs.getLong("booking_id"),rs.getLong("branch_id"),
                     rs.getBigDecimal("amount"),rs.getString("status"),rs.getString("bill_image_url"),
                     time == null ? null : time.toInstant(),rs.getString("rejection_reason"),
                     checkout == null ? null : json.readValue(checkout, CheckoutInfo.class),
-                    rs.getString("check_in_code"),rs.getString("qr_image_url"));
+                    rs.getString("check_in_code"),rs.getString("qr_image_url"),confirmed == null ? null : confirmed.toInstant());
         } catch (JsonProcessingException e) { throw new IllegalStateException("Invalid stored checkout", e); }
     }
 }

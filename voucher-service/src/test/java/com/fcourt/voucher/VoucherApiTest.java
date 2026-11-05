@@ -115,6 +115,85 @@ class VoucherApiTest {
         return json.readTree(result).path("id").asLong();
     }
 
+    void usage(long voucherId, long bookingId, long userId, long branchId, String discount, Instant usedAt) {
+        var id=java.util.UUID.randomUUID();
+        var amount=new java.math.BigDecimal(discount);
+        jdbc.update("""
+                INSERT INTO voucher_redemptions(id,voucher_id,booking_id,customer_id,branch_id,original_amount,discount_amount,final_amount,expires_at,status,payment_id)
+                VALUES (?,?,?,?,?,100000,?,?,?,'APPLIED',?)
+                """,id,voucherId,bookingId,userId,branchId,amount,new java.math.BigDecimal("100000").subtract(amount),java.sql.Timestamp.from(usedAt),bookingId);
+        jdbc.update("INSERT INTO voucher_usages(id,voucher_id,booking_id,user_id,branch_id,discount_amount,used_at,used_at_source,payment_id) VALUES (?,?,?,?,?,?,?,'PAYMENT_CONFIRMED',?)",
+                id,voucherId,bookingId,userId,branchId,amount,java.sql.Timestamp.from(usedAt),bookingId);
+        jdbc.update("UPDATE vouchers SET used_count=used_count+1 WHERE id=?",voucherId);
+    }
+
+    @Test void usageHistoryPaginatesStablyAndSummarizesAllPagesWithExactMoney() throws Exception {
+        long id=create("HISTORY");var time=Instant.parse("2030-01-09T12:00:00Z");
+        usage(id,1,10,7,"10.01",time);usage(id,2,20,7,"20.02",time);usage(id,3,30,7,"30.03",time.minusSeconds(1));
+        mvc.perform(get("/api/admin/vouchers/"+id+"/usages?size=1").with(admin())).andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control","no-store")).andExpect(jsonPath("$.total").value(3))
+                .andExpect(jsonPath("$.totalDiscountAmount").value(60.06)).andExpect(jsonPath("$.items[0].bookingId").value(2))
+                .andExpect(jsonPath("$.items[0].userId").value(20)).andExpect(jsonPath("$.items[0].discountAmount").value(20.02))
+                .andExpect(jsonPath("$.items[0].usedAt").value(time.toString()))
+                .andExpect(jsonPath("$.items[0].usedAtSource").value("PAYMENT_CONFIRMED"))
+                .andExpect(jsonPath("$.items[0].holdToken").doesNotExist());
+        mvc.perform(get("/api/admin/vouchers/"+id+"/usages?size=1&page=1").with(admin())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].bookingId").value(1)).andExpect(jsonPath("$.totalDiscountAmount").value(60.06));
+        mvc.perform(get("/api/admin/vouchers/"+id+"/usages?size=1&page=99").with(admin())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isEmpty()).andExpect(jsonPath("$.total").value(3)).andExpect(jsonPath("$.totalDiscountAmount").value(60.06));
+    }
+
+    @Test void usageHistoryEnforcesRolesAndNeverLeaksForeignBranchTotals() throws Exception {
+        long id=create("SCOPED");usage(id,1,10,7,"100",Instant.parse("2030-01-09T12:00:00Z"));CALLS.set(0);
+        String path="/api/admin/vouchers/"+id+"/usages";
+        mvc.perform(get(path).header("X-User-Id","100")).andExpect(status().isUnauthorized());
+        for(String role:List.of("CUSTOMER","STAFF")){
+            mvc.perform(get(path).with(jwt().jwt(token->token.subject("100").claim("roles",List.of(role)))))
+                    .andExpect(status().isForbidden());
+        }
+        assertThat(CALLS.get()).isZero();
+        BRANCHES.set("[{\"id\":8,\"adminId\":200}]");
+        mvc.perform(get(path).with(jwt().jwt(token->token.subject("200").claim("roles",List.of("ADMIN")))))
+                .andExpect(status().isNotFound());
+        BRANCHES.set("[{\"id\":7,\"adminId\":100},{\"id\":8,\"adminId\":200}]");
+        mvc.perform(get(path).with(jwt().jwt(token->token.subject("999").claim("roles",List.of("SUPER_ADMIN")))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1)).andExpect(jsonPath("$.totalDiscountAmount").value(100));
+        // Moving a voucher must not expose the previous branch's customer history to its new owner.
+        jdbc.update("UPDATE vouchers SET branch_id=8 WHERE id=?",id);
+        BRANCHES.set("[{\"id\":8,\"adminId\":200}]");
+        mvc.perform(get(path).with(jwt().jwt(token->token.subject("200").claim("roles",List.of("ADMIN")))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.items").isEmpty()).andExpect(jsonPath("$.total").value(0))
+                .andExpect(jsonPath("$.totalDiscountAmount").value(0));
+    }
+
+    @Test void historyExcludesUnpaidReservationsAndSurvivesVoucherSoftDeletion() throws Exception {
+        long id=create("AUDIT");String path="/api/admin/vouchers/"+id+"/usages";
+        jdbc.update("""
+                INSERT INTO voucher_redemptions(id,voucher_id,booking_id,customer_id,branch_id,original_amount,discount_amount,final_amount,expires_at,status)
+                VALUES (?, ?, 1,10,7,100000,20000,80000,'2030-02-01','RESERVED')
+                """,java.util.UUID.randomUUID(),id);
+        mvc.perform(get(path).with(admin())).andExpect(status().isOk()).andExpect(jsonPath("$.items").isEmpty())
+                .andExpect(jsonPath("$.total").value(0)).andExpect(jsonPath("$.totalDiscountAmount").value(0));
+        usage(id,2,20,7,"100.50",Instant.parse("2030-01-09T12:00:00Z"));
+        mvc.perform(delete("/api/admin/vouchers/"+id).with(admin())).andExpect(status().isNoContent());
+        mvc.perform(get("/api/admin/vouchers/"+id).with(admin())).andExpect(status().isNotFound());
+        mvc.perform(get(path).with(admin())).andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.totalDiscountAmount").value(100.50)).andExpect(jsonPath("$.items[0].userId").value(20));
+    }
+
+    @Test void historyRejectsInvalidPagingAndRechecksOwnershipOnEveryRequest() throws Exception {
+        long id=create("LIVE_AUDIT");String path="/api/admin/vouchers/"+id+"/usages";CALLS.set(0);
+        for(String query:List.of("page=-1","page=100001","size=0","size=101","size=abc")){
+            mvc.perform(get(path+"?"+query).with(admin())).andExpect(status().isBadRequest());
+        }
+        mvc.perform(get("/api/admin/vouchers/0/usages").with(admin())).andExpect(status().isBadRequest());
+        assertThat(CALLS.get()).isZero();
+        mvc.perform(get(path).with(admin())).andExpect(status().isOk());
+        BRANCHES.set("[]");mvc.perform(get(path).with(admin())).andExpect(status().isNotFound());
+        UPSTREAM_STATUS.set(500);mvc.perform(get(path).with(admin())).andExpect(status().isServiceUnavailable());
+        UPSTREAM_STATUS.set(403);mvc.perform(get(path).with(admin())).andExpect(status().isForbidden());
+    }
+
     @Test
     void createsReadsUpdatesAndSoftDeletesVoucherWithoutAllowingClientCounters() throws Exception {
         var body = request(" save_20 ").put("usedCount", 9);
