@@ -127,6 +127,22 @@ class VoucherApiTest {
         jdbc.update("UPDATE vouchers SET used_count=used_count+1 WHERE id=?",voucherId);
     }
 
+    @Test void usageHistoryPaginatesStablyAndSummarizesAllPagesWithExactMoney() throws Exception {
+        long id=create("HISTORY");var time=Instant.parse("2030-01-09T12:00:00Z");
+        usage(id,1,10,7,"10.01",time);usage(id,2,20,7,"20.02",time);usage(id,3,30,7,"30.03",time.minusSeconds(1));
+        mvc.perform(get("/api/admin/vouchers/"+id+"/usages?size=1").with(admin())).andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control","no-store")).andExpect(jsonPath("$.total").value(3))
+                .andExpect(jsonPath("$.totalDiscountAmount").value(60.06)).andExpect(jsonPath("$.items[0].bookingId").value(2))
+                .andExpect(jsonPath("$.items[0].userId").value(20)).andExpect(jsonPath("$.items[0].discountAmount").value(20.02))
+                .andExpect(jsonPath("$.items[0].usedAt").value(time.toString()))
+                .andExpect(jsonPath("$.items[0].usedAtSource").value("PAYMENT_CONFIRMED"))
+                .andExpect(jsonPath("$.items[0].holdToken").doesNotExist());
+        mvc.perform(get("/api/admin/vouchers/"+id+"/usages?size=1&page=1").with(admin())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].bookingId").value(1)).andExpect(jsonPath("$.totalDiscountAmount").value(60.06));
+        mvc.perform(get("/api/admin/vouchers/"+id+"/usages?size=1&page=99").with(admin())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isEmpty()).andExpect(jsonPath("$.total").value(3)).andExpect(jsonPath("$.totalDiscountAmount").value(60.06));
+    }
+
     @Test
     void createsReadsUpdatesAndSoftDeletesVoucherWithoutAllowingClientCounters() throws Exception {
         var body = request(" save_20 ").put("usedCount", 9);
