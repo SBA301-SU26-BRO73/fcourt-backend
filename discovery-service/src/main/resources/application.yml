@@ -37,6 +37,7 @@ spring:
   jackson:
     deserialization:
       fail-on-null-for-primitives: true
+      accept-float-as-int: false
 management:
   endpoints:
     web:
