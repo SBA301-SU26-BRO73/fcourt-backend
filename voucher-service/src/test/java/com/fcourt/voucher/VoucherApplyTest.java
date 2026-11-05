@@ -133,4 +133,18 @@ class VoucherApplyTest {
                 .andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-store"))
                 .andExpect(jsonPath("$.customerId").doesNotExist()).andExpect(jsonPath("$.finalAmount").value(80000));
     }
+
+    @Test void sixValidationStepsReturnVietnameseReasons() throws Exception {
+        rejects(1,"không tồn tại");
+        long id=voucher("SAVE",10);
+        rejects(4,"chi nhánh");
+        jdbc.update("UPDATE vouchers SET end_date='2030-01-09' WHERE id=?",id);rejects(1,"hết hạn");
+        jdbc.update("UPDATE vouchers SET end_date='2030-02-01',start_date='2030-01-11' WHERE id=?",id);rejects(1,"chưa đến");
+        jdbc.update("UPDATE vouchers SET start_date='2030-01-01',used_count=usage_limit WHERE id=?",id);rejects(1,"hết lượt");
+        jdbc.update("UPDATE vouchers SET used_count=0,min_order_amount=100001 WHERE id=?",id);rejects(1,"tối thiểu");
+        jdbc.update("UPDATE vouchers SET min_order_amount=100000 WHERE id=?",id);
+        var application=apply(1,10);events.accept(applied(application,UUID.randomUUID()).toString());
+        rejects(3,"đã sử dụng");
+        assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers WHERE id=?",Integer.class,id)).isEqualTo(1);
+    }
 }
