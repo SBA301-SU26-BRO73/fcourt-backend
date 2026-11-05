@@ -141,4 +141,20 @@ class BookingApiTest {
         assertThat(out.path("voucher").path("finalAmount").decimalValue()).isEqualByComparingTo("80000");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM booking_outbox",Long.class)).isEqualTo(1);
     }
+
+    @Test void concurrentApplyAndFreezeCannotAcceptTwoDifferentPrices() throws Exception {
+        jdbc.update("UPDATE bookings SET hold_expires_at=? WHERE id=1",java.sql.Timestamp.from(Instant.now().plusSeconds(3600)));
+        var actor=org.springframework.security.oauth2.jwt.Jwt.withTokenValue("fixture").header("alg","RS256").subject("10").build();
+        var attachment=new BookingVoucherBridge.Attachment(UUID.randomUUID(),7,new java.math.BigDecimal("100000"),new java.math.BigDecimal("20000"),new java.math.BigDecimal("80000"));
+        var start=new java.util.concurrent.CountDownLatch(1);
+        try(var executor=java.util.concurrent.Executors.newFixedThreadPool(2)){
+            var apply=executor.submit(()->{start.await();try{voucherBridge.attach(1,actor,attachment);return true;}catch(org.springframework.web.server.ResponseStatusException error){return false;}});
+            var freeze=executor.submit(()->{start.await();try{voucherBridge.freeze(1,actor,null,new java.math.BigDecimal("100000"));return true;}catch(org.springframework.web.server.ResponseStatusException error){return false;}});
+            start.countDown();
+            assertThat(List.of(apply.get(10,java.util.concurrent.TimeUnit.SECONDS),freeze.get(10,java.util.concurrent.TimeUnit.SECONDS)))
+                    .containsExactlyInAnyOrder(true,false);
+        }
+        var order=jdbc.queryForMap("SELECT payment_frozen,total_price FROM bookings WHERE id=1");
+        assertThat((java.math.BigDecimal)order.get("total_price")).isEqualByComparingTo(Boolean.TRUE.equals(order.get("payment_frozen"))?"100000":"80000");
+    }
 }
