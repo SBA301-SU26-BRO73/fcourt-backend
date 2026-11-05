@@ -275,4 +275,21 @@ class ReviewIntegrationTest {
         projection.apply(snapshot(7,3,false));mvc.perform(get("/api/public/branches/7/reviews")).andExpect(status().isNotFound());
         assertThat(jdbc.queryForObject("SELECT count(*) FROM reviews",Long.class)).isEqualTo(2);
     }
+
+    @Test void invalidBookingAndOwnershipSourcesFailClosedWithoutSavingData() throws Exception {
+        String body="{\"bookingId\":1,\"rating\":5}";
+        BOOKING_STATUS.set(500);
+        mvc.perform(post("/api/reviews").with(jwt().jwt(actor(10,"CUSTOMER"))).contentType("application/json").content(body)).andExpect(status().isServiceUnavailable());
+        BOOKING_STATUS.set(200);BOOKINGS.get(1L).put("courtId",0);
+        mvc.perform(post("/api/reviews").with(jwt().jwt(actor(10,"CUSTOMER"))).contentType("application/json").content(body)).andExpect(status().isServiceUnavailable());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM reviews",Long.class)).isZero();
+        BOOKINGS.get(1L).put("courtId",11);long id=create(1,10,5);String path="/api/admin/reviews/"+id+"/reply";
+        for(String invalid:List.of("null","{}","[null]","[{\"id\":7,\"adminId\":999}]","[{\"id\":7,\"adminId\":100},{\"id\":7,\"adminId\":100}]")){
+            BRANCHES.set(invalid);mvc.perform(post(path).with(jwt().jwt(actor(100,"ADMIN"))).contentType("application/json").content("{\"reply\":\"Thanks\"}"))
+                    .andExpect(status().isServiceUnavailable());
+        }
+        FACILITY_STATUS.set(403);mvc.perform(post(path).with(jwt().jwt(actor(100,"ADMIN"))).contentType("application/json").content("{\"reply\":\"Thanks\"}"))
+                .andExpect(status().isForbidden());
+        assertThat(jdbc.queryForObject("SELECT admin_reply FROM reviews WHERE id=?",String.class,id)).isNull();
+    }
 }
