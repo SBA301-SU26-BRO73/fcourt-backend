@@ -256,7 +256,7 @@ class PaymentDatabaseTest {
         var payment=submitted();ownBranch();var confirmed=approvals.decide(payment.id(),true,null,admin());
         var stored=jdbc.queryForObject("SELECT confirmed_at FROM payments WHERE id=?",java.sql.Timestamp.class,payment.id()).toInstant();
         assertThat(confirmed.confirmedAt()).isEqualTo(stored);
-        var event=store.json.readTree(jdbc.queryForObject("SELECT payload::text FROM payment_outbox WHERE event_type='PaymentConfirmedEvent'",String.class));
+        var event=new com.fasterxml.jackson.databind.ObjectMapper().readTree(jdbc.queryForObject("SELECT payload::text FROM payment_outbox WHERE event_type='PaymentConfirmedEvent'",String.class));
         assertThat(java.time.Instant.parse(event.path("payment").path("confirmedAt").asText())).isEqualTo(stored);
         assertThat(approvals.decide(payment.id(),true,null,admin()).confirmedAt()).isEqualTo(stored);
     }
