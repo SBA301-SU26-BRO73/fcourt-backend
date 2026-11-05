@@ -7,8 +7,9 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 class VoucherRedemptions {
-    final JdbcTemplate jdbc;
+    private final JdbcTemplate jdbc;
     VoucherRedemptions(JdbcTemplate jdbc) { this.jdbc = jdbc; }
+    JdbcTemplate jdbc() { return jdbc; }
 
     Optional<VoucherRedemption> booking(long id, boolean lock) {
         return jdbc.query("SELECT * FROM voucher_redemptions WHERE booking_id=?" + (lock ? " FOR UPDATE" : ""),
