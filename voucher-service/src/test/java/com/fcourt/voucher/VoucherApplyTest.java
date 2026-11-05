@@ -233,4 +233,14 @@ class VoucherApplyTest {
         assertThat(applications.booking(3,false).orElseThrow().status()).isEqualTo("APPLIED");
         assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isEqualTo(1);
     }
+
+    @Test void cancelledFrozenBookingWaitsForPaidEventRatherThanLosingUsage() throws Exception {
+        voucher("SAVE",10);var application=apply(1,10);
+        ORDERS.get(1L).put("holdExpiresAt",NOW.minusSeconds(1).toString()).put("paymentFrozen",true).put("status","CANCELLED");
+        expiry.reconcile(application);
+        assertThat(applications.booking(1,false).orElseThrow().status()).isEqualTo("RESERVED");
+        events.accept(applied(application,UUID.randomUUID()).toString());
+        assertThat(applications.booking(1,false).orElseThrow().status()).isEqualTo("APPLIED");
+        assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isEqualTo(1);
+    }
 }
