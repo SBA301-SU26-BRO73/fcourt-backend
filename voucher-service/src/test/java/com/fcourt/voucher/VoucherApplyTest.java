@@ -203,6 +203,8 @@ class VoucherApplyTest {
         org.awaitility.Awaitility.await().atMost(Duration.ofSeconds(15)).untilAsserted(()->
                 assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_inbox",Long.class)).isEqualTo(2));
         assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_usages",Long.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT used_at_source FROM voucher_usages",String.class)).isEqualTo("RECORDED_AT");
     }
 
     @Test void uncertainAttachmentIsRetainedForSafeRetryAndDiscountNeverGoesNegative() throws Exception {
