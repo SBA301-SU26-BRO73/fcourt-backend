@@ -184,4 +184,22 @@ class AdminBookingApiTest {
         mvc.perform(get("/api/admin/bookings?courtId=12").with(admin())).andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(1)).andExpect(jsonPath("$.items[0].customerPhone").isEmpty());
     }
+
+    @Test
+    void ownershipChangesAndDependencyErrorsNeverReusePreviousResults() throws Exception {
+        mvc.perform(get("/api/admin/bookings").with(admin())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(4));
+        BRANCHES.set("[{\"id\":8,\"adminId\":100}]");
+        mvc.perform(get("/api/admin/bookings").with(admin())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1)).andExpect(jsonPath("$.items[0].id").value(3));
+        BRANCHES.set("[]");
+        mvc.perform(get("/api/admin/bookings").with(admin())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(0)).andExpect(jsonPath("$.items").isEmpty());
+        BRANCHES.set("[{\"id\":9,\"adminId\":200}]");
+        mvc.perform(get("/api/admin/bookings").with(admin())).andExpect(status().isServiceUnavailable());
+        FACILITY_STATUS.set(500);
+        mvc.perform(get("/api/admin/bookings").with(admin())).andExpect(status().isServiceUnavailable());
+        FACILITY_STATUS.set(403);
+        mvc.perform(get("/api/admin/bookings").with(admin())).andExpect(status().isForbidden());
+    }
 }
