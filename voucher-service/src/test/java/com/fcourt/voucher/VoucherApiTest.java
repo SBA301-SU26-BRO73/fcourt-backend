@@ -115,6 +115,18 @@ class VoucherApiTest {
         return json.readTree(result).path("id").asLong();
     }
 
+    void usage(long voucherId, long bookingId, long userId, long branchId, String discount, Instant usedAt) {
+        var id=java.util.UUID.randomUUID();
+        var amount=new java.math.BigDecimal(discount);
+        jdbc.update("""
+                INSERT INTO voucher_redemptions(id,voucher_id,booking_id,customer_id,branch_id,original_amount,discount_amount,final_amount,expires_at,status,payment_id)
+                VALUES (?,?,?,?,?,100000,?,?,?,'APPLIED',?)
+                """,id,voucherId,bookingId,userId,branchId,amount,new java.math.BigDecimal("100000").subtract(amount),java.sql.Timestamp.from(usedAt),bookingId);
+        jdbc.update("INSERT INTO voucher_usages(id,voucher_id,booking_id,user_id,branch_id,discount_amount,used_at,used_at_source,payment_id) VALUES (?,?,?,?,?,?,?,'PAYMENT_CONFIRMED',?)",
+                id,voucherId,bookingId,userId,branchId,amount,java.sql.Timestamp.from(usedAt),bookingId);
+        jdbc.update("UPDATE vouchers SET used_count=used_count+1 WHERE id=?",voucherId);
+    }
+
     @Test
     void createsReadsUpdatesAndSoftDeletesVoucherWithoutAllowingClientCounters() throws Exception {
         var body = request(" save_20 ").put("usedCount", 9);
