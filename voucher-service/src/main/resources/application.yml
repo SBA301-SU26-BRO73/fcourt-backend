@@ -4,6 +4,7 @@ spring:
   jackson:
     deserialization:
       accept-float-as-int: false
+      fail-on-numbers-for-enums: true
   application:
     name: voucher-service
   datasource:
