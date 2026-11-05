@@ -77,3 +77,35 @@ booking-service publishes its events, add them to `EventTranslator` (same dedupe
 `.\mvnw.cmd clean verify` (Java 21, Docker running): `EventTranslatorTest` (envelope mapping and
 validation) and `ReportingIntegrationTest` (PostgreSQL 16 Testcontainer + embedded Kafka: events →
 read model → stats, duplicate delivery, older snapshot ignored, owner scoping 403, DLT, 400/401/403).
+
+## Revenue export (SCRUM-76) — ADMIN only
+
+`GET /api/admin/dashboard/export/revenue?fromDate=2026-10-01&toDate=2026-10-31&format=xlsx|csv&branchId={id}`
+
+- Returns the file as an attachment (`Content-Disposition: attachment; filename="bao-cao-doanh-thu_20261001_20261031.xlsx"`,
+  `Cache-Control: no-store`). `format` defaults to `xlsx` (Apache POI, streaming `SXSSFWorkbook`); `csv` is UTF-8 with BOM
+  so Excel shows Vietnamese correctly.
+- Same owner scoping as the dashboard (facility-service decides the branches; foreign `branchId` -> 403, facility down -> 503).
+- Rows: CONFIRMED bookings with *play date* in `[fromDate, toDate]`, columns Mã đơn / Chi nhánh / Ngày chơi / Ngày ghi nhận
+  doanh thu / Số slot / Số tiền (VND) / Trạng thái, then the net revenue line. Amounts are the recognized `revenue` the
+  dashboard sums (CONFIRMED, by booking date), so totals match it.
+- 400: `fromDate`/`toDate` missing or malformed, `fromDate > toDate`, range over 366 days, `format` not xlsx/csv, `branchId <= 0`.
+- Court and customer name are not in the read model (events carry neither), so they are not exported yet.
+
+## Super Admin overview (SCRUM-78) — SUPER_ADMIN only
+
+`GET /api/super-admin/dashboard/overview?months=12` (1..24; default 12)
+
+```json
+{"owners":{"active":3,"pending":2,"rejected":1,"total":6},"branches":{"total":4,"active":3},"courts":10,
+ "customers":{"total":40,"active":35},"gmv":5000000,"saasRevenue":900000,
+ "monthly":[{"month":"2026-10","newAccounts":9,"gmv":1000000,"saasRevenue":600000}],
+ "topOwners":[{"ownerId":10,"ownerName":"Chủ A","revenue":1500000,"branches":2}],"generatedAt":"2026-11-05T03:00:00Z"}
+```
+
+- `gmv` = CONFIRMED booking revenue (read model, all branches); `saasRevenue` = PAID plan purchases (subscription-service).
+  Different sources, never summed together.
+- Sources: facility-service `GET /api/admin/branches` (all branches for SUPER_ADMIN), auth-service
+  `GET /api/super-admin/stats/accounts|owner-names`, subscription-service `GET /api/super-admin/stats/saas-revenue`;
+  the caller's token is forwarded. Any source down -> 503 (no zero-filled figures). New env: `AUTH_SERVICE_URL`
+  (`http://localhost:8081`), `SUBSCRIPTION_URL` (`http://localhost:8082`).

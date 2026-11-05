@@ -37,6 +37,8 @@ spring:
 reporting:
   time-zone: ${REPORTING_TIME_ZONE:Asia/Ho_Chi_Minh}
   facility-url: ${FACILITY_URL:http://localhost:8083}
+  auth-service-url: ${AUTH_SERVICE_URL:http://localhost:8081}
+  subscription-url: ${SUBSCRIPTION_URL:http://localhost:8082}
   auth:
     jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
     issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
