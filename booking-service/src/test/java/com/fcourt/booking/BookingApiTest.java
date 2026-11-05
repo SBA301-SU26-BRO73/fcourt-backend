@@ -20,7 +20,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Testcontainers
-@SpringBootTest(properties="booking.events-enabled=false")
+@SpringBootTest(properties={"booking.events-enabled=false","booking.integration-token=integration"})
 @org.springframework.test.annotation.DirtiesContext(classMode=org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 @AutoConfigureMockMvc
 class BookingApiTest {
