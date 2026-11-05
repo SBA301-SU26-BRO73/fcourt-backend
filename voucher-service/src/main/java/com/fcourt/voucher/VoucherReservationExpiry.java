@@ -30,8 +30,8 @@ class VoucherReservationExpiry {
         var order = booking.internal(application.bookingId());
         if (order.customerId() == null || order.customerId() != application.customerId() || order.branchId() != application.branchId())
             throw new IllegalStateException("Booking reservation identity mismatch");
-        boolean releasable = "CANCELLED".equals(order.status()) || (!order.paymentFrozen()
-                && order.holdExpiresAt() != null && !order.holdExpiresAt().isAfter(clock.instant()));
+        boolean releasable = !order.paymentFrozen() && ("CANCELLED".equals(order.status())
+                || (order.holdExpiresAt() != null && !order.holdExpiresAt().isAfter(clock.instant())));
         if (!releasable) return;
         // A frozen checkout may still be approved after hold expiry. Never free it by TTL alone.
         tx.executeWithoutResult(ignored -> {
