@@ -166,6 +166,21 @@ class VoucherApiTest {
                 .andExpect(jsonPath("$.totalDiscountAmount").value(0));
     }
 
+    @Test void historyExcludesUnpaidReservationsAndSurvivesVoucherSoftDeletion() throws Exception {
+        long id=create("AUDIT");String path="/api/admin/vouchers/"+id+"/usages";
+        jdbc.update("""
+                INSERT INTO voucher_redemptions(id,voucher_id,booking_id,customer_id,branch_id,original_amount,discount_amount,final_amount,expires_at,status)
+                VALUES (?, ?, 1,10,7,100000,20000,80000,'2030-02-01','RESERVED')
+                """,java.util.UUID.randomUUID(),id);
+        mvc.perform(get(path).with(admin())).andExpect(status().isOk()).andExpect(jsonPath("$.items").isEmpty())
+                .andExpect(jsonPath("$.total").value(0)).andExpect(jsonPath("$.totalDiscountAmount").value(0));
+        usage(id,2,20,7,"100.50",Instant.parse("2030-01-09T12:00:00Z"));
+        mvc.perform(delete("/api/admin/vouchers/"+id).with(admin())).andExpect(status().isNoContent());
+        mvc.perform(get("/api/admin/vouchers/"+id).with(admin())).andExpect(status().isNotFound());
+        mvc.perform(get(path).with(admin())).andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.totalDiscountAmount").value(100.50)).andExpect(jsonPath("$.items[0].userId").value(20));
+    }
+
     @Test
     void createsReadsUpdatesAndSoftDeletesVoucherWithoutAllowingClientCounters() throws Exception {
         var body = request(" save_20 ").put("usedCount", 9);
