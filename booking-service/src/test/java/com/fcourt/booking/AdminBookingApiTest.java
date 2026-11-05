@@ -104,4 +104,21 @@ class AdminBookingApiTest {
                 .andExpect(jsonPath("$.items[0].checkInCode").doesNotExist());
         assertThat(CALLS.get()).isEqualTo(1);
     }
+
+    @Test
+    void deniesAnonymousForeignRolesAndUnownedBranchWithoutLeakingRows() throws Exception {
+        mvc.perform(get("/api/admin/bookings").header("X-User-Id", "100")).andExpect(status().isUnauthorized());
+        for (String role : List.of("CUSTOMER", "STAFF", "SUPER_ADMIN")) {
+            mvc.perform(get("/api/admin/bookings").with(jwt().jwt(token -> token.subject("100").claim("roles", List.of(role)))))
+                    .andExpect(status().isForbidden());
+        }
+        mvc.perform(get("/api/admin/bookings").with(jwt().jwt(token -> token.subject("abc").claim("roles", List.of("ADMIN")))))
+                .andExpect(status().isUnauthorized());
+        assertThat(CALLS.get()).isZero();
+        mvc.perform(get("/api/admin/bookings?branchId=9").with(admin())).andExpect(status().isForbidden());
+        mvc.perform(get("/api/admin/bookings?courtId=31").with(admin())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(0)).andExpect(jsonPath("$.items").isEmpty());
+        mvc.perform(get("/api/admin/bookings?search=090111").with(admin())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1)).andExpect(jsonPath("$.items[0].id").value(1));
+    }
 }
