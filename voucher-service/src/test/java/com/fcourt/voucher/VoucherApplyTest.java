@@ -164,4 +164,17 @@ class VoucherApplyTest {
                 .andExpect(status().isGone());
         assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_redemptions",Long.class)).isZero();
     }
+
+    @Test void twoCustomersCannotReserveTheLastUsageConcurrently() throws Exception {
+        voucher("SAVE",1);
+        var start=new CountDownLatch(1);
+        try(var executor=Executors.newFixedThreadPool(2)){
+            var one=executor.submit(()->{start.await();try{apply(1,10);return true;}catch(org.springframework.web.server.ResponseStatusException error){return false;}});
+            var two=executor.submit(()->{start.await();try{apply(2,20);return true;}catch(org.springframework.web.server.ResponseStatusException error){return false;}});
+            start.countDown();
+            assertThat(List.of(one.get(10,TimeUnit.SECONDS),two.get(10,TimeUnit.SECONDS))).containsExactlyInAnyOrder(true,false);
+        }
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_redemptions WHERE status='RESERVED'",Long.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isZero();
+    }
 }
