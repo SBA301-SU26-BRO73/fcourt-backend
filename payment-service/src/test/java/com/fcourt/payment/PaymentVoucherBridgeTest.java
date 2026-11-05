@@ -11,6 +11,23 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 
 class PaymentVoucherBridgeTest {
+    @Test void freezeFailsClosedForUnknownAmountsAndPropagatesPriceConflict() {
+        var builder=RestClient.builder().baseUrl("http://booking");
+        var http=MockRestServiceServer.bindTo(builder).build();
+        var client=new PaymentUpstreams(builder.build(),RestClient.create(),"integration");
+        http.expect(requestTo("http://booking/api/internal/bookings/42/payment-freeze"))
+                .andRespond(withSuccess("{\"id\":42,\"totalPrice\":100000,\"paymentFrozen\":true}",MediaType.APPLICATION_JSON));
+        http.expect(requestTo("http://booking/api/internal/bookings/42/payment-freeze")).andRespond(withStatus(HttpStatus.CONFLICT));
+        assertThatThrownBy(()->client.freeze(42,"Bearer user",null,new BigDecimal("80000")))
+                .isInstanceOfSatisfying(ResponseStatusException.class,error->assertThat(error.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE));
+        assertThatThrownBy(()->client.freeze(42,"Bearer user",null,new BigDecimal("80000")))
+                .isInstanceOfSatisfying(ResponseStatusException.class,error->assertThat(error.getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+        http.verify();
+        var noCredential=new PaymentUpstreams(RestClient.create(),RestClient.create(),"");
+        assertThatThrownBy(()->noCredential.freeze(42,"Bearer user",null,new BigDecimal("80000")))
+                .isInstanceOfSatisfying(ResponseStatusException.class,error->assertThat(error.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE));
+    }
+
     @Test void freezeForwardsServiceAndCustomerCredentialsAndVerifiesExactAmount() {
         var builder=RestClient.builder().baseUrl("http://booking");
         var http=MockRestServiceServer.bindTo(builder).build();
