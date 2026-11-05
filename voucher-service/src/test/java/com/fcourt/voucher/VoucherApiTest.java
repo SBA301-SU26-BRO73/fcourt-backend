@@ -186,4 +186,25 @@ class VoucherApiTest {
         mvc.perform(get("/api/admin/vouchers/0").with(admin())).andExpect(status().isBadRequest());
         assertThat(CALLS.get()).isZero();
     }
+
+    @Test
+    void paginationAndUsagePreservationHandleExpiredVouchers() throws Exception {
+        long first = create("FIRST");
+        long second = create("SECOND");
+        mvc.perform(get("/api/admin/vouchers?branchId=7&size=1").with(admin())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(2)).andExpect(jsonPath("$.items[0].id").value(second));
+        mvc.perform(get("/api/admin/vouchers?size=1&page=1").with(admin())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].id").value(first));
+        mvc.perform(get("/api/admin/vouchers?size=1&page=99").with(admin())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(2)).andExpect(jsonPath("$.items").isEmpty());
+        jdbc.update("UPDATE vouchers SET used_count=5 WHERE id=?", first);
+        var body = request("FIRST").put("usageLimit", 4);
+        mvc.perform(put("/api/admin/vouchers/" + first).with(admin()).contentType("application/json").content(body.toString()))
+                .andExpect(status().isBadRequest());
+        body.put("usageLimit", 5).put("usedCount", 0).put("endDate", "2030-01-09T00:00:00Z");
+        mvc.perform(put("/api/admin/vouchers/" + first).with(admin()).contentType("application/json").content(body.toString()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.usedCount").value(5)).andExpect(jsonPath("$.status").value("EXPIRED"));
+        mvc.perform(get("/api/admin/vouchers/" + first).with(admin())).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("EXPIRED"));
+        mvc.perform(get("/api/admin/vouchers").with(admin())).andExpect(status().isOk()).andExpect(jsonPath("$.items[1].status").value("EXPIRED"));
+    }
 }
