@@ -161,4 +161,29 @@ class VoucherApiTest {
                 .andExpect(status().isForbidden());
         mvc.perform(get("/api/admin/vouchers?branchId=8").with(admin())).andExpect(status().isForbidden());
     }
+
+    @Test
+    void invalidFieldsAndCrossFieldRulesAreRejected() throws Exception {
+        Object[][] invalid = {{"code", "bad code"}, {"code", "x".repeat(51)}, {"branchId", "0"},
+                {"discountType", "OTHER"}, {"discountValue", "0"}, {"discountValue", "100.01"},
+                {"discountValue", "1.001"}, {"discountValue", "10000000000"}, {"maxDiscountAmount", "-1"},
+                {"minOrderAmount", "-1"}, {"usageLimit", "0"}, {"status", "OTHER"},
+                {"startDate", "2031-01-01T00:00:00Z"}, {"startDate", "2030-01-01"},
+                {"endDate", "2030-01-01T00:00:00Z"}};
+        for (Object[] entry : invalid) {
+            var body = request("INVALID").put((String) entry[0], (String) entry[1]);
+            mvc.perform(post("/api/admin/vouchers").with(admin()).contentType("application/json").content(body.toString()))
+                    .andExpect(status().isBadRequest());
+        }
+        for (String field : List.of("code", "branchId", "discountType", "discountValue", "startDate", "endDate", "usageLimit")) {
+            var body = request("MISSING"); body.remove(field);
+            mvc.perform(post("/api/admin/vouchers").with(admin()).contentType("application/json").content(body.toString()))
+                    .andExpect(status().isBadRequest());
+        }
+        for (String query : List.of("page=-1", "page=100001", "size=0", "size=101", "branchId=0")) {
+            mvc.perform(get("/api/admin/vouchers?" + query).with(admin())).andExpect(status().isBadRequest());
+        }
+        mvc.perform(get("/api/admin/vouchers/0").with(admin())).andExpect(status().isBadRequest());
+        assertThat(CALLS.get()).isZero();
+    }
 }
