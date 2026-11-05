@@ -292,4 +292,26 @@ class ReviewIntegrationTest {
                 .andExpect(status().isForbidden());
         assertThat(jdbc.queryForObject("SELECT admin_reply FROM reviews WHERE id=?",String.class,id)).isNull();
     }
+
+    @Test void signedJwtIsVerifiedOverRealHttpWhilePublicReadsRemainAnonymous() throws Exception {
+        for(String[] values:List.of(new String[]{ISSUER,"fcourt","60"},new String[]{"http://wrong-issuer","fcourt","60"},
+                new String[]{ISSUER,"other","60"},new String[]{ISSUER,"fcourt","-120"})){
+            var now=Instant.now();
+            var claims=new com.nimbusds.jwt.JWTClaimsSet.Builder().issuer(values[0]).audience(values[1]).subject("10")
+                    .issueTime(Date.from(now.minusSeconds(300))).expirationTime(Date.from(now.plusSeconds(Long.parseLong(values[2]))))
+                    .claim("roles",List.of("CUSTOMER")).build();
+            var signed=new com.nimbusds.jwt.SignedJWT(new com.nimbusds.jose.JWSHeader.Builder(com.nimbusds.jose.JWSAlgorithm.RS256).keyID(KEY.getKeyID()).build(),claims);
+            signed.sign(new com.nimbusds.jose.crypto.RSASSASigner(KEY));
+            var headers=new org.springframework.http.HttpHeaders();headers.setBearerAuth(signed.serialize());headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+            var response=http.exchange("/api/reviews",org.springframework.http.HttpMethod.POST,
+                    new org.springframework.http.HttpEntity<>("{\"bookingId\":1,\"rating\":5}",headers),String.class);
+            boolean valid=values[0].equals(ISSUER)&&values[1].equals("fcourt")&&values[2].equals("60");
+            assertThat(response.getStatusCode().value()).isEqualTo(valid?201:401);
+        }
+        assertThat(BOOKING_CALLS.get()).isEqualTo(1);
+        assertThat(http.getForEntity("/api/public/branches/7/reviews",String.class).getStatusCode().value()).isEqualTo(200);
+        var invalidBearer=new org.springframework.http.HttpHeaders();invalidBearer.setBearerAuth("invalid-token");
+        assertThat(http.exchange("/api/public/branches",org.springframework.http.HttpMethod.GET,
+                new org.springframework.http.HttpEntity<>(invalidBearer),String.class).getStatusCode().value()).isEqualTo(200);
+    }
 }
