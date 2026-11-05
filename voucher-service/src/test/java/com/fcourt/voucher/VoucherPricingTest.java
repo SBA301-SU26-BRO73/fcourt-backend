@@ -47,4 +47,20 @@ class VoucherPricingTest {
         var disabled = voucher(Voucher.DiscountType.FIXED_AMOUNT, "10", null, "0", now, now.plusSeconds(1), 0, Voucher.Status.EXPIRED);
         assertThat(VoucherPricing.calculate(disabled, 7, new BigDecimal("100"), now).reason()).isEqualTo("EXPIRED");
     }
+
+    @Test
+    void rejectsMalformedAmountsBeforeDatabaseAccessAndNormalizesCode() {
+        for (String amount : java.util.List.of("", "0", "-1", "1e2", "1.234", "10000000000", "NaN", ".50")) {
+            assertThatThrownBy(() -> pricing.validate("SAVE", 7, amount)).isInstanceOf(IllegalArgumentException.class);
+        }
+        assertThatThrownBy(() -> pricing.validate("bad code", 7, "100")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> pricing.validate("SAVE", 0, "100")).isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(repository);
+        when(repository.byCode("SAVE")).thenReturn(Optional.empty());
+        var quote = pricing.validate(" save ", 7, "100.00");
+        assertThat(quote.reason()).isEqualTo("NOT_FOUND");
+        assertThat(quote.discountAmount()).isEqualByComparingTo("0");
+        assertThat(quote.finalAmount()).isEqualByComparingTo("100");
+        verify(repository).byCode("SAVE");
+    }
 }
