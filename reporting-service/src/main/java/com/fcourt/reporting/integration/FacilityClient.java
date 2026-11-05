@@ -66,6 +66,24 @@ public class FacilityClient {
         }
     }
 
+    /** Every branch of the platform; facility-service returns them all only to a SUPER_ADMIN token. */
+    public List<OwnedBranch> allBranches(String bearer) {
+        try {
+            List<OwnedBranch> branches = facility.get().uri("/api/admin/branches")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + bearer).retrieve()
+                    .body(new ParameterizedTypeReference<List<OwnedBranch>>() { });
+            if (branches == null) throw unavailable();
+            branches.forEach(FacilityClient::validate);
+            return branches;
+        } catch (HttpClientErrorException error) {
+            int code = error.getStatusCode().value();
+            if (code == 401 || code == 403) throw denied();
+            throw unavailable();
+        } catch (RestClientException error) {
+            throw unavailable();
+        }
+    }
+
     private static void validate(OwnedBranch branch) {
         if (branch == null || branch.id() == null || branch.adminId() == null || branch.openTime() == null
                 || branch.closeTime() == null || branch.courtCount() == null) {
