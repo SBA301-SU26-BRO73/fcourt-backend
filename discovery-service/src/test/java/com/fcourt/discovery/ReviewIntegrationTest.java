@@ -259,4 +259,20 @@ class ReviewIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT count(*) FROM branch_review_stats",Long.class)).isZero();
         assertThat(jdbc.queryForObject("SELECT version FROM review_cache_version",Long.class)).isZero();
     }
+
+    @Test void independentBookingsKeepAccurateTotalsAndSurviveBranchSnapshotReplacement() throws Exception {
+        var start=new CountDownLatch(1);
+        try(var executor=Executors.newFixedThreadPool(2)){
+            var one=executor.submit(()->{start.await();return service.create(new CreateReviewRequest(1L,5,null,null),actor(10,"CUSTOMER"));});
+            var two=executor.submit(()->{start.await();return service.create(new CreateReviewRequest(2L,3,null,null),actor(20,"CUSTOMER"));});
+            start.countDown();one.get(10,TimeUnit.SECONDS);two.get(10,TimeUnit.SECONDS);
+        }
+        assertThat(jdbc.queryForObject("SELECT review_count FROM branch_review_stats",Long.class)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT rating_sum FROM branch_review_stats",Long.class)).isEqualTo(8);
+        projection.apply(snapshot(7,2,true));
+        mvc.perform(get("/api/public/branches/7/reviews")).andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.averageRating").value(4));
+        projection.apply(snapshot(7,3,false));mvc.perform(get("/api/public/branches/7/reviews")).andExpect(status().isNotFound());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM reviews",Long.class)).isEqualTo(2);
+    }
 }
