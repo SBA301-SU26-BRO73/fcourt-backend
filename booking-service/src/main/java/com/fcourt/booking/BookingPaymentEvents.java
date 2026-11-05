@@ -53,5 +53,6 @@ class BookingPaymentEvents {
             """,next,p.path("id").asLong(),paymentStatus,code,confirm?p.path("qrImageUrl").asText():null,
             p.path("receiptImageUrl").isTextual()?p.path("receiptImageUrl").asText():null,id);
         if(next.equals("CANCELLED"))jdbc.update("UPDATE booking_slots SET active=false WHERE booking_id=?",id);
+        if(confirm) BookingVoucherEvents.confirmed(jdbc,json,b,p);
     }
 }

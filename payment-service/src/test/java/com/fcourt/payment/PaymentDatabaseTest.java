@@ -16,6 +16,47 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest(properties="payment.events-enabled=false")
 @org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 class PaymentDatabaseTest {
+    @Test void receiptPriceConflictRollsBackPaymentAndCleansUploadedBill() throws Exception {
+        var upstream=org.mockito.Mockito.mock(PaymentUpstreams.class);
+        var checkout=org.mockito.Mockito.mock(CheckoutService.class);
+        var storage=org.mockito.Mockito.mock(ReceiptStorage.class);
+        var mapper=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+        var order=mapper.readValue(CheckoutApiTest.BOOKING,PaymentUpstreams.Booking.class);
+        org.mockito.Mockito.when(upstream.booking(42,null,"guest")).thenReturn(order);
+        var info=new CheckoutInfo(42L,"BK00000042",7L,"Thu Duc","Court",order.date(),order.slots(),order.totalPrice(),
+                "VCB","970436","00123","FCOURT","FC BK00000042",order.holdExpiresAt(),"Customer");
+        org.mockito.Mockito.when(checkout.checkout(42,null,"guest")).thenReturn(info);
+        org.mockito.Mockito.when(storage.upload(org.mockito.ArgumentMatchers.any())).thenReturn("https://res.cloudinary.com/demo/new-bill.png");
+        org.mockito.Mockito.doThrow(new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT))
+                .when(upstream).freeze(42,null,"guest",info.amount());
+        var receipts=new ReceiptService(checkout,upstream,store,storage,tx,fixed());
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->receipts.upload(42,null,"guest",image())).hasMessageContaining("409");
+        assertThat(store.find(42)).isNull();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM payment_outbox",Long.class)).isZero();
+        org.mockito.Mockito.verify(storage).delete("https://res.cloudinary.com/demo/new-bill.png");
+    }
+
+    @Test void freeVoucherPaymentIssuesTicketAndConfirmationExactlyOnce() throws Exception {
+        var upstream=org.mockito.Mockito.mock(PaymentUpstreams.class);
+        var checkout=org.mockito.Mockito.mock(CheckoutService.class);
+        var mapper=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+        String body=CheckoutApiTest.BOOKING.replace("160000.00","0").replace("\"status\":",
+                "\"voucherApplicationId\":\"00000000-0000-0000-0000-000000000001\",\"status\":");
+        var order=mapper.readValue(body,PaymentUpstreams.Booking.class);
+        org.mockito.Mockito.when(upstream.booking(42,"Bearer free-user",null)).thenReturn(order);
+        var info=new CheckoutInfo(42L,"BK00000042",7L,"Thu Duc","Court",order.date(),order.slots(),java.math.BigDecimal.ZERO,
+                "VCB","970436","00123","FCOURT","FC BK00000042",order.holdExpiresAt(),"Customer");
+        org.mockito.Mockito.when(checkout.checkout(42,"Bearer free-user",null)).thenReturn(info);
+        var free=new FreeVoucherPayment(upstream,checkout,store,tx,fixed());
+        var customer=org.springframework.security.oauth2.jwt.Jwt.withTokenValue("free-user").header("alg","RS256").subject("10").build();
+        var first=free.confirm(42,customer);var retry=free.confirm(42,customer);
+        assertThat(first.amount()).isZero();assertThat(first.status()).isEqualTo("CONFIRMED");
+        assertThat(first.checkInCode()).matches("[0-9]{32}");assertThat(retry.id()).isEqualTo(first.id());
+        assertThat(jdbc.queryForObject("SELECT customer_id FROM payments WHERE booking_id=42",Long.class)).isEqualTo(10);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM payment_outbox WHERE event_type='PaymentConfirmedEvent'",Long.class)).isEqualTo(1);
+        org.mockito.Mockito.verify(upstream,org.mockito.Mockito.times(1)).freeze(42,"Bearer free-user",null,java.math.BigDecimal.ZERO);
+    }
+
     @Container
     static final PostgreSQLContainer<?> DATABASE = new PostgreSQLContainer<>("postgres:16-alpine")
             .withDatabaseName("payment_db");

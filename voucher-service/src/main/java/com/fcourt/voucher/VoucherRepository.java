@@ -24,6 +24,16 @@ class VoucherRepository {
                 new MapSqlParameterSource("code", code), mapper).stream().findFirst();
     }
 
+    Optional<Voucher> lockByCode(String code) {
+        return jdbc.query("SELECT * FROM vouchers WHERE code=:code AND deleted_at IS NULL FOR UPDATE",
+                new MapSqlParameterSource("code", code), mapper).stream().findFirst();
+    }
+
+    long reservations(long id) {
+        return Objects.requireNonNull(jdbc.queryForObject("SELECT count(*) FROM voucher_redemptions WHERE voucher_id=:id AND status='RESERVED'",
+                new MapSqlParameterSource("id", id), Long.class));
+    }
+
     Voucher.Page page(List<Long> branches, int page, int size) {
         if (branches.isEmpty()) return new Voucher.Page(List.of(), page, size, 0);
         var params = new MapSqlParameterSource("branches", branches).addValue("limit", size)
