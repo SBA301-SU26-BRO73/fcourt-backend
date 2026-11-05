@@ -17,6 +17,11 @@ public class BranchSearchRepository {
         this.jdbc = jdbc;
     }
 
+    public long ratingVersion() {
+        return java.util.Objects.requireNonNull(jdbc.queryForObject("SELECT version FROM review_cache_version WHERE id=1",
+                new MapSqlParameterSource(), Long.class));
+    }
+
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public BranchSearchResponse search(BranchSearchRequest request) {
         var params = new MapSqlParameterSource();
@@ -77,8 +82,10 @@ public class BranchSearchRepository {
         String sql = "WITH matched AS MATERIALIZED (SELECT b.* FROM branch_read_model b" + where + "), "
                 + "page AS (SELECT b.*, " + score + " AS relevance, " + distance
                 + " AS distance_km FROM matched b ORDER BY " + order + " LIMIT :limit OFFSET :offset) "
-                + "SELECT p.*, a.min_price, a.max_price, a.court_count, s.total_elements "
+                + "SELECT p.*, a.min_price, a.max_price, a.court_count, s.total_elements, "
+                + "COALESCE(round(r.rating_sum::numeric / NULLIF(r.review_count,0),2),0) AS average_rating, COALESCE(r.review_count,0) AS review_count "
                 + "FROM (SELECT count(*) AS total_elements FROM matched) s LEFT JOIN page p ON true "
+                + "LEFT JOIN branch_review_stats r ON r.branch_id=p.id "
                 + "LEFT JOIN LATERAL (SELECT min(c.min_price) AS min_price, max(c.max_price) AS max_price, "
                 + "count(*) AS court_count FROM court_read_model c WHERE c.branch_id = p.id) a ON true "
                 + (request.latitude() != null ? "ORDER BY p.distance_km ASC NULLS LAST, p.id"
@@ -92,7 +99,7 @@ public class BranchSearchRepository {
                     rs.getString("city"), rs.getString("district"),
                     rs.getObject("latitude", Double.class), rs.getObject("longitude", Double.class),
                     rs.getBigDecimal("min_price"), rs.getBigDecimal("max_price"),
-                    rs.getLong("court_count"), rs.getObject("distance_km", Double.class));
+                    rs.getLong("court_count"), rs.getObject("distance_km", Double.class), rs.getBigDecimal("average_rating"), rs.getLong("review_count"));
         });
         var content = rows.stream().filter(java.util.Objects::nonNull).toList();
         long total = totalRows[0];

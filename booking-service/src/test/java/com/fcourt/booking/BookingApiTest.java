@@ -100,4 +100,12 @@ class BookingApiTest {
         assertThat(jdbc.queryForObject("SELECT checkin_code FROM bookings WHERE id=1",String.class)).isNull();
     }
     String eventUnchecked(String amount) { try{return event(UUID.randomUUID(),"PaymentConfirmedEvent",amount);}catch(Exception e){throw new RuntimeException(e);} }
+
+    @Test void completedBookingDetailExposesTheBookedCourtForReviewVerification() throws Exception {
+        jdbc.update("UPDATE bookings SET court_id=7,status='COMPLETED' WHERE id=1");
+        mvc.perform(get("/api/bookings/1").with(jwt().jwt(token->token.subject("10"))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.courtId").value(7)).andExpect(jsonPath("$.branchId").value(7))
+                .andExpect(jsonPath("$.status").value("COMPLETED")).andExpect(jsonPath("$.customerId").doesNotExist());
+        mvc.perform(get("/api/bookings/1").with(jwt().jwt(token->token.subject("20")))).andExpect(status().isNotFound());
+    }
 }
