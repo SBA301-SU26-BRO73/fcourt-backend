@@ -143,6 +143,29 @@ class VoucherApiTest {
                 .andExpect(jsonPath("$.items").isEmpty()).andExpect(jsonPath("$.total").value(3)).andExpect(jsonPath("$.totalDiscountAmount").value(60.06));
     }
 
+    @Test void usageHistoryEnforcesRolesAndNeverLeaksForeignBranchTotals() throws Exception {
+        long id=create("SCOPED");usage(id,1,10,7,"100",Instant.parse("2030-01-09T12:00:00Z"));CALLS.set(0);
+        String path="/api/admin/vouchers/"+id+"/usages";
+        mvc.perform(get(path).header("X-User-Id","100")).andExpect(status().isUnauthorized());
+        for(String role:List.of("CUSTOMER","STAFF")){
+            mvc.perform(get(path).with(jwt().jwt(token->token.subject("100").claim("roles",List.of(role)))))
+                    .andExpect(status().isForbidden());
+        }
+        assertThat(CALLS.get()).isZero();
+        BRANCHES.set("[{\"id\":8,\"adminId\":200}]");
+        mvc.perform(get(path).with(jwt().jwt(token->token.subject("200").claim("roles",List.of("ADMIN")))))
+                .andExpect(status().isNotFound());
+        BRANCHES.set("[{\"id\":7,\"adminId\":100},{\"id\":8,\"adminId\":200}]");
+        mvc.perform(get(path).with(jwt().jwt(token->token.subject("999").claim("roles",List.of("SUPER_ADMIN")))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1)).andExpect(jsonPath("$.totalDiscountAmount").value(100));
+        // Moving a voucher must not expose the previous branch's customer history to its new owner.
+        jdbc.update("UPDATE vouchers SET branch_id=8 WHERE id=?",id);
+        BRANCHES.set("[{\"id\":8,\"adminId\":200}]");
+        mvc.perform(get(path).with(jwt().jwt(token->token.subject("200").claim("roles",List.of("ADMIN")))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.items").isEmpty()).andExpect(jsonPath("$.total").value(0))
+                .andExpect(jsonPath("$.totalDiscountAmount").value(0));
+    }
+
     @Test
     void createsReadsUpdatesAndSoftDeletesVoucherWithoutAllowingClientCounters() throws Exception {
         var body = request(" save_20 ").put("usedCount", 9);
