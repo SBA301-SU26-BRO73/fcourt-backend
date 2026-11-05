@@ -147,4 +147,21 @@ class VoucherApplyTest {
         rejects(3,"đã sử dụng");
         assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers WHERE id=?",Integer.class,id)).isEqualTo(1);
     }
+
+    @Test void untrustedIdentityAmountsAndExpiredBookingsAreRejected() throws Exception {
+        voucher("SAVE",10);
+        String body="{\"code\":\"SAVE\",\"bookingId\":1,\"totalAmount\":100000}";
+        mvc.perform(post("/api/vouchers/apply").contentType("application/json").content(body)).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/vouchers/apply").with(jwt().jwt(token->token.subject("10").claim("roles",List.of("STAFF"))))
+                .contentType("application/json").content(body)).andExpect(status().isForbidden());
+        assertThat(CALLS.get()).isZero();
+        mvc.perform(post("/api/vouchers/apply").with(jwt().jwt(customer(20))).contentType("application/json").content(body))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/api/vouchers/apply").with(jwt().jwt(customer(10))).contentType("application/json").content(body.replace("100000","1")))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("không khớp")));
+        ORDERS.get(1L).put("holdExpiresAt",NOW.toString());
+        mvc.perform(post("/api/vouchers/apply").with(jwt().jwt(customer(10))).contentType("application/json").content(body))
+                .andExpect(status().isGone());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_redemptions",Long.class)).isZero();
+    }
 }
