@@ -254,4 +254,30 @@ class VoucherApiTest {
             mvc.perform(get("/api/admin/vouchers").with(admin())).andExpect(status().is(status < 404 ? 403 : 503));
         }
     }
+
+    @Test
+    void realHttpValidatesSignedJwtIssuerAudienceExpiryAndForwardsIdentity() throws Exception {
+        create("SIGNED");
+        for (String[] values : List.of(new String[] {ISSUER, "fcourt", "60"},
+                new String[] {"http://wrong-issuer", "fcourt", "60"}, new String[] {ISSUER, "other", "60"},
+                new String[] {ISSUER, "fcourt", "-120"})) {
+            var now = Instant.now();
+            var claims = new com.nimbusds.jwt.JWTClaimsSet.Builder().issuer(values[0]).audience(values[1]).subject("100")
+                    .issueTime(java.util.Date.from(now.minusSeconds(300))).expirationTime(java.util.Date.from(now.plusSeconds(Long.parseLong(values[2]))))
+                    .claim("roles", List.of("ADMIN")).build();
+            var token = new com.nimbusds.jwt.SignedJWT(new com.nimbusds.jose.JWSHeader.Builder(com.nimbusds.jose.JWSAlgorithm.RS256)
+                    .keyID(KEY.getKeyID()).build(), claims);
+            token.sign(new com.nimbusds.jose.crypto.RSASSASigner(KEY));
+            var headers = new org.springframework.http.HttpHeaders(); headers.setBearerAuth(token.serialize());
+            var result = http.exchange("/api/admin/vouchers", org.springframework.http.HttpMethod.GET,
+                    new org.springframework.http.HttpEntity<>(headers), String.class);
+            boolean valid = values[0].equals(ISSUER) && values[1].equals("fcourt") && values[2].equals("60");
+            assertThat(result.getStatusCode().value()).isEqualTo(valid ? 200 : 401);
+            if (valid) {
+                assertThat(result.getBody()).contains("SIGNED");
+                assertThat(AUTHORIZATION.get()).isEqualTo("Bearer " + token.serialize());
+            }
+        }
+        assertThat(http.getForEntity("/actuator/health", String.class).getStatusCode().value()).isEqualTo(200);
+    }
 }
