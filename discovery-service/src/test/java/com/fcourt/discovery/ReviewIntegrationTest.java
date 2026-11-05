@@ -236,4 +236,18 @@ class ReviewIntegrationTest {
                 .andExpect(jsonPath("$.content[0].repliedAt").isNotEmpty());
         assertThat(jdbc.queryForObject("SELECT version FROM review_cache_version",Long.class)).isEqualTo(1);
     }
+
+    @Test void committedRatingRevisionRefreshesSearchCachesAcrossInstances() throws Exception {
+        var request=new BranchSearchRequest(null,null,null,null,null,null,null,null,null,null);
+        var other=new BranchSearchService(searchRepository,60);
+        var initial=search.search(request);var initialOther=other.search(request);
+        assertThat(initial.content().getFirst().reviewCount()).isZero();assertThat(other.search(request)).isSameAs(initialOther);
+        create(1,10,5);
+        assertThat(search.search(request).content().getFirst().averageRating()).isEqualByComparingTo("5");
+        assertThat(other.search(request).content().getFirst().reviewCount()).isEqualTo(1);
+        create(2,20,1);
+        assertThat(other.search(request).content().getFirst().averageRating()).isEqualByComparingTo("3");
+        mvc.perform(get("/api/public/branches")).andExpect(status().isOk()).andExpect(jsonPath("$.content[0].averageRating").value(3))
+                .andExpect(jsonPath("$.content[0].reviewCount").value(2));
+    }
 }
