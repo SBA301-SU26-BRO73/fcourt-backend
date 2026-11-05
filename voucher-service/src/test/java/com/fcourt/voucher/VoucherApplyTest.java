@@ -191,4 +191,16 @@ class VoucherApplyTest {
         assertThatThrownBy(()->events.accept(conflict.toString())).isInstanceOf(IllegalArgumentException.class);
         assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isEqualTo(1);
     }
+
+    @Test void actualKafkaDeliveryIncrementsUsageOnlyOnce() throws Exception {
+        voucher("SAVE",10);var application=apply(1,10);var first=applied(application,UUID.randomUUID());
+        kafka.send("fcourt.booking.events","1",first.toString()).get(10,TimeUnit.SECONDS);
+        org.awaitility.Awaitility.await().atMost(Duration.ofSeconds(15)).untilAsserted(()->
+                assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isEqualTo(1));
+        kafka.send("fcourt.booking.events","1",first.toString()).get(10,TimeUnit.SECONDS);
+        kafka.send("fcourt.booking.events","1",applied(application,UUID.randomUUID()).toString()).get(10,TimeUnit.SECONDS);
+        org.awaitility.Awaitility.await().atMost(Duration.ofSeconds(15)).untilAsserted(()->
+                assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_inbox",Long.class)).isEqualTo(2));
+        assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isEqualTo(1);
+    }
 }
