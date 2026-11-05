@@ -145,4 +145,23 @@ class ReviewIntegrationTest {
                 .andExpect(jsonPath("$.content[0].checkInCode").doesNotExist()).andExpect(jsonPath("$.content[0].holdToken").doesNotExist())
                 .andExpect(jsonPath("$.averageRating").value(5)).andExpect(jsonPath("$.totalElements").value(1));
     }
+
+    @Test void onlyCompletedOwnedBookingsAndCustomerRoleCanBeReviewed() throws Exception {
+        String body="{\"bookingId\":1,\"rating\":5}";
+        mvc.perform(post("/api/reviews").contentType("application/json").content(body)).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/reviews").with(jwt().jwt(actor(100,"ADMIN"))).contentType("application/json").content(body)).andExpect(status().isForbidden());
+        assertThat(BOOKING_CALLS.get()).isZero();
+        mvc.perform(post("/api/reviews").with(jwt().jwt(actor(20,"CUSTOMER"))).contentType("application/json").content(body)).andExpect(status().isNotFound());
+        for(String state:List.of("PENDING_PAYMENT","AWAITING_CONFIRMATION","CONFIRMED","CHECKED_IN","CANCELLED")){
+            BOOKINGS.get(1L).put("status",state);
+            mvc.perform(post("/api/reviews").with(jwt().jwt(actor(10,"CUSTOMER"))).contentType("application/json").content(body)).andExpect(status().isConflict());
+        }
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM reviews",Long.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT version FROM review_cache_version",Long.class)).isZero();
+        BOOKINGS.get(1L).put("status","COMPLETED");
+        mvc.perform(post("/api/reviews").with(jwt().jwt(actor(10,"CUSTOMER"))).contentType("application/json")
+                        .content("{\"bookingId\":1,\"rating\":5,\"branchId\":999,\"courtId\":999,\"userId\":999}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.branchId").value(7)).andExpect(jsonPath("$.courtId").value(11))
+                .andExpect(jsonPath("$.userId").value(10));
+    }
 }
