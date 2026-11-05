@@ -195,4 +195,22 @@ class ReviewIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT rating_sum FROM branch_review_stats",Long.class))
                 .isEqualTo(jdbc.queryForObject("SELECT rating FROM reviews",Long.class));
     }
+
+    @Test void averagesDistributionAndPagingUseAllBranchVotes() throws Exception {
+        create(1,10,5);create(2,20,3);long newest=create(3,30,1);
+        jdbc.update("UPDATE reviews SET created_at='2030-01-01T00:00:00Z'");
+        mvc.perform(get("/api/public/branches/7/reviews?size=1")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(newest)).andExpect(jsonPath("$.totalElements").value(3))
+                .andExpect(jsonPath("$.totalPages").value(3)).andExpect(jsonPath("$.averageRating").value(3))
+                .andExpect(jsonPath("$.starDistribution.length()").value(5))
+                .andExpect(jsonPath("$.starDistribution[0].rating").value(1)).andExpect(jsonPath("$.starDistribution[0].count").value(1))
+                .andExpect(jsonPath("$.starDistribution[0].percentage").value(33.33)).andExpect(jsonPath("$.starDistribution[1].count").value(0));
+        mvc.perform(get("/api/public/branches/7/reviews?size=1&page=99")).andExpect(status().isOk()).andExpect(jsonPath("$.content").isEmpty())
+                .andExpect(jsonPath("$.totalElements").value(3)).andExpect(jsonPath("$.averageRating").value(3));
+        mvc.perform(get("/api/public/branches/8/reviews")).andExpect(status().isOk()).andExpect(jsonPath("$.content").isEmpty())
+                .andExpect(jsonPath("$.averageRating").value(0)).andExpect(jsonPath("$.starDistribution[4].percentage").value(0));
+        for(String query:List.of("page=-1","page=1000001","size=0","size=101"))
+            mvc.perform(get("/api/public/branches/7/reviews?"+query)).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/public/branches/999/reviews")).andExpect(status().isNotFound());
+    }
 }
