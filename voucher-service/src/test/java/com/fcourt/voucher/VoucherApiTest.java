@@ -188,6 +188,21 @@ class VoucherApiTest {
     }
 
     @Test
+    void fractionalIdsUsageLimitsAndNumericEnumsAreNotSilentlyCoerced() throws Exception {
+        for (String field : List.of("branchId", "usageLimit")) {
+            var body = request("FRACTION").put(field, 7.5);
+            mvc.perform(post("/api/admin/vouchers").with(admin()).contentType("application/json").content(body.toString()))
+                    .andExpect(status().isBadRequest());
+        }
+        for (String field : List.of("discountType", "status")) {
+            var body = request("ORDINAL").put(field, 0);
+            mvc.perform(post("/api/admin/vouchers").with(admin()).contentType("application/json").content(body.toString()))
+                    .andExpect(status().isBadRequest());
+        }
+        assertThat(CALLS.get()).isZero();
+    }
+
+    @Test
     void paginationAndUsagePreservationHandleExpiredVouchers() throws Exception {
         long first = create("FIRST");
         long second = create("SECOND");
