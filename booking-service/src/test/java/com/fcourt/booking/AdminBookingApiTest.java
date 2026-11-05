@@ -139,4 +139,23 @@ class AdminBookingApiTest {
         mvc.perform(get("/api/admin/bookings?fromDate=2030-01-12").with(admin()))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1));
     }
+
+    @Test
+    void paginationAndBothSortFieldsHaveStableTieBreaksAndCorrectTotals() throws Exception {
+        mvc.perform(get("/api/admin/bookings?size=2&page=1").with(admin()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(4))
+                .andExpect(jsonPath("$.page").value(1)).andExpect(jsonPath("$.size").value(2))
+                .andExpect(jsonPath("$.items[0].id").value(3)).andExpect(jsonPath("$.items[1].id").value(1));
+        mvc.perform(get("/api/admin/bookings?size=2&page=99").with(admin()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(4)).andExpect(jsonPath("$.items").isEmpty());
+        mvc.perform(get("/api/admin/bookings?sortBy=date&direction=ASC").with(admin()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].id").value(1))
+                .andExpect(jsonPath("$.items[1].id").value(3));
+        mvc.perform(get("/api/admin/bookings?sortBy=createdAt&direction=ASC").with(admin()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].id").value(5))
+                .andExpect(jsonPath("$.items[3].id").value(3));
+        mvc.perform(get("/api/admin/bookings?sortBy=createdAt&direction=DESC").with(admin()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].id").value(3))
+                .andExpect(jsonPath("$.items[3].id").value(5));
+    }
 }
