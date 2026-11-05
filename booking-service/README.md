@@ -35,11 +35,13 @@ monitor blocked partitions and repair the source record/creation ordering explic
 
 ## Integration boundary
 
-This task reads existing bookings and synchronizes payment events; it does not create
-bookings. SCRUM-24's current hold API only creates a Redis hold and returns its token.
-The booking-creation owner must atomically persist the booking, slots, branch/contact
-snapshots, guest hash and original hold expiration before exposing a booking ID to
-checkout. No public snapshot-write endpoint or cross-service database access is added.
+History reads existing bookings and synchronizes payment events. Online creation
+is now implemented at POST /api/bookings for an active CUSTOMER consuming a public
+Redis hold. It persists slots, server-owned venue/contact/price snapshots and the
+original hold expiration before exposing an ID to checkout. See
+[ONLINE_BOOKING.md](ONLINE_BOOKING.md) for replay, atomic occupancy, expiry and
+required service credentials. There is no public snapshot-write endpoint or
+cross-service database access in runtime services.
 Facility slot-release consumers and full checkout acceptance remain integration work.
 Ticket PNG remains the fixed authenticated payment endpoint, not a public image URL.
 
