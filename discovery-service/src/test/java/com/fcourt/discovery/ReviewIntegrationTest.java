@@ -213,4 +213,27 @@ class ReviewIntegrationTest {
             mvc.perform(get("/api/public/branches/7/reviews?"+query)).andExpect(status().isBadRequest());
         mvc.perform(get("/api/public/branches/999/reviews")).andExpect(status().isNotFound());
     }
+
+    @Test void branchOwnerCanUpdateReplyAndItIsImmediatelyPublic() throws Exception {
+        long id=create(1,10,5);String path="/api/admin/reviews/"+id+"/reply";
+        mvc.perform(post(path).contentType("application/json").content("{\"reply\":\"Thanks\"}")).andExpect(status().isUnauthorized());
+        mvc.perform(post(path).with(jwt().jwt(actor(10,"CUSTOMER"))).contentType("application/json").content("{\"reply\":\"fake\"}"))
+                .andExpect(status().isForbidden());
+        for(String reply:List.of(" ","x".repeat(2001)))
+            mvc.perform(post(path).with(jwt().jwt(actor(100,"ADMIN"))).contentType("application/json").content(JSON.createObjectNode().put("reply",reply).toString()))
+                    .andExpect(status().isBadRequest());
+        assertThat(FACILITY_CALLS.get()).isZero();
+        mvc.perform(post(path).with(jwt().jwt(actor(100,"ADMIN"))).contentType("application/json").content("{\"reply\":\" Thanks for playing \"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.adminReply").value("Thanks for playing"));
+        assertThat(FACILITY_AUTH.get()).isEqualTo("Bearer admin-100");
+        BRANCHES.set("[{\"id\":8,\"adminId\":200}]");
+        mvc.perform(post(path).with(jwt().jwt(actor(200,"ADMIN"))).contentType("application/json").content("{\"reply\":\"foreign\"}"))
+                .andExpect(status().isNotFound());
+        BRANCHES.set("[{\"id\":7,\"adminId\":100}]");
+        mvc.perform(post(path).with(jwt().jwt(actor(100,"ADMIN"))).contentType("application/json").content("{\"reply\":\"Updated reply\"}"))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/public/branches/7/reviews")).andExpect(status().isOk()).andExpect(jsonPath("$.content[0].adminReply").value("Updated reply"))
+                .andExpect(jsonPath("$.content[0].repliedAt").isNotEmpty());
+        assertThat(jdbc.queryForObject("SELECT version FROM review_cache_version",Long.class)).isEqualTo(1);
+    }
 }
