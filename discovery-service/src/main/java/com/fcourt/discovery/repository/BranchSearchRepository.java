@@ -17,6 +17,11 @@ public class BranchSearchRepository {
         this.jdbc = jdbc;
     }
 
+    public long ratingVersion() {
+        return java.util.Objects.requireNonNull(jdbc.queryForObject("SELECT version FROM review_cache_version WHERE id=1",
+                new MapSqlParameterSource(), Long.class));
+    }
+
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public BranchSearchResponse search(BranchSearchRequest request) {
         var params = new MapSqlParameterSource();
