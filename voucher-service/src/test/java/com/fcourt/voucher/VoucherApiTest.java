@@ -232,4 +232,26 @@ class VoucherApiTest {
                 .andExpect(status().isConflict());
         assertThat(jdbc.queryForObject("SELECT code FROM vouchers WHERE id=?", String.class, other)).isEqualTo("OTHER");
     }
+
+    @Test
+    void authenticationRoleAndLiveBranchFailuresNeverExposeVouchers() throws Exception {
+        mvc.perform(get("/api/admin/vouchers").header("X-User-Id", "100")).andExpect(status().isUnauthorized());
+        for (String role : List.of("CUSTOMER", "STAFF")) {
+            mvc.perform(get("/api/admin/vouchers").with(jwt().jwt(token -> token.subject("100").claim("roles", List.of(role)))))
+                    .andExpect(status().isForbidden());
+        }
+        assertThat(CALLS.get()).isZero();
+        create("LIVE");
+        BRANCHES.set("[]");
+        mvc.perform(get("/api/admin/vouchers").with(admin())).andExpect(status().isOk()).andExpect(jsonPath("$.total").value(0));
+        for (String invalid : List.of("null", "{}", "[null]", "[{\"id\":7}]", "[{\"id\":7,\"adminId\":200}]",
+                "[{\"id\":7,\"adminId\":100},{\"id\":7,\"adminId\":100}]")) {
+            BRANCHES.set(invalid);
+            mvc.perform(get("/api/admin/vouchers").with(admin())).andExpect(status().isServiceUnavailable());
+        }
+        for (int status : List.of(401, 403, 404, 500)) {
+            UPSTREAM_STATUS.set(status);
+            mvc.perform(get("/api/admin/vouchers").with(admin())).andExpect(status().is(status < 404 ? 403 : 503));
+        }
+    }
 }
