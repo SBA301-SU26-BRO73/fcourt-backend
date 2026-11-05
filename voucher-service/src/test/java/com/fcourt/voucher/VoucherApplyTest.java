@@ -177,4 +177,18 @@ class VoucherApplyTest {
         assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_redemptions WHERE status='RESERVED'",Long.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isZero();
     }
+
+    @Test void paymentEventReplayCountsOnceAndRejectsMismatchedMoney() throws Exception {
+        voucher("SAVE",10);var application=apply(1,10);
+        var bad=applied(application,UUID.randomUUID());((ObjectNode)bad.path("voucher")).put("finalAmount",1);
+        assertThatThrownBy(()->events.accept(bad.toString())).isInstanceOf(IllegalArgumentException.class);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_inbox",Long.class)).isZero();
+        var valid=applied(application,UUID.randomUUID());events.accept(valid.toString());events.accept(valid.toString());
+        events.accept(applied(application,UUID.randomUUID()).toString());
+        assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isEqualTo(1);
+        assertThat(applications.booking(1,false).orElseThrow().status()).isEqualTo("APPLIED");
+        var conflict=applied(application,UUID.randomUUID());((ObjectNode)conflict.path("voucher")).put("paymentId",100);
+        assertThatThrownBy(()->events.accept(conflict.toString())).isInstanceOf(IllegalArgumentException.class);
+        assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isEqualTo(1);
+    }
 }
