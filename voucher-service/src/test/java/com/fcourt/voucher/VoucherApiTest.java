@@ -207,4 +207,29 @@ class VoucherApiTest {
         mvc.perform(get("/api/admin/vouchers/" + first).with(admin())).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("EXPIRED"));
         mvc.perform(get("/api/admin/vouchers").with(admin())).andExpect(status().isOk()).andExpect(jsonPath("$.items[1].status").value("EXPIRED"));
     }
+
+    @Test
+    void concurrentDuplicateCodesProduceOneSuccessAndOneConflict() throws Exception {
+        var actor = org.springframework.security.oauth2.jwt.Jwt.withTokenValue("fixture").header("alg", "RS256")
+                .subject("100").claim("roles", List.of("ADMIN")).build();
+        var body = json.treeToValue(request(" race "), VoucherRequest.class);
+        var start = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.Callable<Integer> action = () -> {
+            if (!start.await(5, java.util.concurrent.TimeUnit.SECONDS)) throw new IllegalStateException("start timed out");
+            try { service.create(actor, body); return 201; }
+            catch (org.springframework.web.server.ResponseStatusException error) { return error.getStatusCode().value(); }
+        };
+        try (var executor = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            var one = executor.submit(action);
+            var two = executor.submit(action);
+            start.countDown();
+            assertThat(List.of(one.get(10, java.util.concurrent.TimeUnit.SECONDS), two.get(10, java.util.concurrent.TimeUnit.SECONDS)))
+                    .containsExactlyInAnyOrder(201, 409);
+        }
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM vouchers WHERE code='RACE'", Long.class)).isEqualTo(1);
+        long other = create("OTHER");
+        mvc.perform(put("/api/admin/vouchers/" + other).with(admin()).contentType("application/json").content(request("race").toString()))
+                .andExpect(status().isConflict());
+        assertThat(jdbc.queryForObject("SELECT code FROM vouchers WHERE id=?", String.class, other)).isEqualTo("OTHER");
+    }
 }
