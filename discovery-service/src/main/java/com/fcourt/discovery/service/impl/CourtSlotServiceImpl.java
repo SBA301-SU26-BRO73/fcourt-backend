@@ -21,6 +21,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 @Service
 public class CourtSlotServiceImpl implements CourtSlotService {
@@ -55,8 +56,32 @@ public class CourtSlotServiceImpl implements CourtSlotService {
         Set<Long> held = holds.heldSlots(courtId, date, ids);
         // Capture after I/O so slots that expire during the calls cannot remain available.
         LocalDateTime now = LocalDateTime.now(clock);
-        return slots.stream().map(slot -> new CourtSlotResponse(slot.slotId(), slot.startTime(),
-                slot.endTime(), slot.price(), status(slot, schedule, date, now, booked, held))).toList();
+        return slots.stream().map(slot -> {
+            Status status = status(slot, schedule, date, now, booked, held);
+            return new CourtSlotResponse(slot.slotId(), slot.startTime(), slot.endTime(), slot.price(), status,
+                    status == Status.OUT_OF_SERVICE ? publicRestriction(slot.restriction()) : null);
+        }).toList();
+    }
+
+    private static final Set<String> RESTRICTION_TYPES = Set.of("OUT_OF_SERVICE", "PRIVATE_EVENT");
+    private static final Pattern PHONE = Pattern.compile("^\\+?[0-9]{9,15}$");
+
+    /**
+     * Optional display metadata: kept only when it is entirely valid, so a malformed upstream value
+     * never leaks partially and never changes the slot status (the slot stays OUT_OF_SERVICE).
+     */
+    private static CourtSlotResponse.Restriction publicRestriction(SlotSourceClient.Restriction restriction) {
+        if (restriction == null || restriction.type() == null || !RESTRICTION_TYPES.contains(restriction.type())
+                || tooLong(restriction.publicReason(), 500) || tooLong(restriction.contactName(), 100)
+                || (restriction.contactPhone() != null && !PHONE.matcher(restriction.contactPhone()).matches())) {
+            return null;
+        }
+        return new CourtSlotResponse.Restriction(restriction.type(), restriction.publicReason(),
+                restriction.contactName(), restriction.contactPhone());
+    }
+
+    private static boolean tooLong(String value, int max) {
+        return value != null && value.length() > max;
     }
 
     private Status status(Slot slot, Schedule schedule, LocalDate date, LocalDateTime now,

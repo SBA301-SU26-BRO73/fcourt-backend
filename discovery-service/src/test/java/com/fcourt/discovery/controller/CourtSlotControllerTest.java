@@ -39,6 +39,22 @@ class CourtSlotControllerTest {
     }
 
     @Test
+    void serializesRestrictionOnlyWhenPresentWithTheFieldNamesOfTheFlutterContract() throws Exception {
+        when(service.find(1, LocalDate.of(2030, 1, 1))).thenReturn(List.of(
+                new CourtSlotResponse(1, LocalTime.of(18, 0), LocalTime.of(18, 30), new BigDecimal("75000"),
+                        Status.OUT_OF_SERVICE, new CourtSlotResponse.Restriction("PRIVATE_EVENT", "Giai dau", null,
+                        "0901234567")),
+                new CourtSlotResponse(2, LocalTime.of(18, 30), LocalTime.of(19, 0), new BigDecimal("75000"),
+                        Status.OUT_OF_SERVICE)));
+        http.perform(get("/api/public/courts/1/slots?date=2030-01-01"))
+                .andExpect(jsonPath("$[0].restriction.type").value("PRIVATE_EVENT"))
+                .andExpect(jsonPath("$[0].restriction.publicReason").value("Giai dau"))
+                .andExpect(jsonPath("$[0].restriction.contactPhone").value("0901234567"))
+                .andExpect(jsonPath("$[0].restriction.contactName").doesNotExist())
+                .andExpect(jsonPath("$[1].restriction").doesNotExist());
+    }
+
+    @Test
     void rejectsMissingAndInvalidDateOrId() throws Exception {
         for (String url : List.of("/1/slots", "/1/slots?date=invalid", "/abc/slots?date=2030-01-01",
                 "/1/slots?date=2030-02-30")) {

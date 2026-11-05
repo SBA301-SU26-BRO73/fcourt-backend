@@ -13,6 +13,9 @@ import com.fcourt.facility.events.BranchEventWriter;
 import com.fcourt.facility.persistence.BranchStore;
 import com.fcourt.facility.persistence.CourtStore;
 import com.fcourt.facility.persistence.CourtStore.OwnedCourt;
+import com.fcourt.facility.persistence.LockStore;
+import com.fcourt.facility.api.LockDtos.LockResponse;
+import com.fcourt.facility.api.LockDtos.Restriction;
 import com.fcourt.facility.persistence.TemplateStore;
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -34,15 +37,17 @@ public class TemplateService {
     private final BranchStore branches;
     private final CourtStore courts;
     private final TemplateStore templates;
+    private final LockStore locks;
     private final BranchEventWriter events;
     private final CourtService courtService;
     private final TransactionTemplate tx;
 
-    public TemplateService(BranchStore branches, CourtStore courts, TemplateStore templates, BranchEventWriter events,
+    public TemplateService(BranchStore branches, CourtStore courts, TemplateStore templates, LockStore locks, BranchEventWriter events,
                            CourtService courtService, TransactionTemplate tx) {
         this.branches = branches;
         this.courts = courts;
         this.templates = templates;
+        this.locks = locks;
         this.events = events;
         this.courtService = courtService;
         this.tx = tx;
@@ -118,8 +123,16 @@ public class TemplateService {
         OwnedCourt court = courts.find(courtId).orElseThrow(CourtService::notFound);
         boolean outOfService = !"ACTIVE".equals(court.court().status()) || !"ACTIVE".equals(court.branchStatus());
         int dayOfWeek = date.getDayOfWeek().getValue() % 7; // java Monday=1..Sunday=7 -> Sunday=0
-        List<ScheduleSlot> slots = templates.listLive(courtId, dayOfWeek).stream()
-                .map(t -> new ScheduleSlot(t.id(), t.startTime(), t.endTime(), t.price(), outOfService)).toList();
+        List<LockResponse> dayLocks = locks.forDay(courtId, date);
+        List<ScheduleSlot> slots = templates.listLive(courtId, dayOfWeek).stream().map(t -> {
+            // Court-level closure wins; otherwise an active lock touching any part of the slot closes it.
+            LockResponse lock = dayLocks.stream().filter(candidate -> SlotWindows.overlaps(date, t.startTime(),
+                    t.endTime(), candidate.startAt(), candidate.endAt())).findFirst().orElse(null);
+            Restriction restriction = lock == null ? null : new Restriction(lock.type(), lock.publicReason(),
+                    lock.contactName(), lock.contactPhone());
+            return new ScheduleSlot(t.id(), t.startTime(), t.endTime(), t.price(), outOfService || lock != null,
+                    restriction);
+        }).toList();
         return new SlotSchedule(courtId, date, outOfService, slots);
     }
 

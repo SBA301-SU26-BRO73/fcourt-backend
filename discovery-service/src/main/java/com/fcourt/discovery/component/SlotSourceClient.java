@@ -55,7 +55,13 @@ public class SlotSourceClient {
     }
 
     public record Schedule(Long courtId, LocalDate date, Boolean outOfService, List<Slot> slots) { }
+    /** restriction is optional public lock metadata from facility-service (SCRUM-111); null for plain slots. */
     public record Slot(Long slotId, LocalTime startTime, LocalTime endTime,
-                       BigDecimal price, Boolean outOfService) { }
+                       BigDecimal price, Boolean outOfService, Restriction restriction) {
+        public Slot(Long slotId, LocalTime startTime, LocalTime endTime, BigDecimal price, Boolean outOfService) {
+            this(slotId, startTime, endTime, price, outOfService, null);
+        }
+    }
+    public record Restriction(String type, String publicReason, String contactName, String contactPhone) { }
     public record Occupancy(Long courtId, LocalDate date, List<Long> bookedSlotIds) { }
 }

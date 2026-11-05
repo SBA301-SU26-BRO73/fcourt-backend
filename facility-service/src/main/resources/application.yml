@@ -41,6 +41,9 @@ facility:
     base-url: ${SUBSCRIPTION_BASE_URL:}
     default-max-branches: ${SUBSCRIPTION_DEFAULT_MAX_BRANCHES:3}
     default-max-courts: ${SUBSCRIPTION_DEFAULT_MAX_COURTS:15}
+  discovery:
+    # Needed to verify bookings/holds before locking; empty = locking answers 503 (fail closed).
+    base-url: ${DISCOVERY_BASE_URL:}
   events:
     enabled: ${FACILITY_EVENTS_ENABLED:true}
     topic: ${BRANCH_UPDATED_TOPIC:facility.branch-updated.v1}
