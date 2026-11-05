@@ -24,6 +24,11 @@ class VoucherRepository {
                 new MapSqlParameterSource("code", code), mapper).stream().findFirst();
     }
 
+    Optional<Voucher> lockByCode(String code) {
+        return jdbc.query("SELECT * FROM vouchers WHERE code=:code AND deleted_at IS NULL FOR UPDATE",
+                new MapSqlParameterSource("code", code), mapper).stream().findFirst();
+    }
+
     Voucher.Page page(List<Long> branches, int page, int size) {
         if (branches.isEmpty()) return new Voucher.Page(List.of(), page, size, 0);
         var params = new MapSqlParameterSource("branches", branches).addValue("limit", size)
