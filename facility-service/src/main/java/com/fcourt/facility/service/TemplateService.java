@@ -3,6 +3,12 @@ package com.fcourt.facility.service;
 import com.fcourt.facility.api.BranchResponse;
 import com.fcourt.facility.api.TemplateDtos.ApplyResponse;
 import com.fcourt.facility.api.TemplateDtos.ApplyTemplateRequest;
+import com.fcourt.facility.api.TemplateDtos.BulkAppliedCourt;
+import com.fcourt.facility.api.TemplateDtos.BulkApplyRequest;
+import com.fcourt.facility.api.TemplateDtos.BulkApplyResponse;
+import com.fcourt.facility.api.TemplateDtos.BulkConflict;
+import com.fcourt.facility.api.TemplateDtos.BulkPreviewCourt;
+import com.fcourt.facility.api.TemplateDtos.BulkPreviewResponse;
 import com.fcourt.facility.api.TemplateDtos.PreviewResponse;
 import com.fcourt.facility.api.TemplateDtos.PreviewSlot;
 import com.fcourt.facility.api.TemplateDtos.ScheduleSlot;
@@ -20,10 +26,14 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.stream.IntStream;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.ErrorResponseException;
 import org.springframework.web.server.ResponseStatusException;
 
 /** 30-minute time slot templates per court and weekday (SCRUM-18). Sunday = 0 .. Saturday = 6. */
@@ -72,6 +82,101 @@ public class TemplateService {
             events.branchChanged(branchId);
             return new ApplyResponse(courtId, plan.days(), created.size(), created);
         });
+    }
+
+    /**
+     * Dry run of a bulk apply (SCRUM-51). Unknown or foreign courts are a 404 for the whole request;
+     * courts that cannot take the template are reported per court instead of failing the preview.
+     */
+    public BulkPreviewResponse bulkPreview(Map<Long, Long> ownerByCourt, BulkApplyRequest request) {
+        requireValidRange(request.template());
+        List<BulkPreviewCourt> result = new ArrayList<>();
+        int total = 0;
+        boolean conflicts = false;
+        for (long courtId : request.courtIds()) {
+            OwnedCourt court = courtService.owned(ownerByCourt.get(courtId), courtId);
+            try {
+                Plan plan = plan(court, branch(court), request.template());
+                int count = plan.slots().size() * plan.days().size();
+                total += count;
+                result.add(new BulkPreviewCourt(courtId, court.court().name(), court.court().branchId(), plan.days(),
+                        plan.slots(), count, null));
+            } catch (ResponseStatusException invalid) {
+                if (invalid.getStatusCode() != HttpStatus.BAD_REQUEST) throw invalid;
+                conflicts = true;
+                result.add(new BulkPreviewCourt(courtId, court.court().name(), court.court().branchId(), List.of(),
+                        List.of(), 0, invalid.getReason()));
+            }
+        }
+        return new BulkPreviewResponse(result, total, conflicts);
+    }
+
+    /**
+     * Applies one template to every court in a single transaction (SCRUM-51). An unknown/foreign court (404) or
+     * any court that cannot take the template (409 listing every conflict) aborts and rolls back everything.
+     */
+    public BulkApplyResponse bulkApply(Map<Long, Long> ownerByCourt, BulkApplyRequest request) {
+        requireValidRange(request.template());
+        // Only to learn which branches to lock; every court is re-read after the locks are held.
+        Map<Long, Long> branchOwners = new TreeMap<>();
+        for (long courtId : request.courtIds()) {
+            long owner = ownerByCourt.get(courtId);
+            branchOwners.put(courtService.owned(owner, courtId).court().branchId(), owner);
+        }
+        return tx.execute(status -> {
+            // TreeMap = ascending branch id, so concurrent bulk requests cannot deadlock on each other.
+            branchOwners.forEach((branchId, owner) -> {
+                if (!branches.lockOwned(branchId, owner)) throw CourtService.notFound();
+            });
+            List<BulkAppliedCourt> applied = new ArrayList<>();
+            List<BulkConflict> conflicts = new ArrayList<>();
+            int total = 0;
+            for (long courtId : request.courtIds()) {
+                OwnedCourt court = courtService.owned(ownerByCourt.get(courtId), courtId);
+                Plan plan;
+                try {
+                    plan = plan(court, branch(court), request.template());
+                } catch (ResponseStatusException invalid) {
+                    if (invalid.getStatusCode() != HttpStatus.BAD_REQUEST) throw invalid;
+                    conflicts.add(new BulkConflict(courtId, invalid.getReason()));
+                    continue;
+                }
+                if (!conflicts.isEmpty()) continue; // already doomed: only keep collecting conflicts
+                for (int day : plan.days()) {
+                    templates.retireDay(courtId, day);
+                    for (PreviewSlot slot : plan.slots()) {
+                        templates.insert(courtId, day, slot.startTime(), slot.endTime(), slot.price());
+                    }
+                }
+                int count = plan.slots().size() * plan.days().size();
+                total += count;
+                applied.add(new BulkAppliedCourt(courtId, court.court().name(), plan.days(), plan.slots().size(), count));
+            }
+            if (!conflicts.isEmpty()) throw bulkConflict(conflicts); // rolls back every court written so far
+            branchOwners.keySet().forEach(events::branchChanged);
+            return new BulkApplyResponse(applied, total);
+        });
+    }
+
+    /** Rejects a request that is wrong whatever the court is, so it is a 400 and not a per-court conflict. */
+    private static void requireValidRange(ApplyTemplateRequest request) {
+        try {
+            int duration = request.durationMinutes() == null ? SlotTemplateEngine.SLOT_MINUTES : request.durationMinutes();
+            if (request.startTime() != null && request.endTime() != null) {
+                SlotTemplateEngine.split(request.startTime(), request.endTime(), duration);
+            } else if (duration != SlotTemplateEngine.SLOT_MINUTES) {
+                throw new IllegalArgumentException("durationMinutes must be " + SlotTemplateEngine.SLOT_MINUTES);
+            }
+        } catch (IllegalArgumentException invalid) {
+            throw badRequest(invalid.getMessage());
+        }
+    }
+
+    private static ErrorResponseException bulkConflict(List<BulkConflict> conflicts) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
+                "Template cannot be applied to " + conflicts.size() + " court(s); nothing was changed");
+        problem.setProperty("conflicts", conflicts);
+        return new ErrorResponseException(HttpStatus.CONFLICT, problem, null);
     }
 
     public List<TemplateSlot> list(long adminId, long courtId, Integer dayOfWeek) {
