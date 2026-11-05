@@ -164,4 +164,21 @@ class ReviewIntegrationTest {
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.branchId").value(7)).andExpect(jsonPath("$.courtId").value(11))
                 .andExpect(jsonPath("$.userId").value(10));
     }
+
+    @Test void invalidStarsCommentsAndImageUrlsFailBeforeCallingBooking() throws Exception {
+        var requests=new ArrayList<ObjectNode>();
+        var base=JSON.createObjectNode().put("bookingId",1).put("rating",5);
+        for(int rating:List.of(0,6)) requests.add(base.deepCopy().put("rating",rating));
+        requests.add(base.deepCopy().put("rating",2.5));requests.add(base.deepCopy().putNull("rating"));
+        requests.add(base.deepCopy().put("bookingId",0));requests.add(base.deepCopy().put("bookingId",1.5));
+        requests.add(base.deepCopy().put("comment","x".repeat(2001)));
+        for(String url:List.of("http://example.test/a.jpg","data:image/png;base64,abc","https://user:password@example.test/a.jpg","https://bad host/a.jpg","https://example.test/"+"x".repeat(2048))){
+            var input=base.deepCopy();input.putArray("imageUrls").add(url);requests.add(input);
+        }
+        var many=base.deepCopy();for(int i=0;i<6;i++)many.withArray("imageUrls").add("https://example.test/"+i+".jpg");requests.add(many);
+        var nullImage=base.deepCopy();nullImage.putArray("imageUrls").addNull();requests.add(nullImage);
+        for(var input:requests) mvc.perform(post("/api/reviews").with(jwt().jwt(actor(10,"CUSTOMER"))).contentType("application/json").content(input.toString()))
+                .andExpect(status().isBadRequest());
+        assertThat(BOOKING_CALLS.get()).isZero();
+    }
 }
