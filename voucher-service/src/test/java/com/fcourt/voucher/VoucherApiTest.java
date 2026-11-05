@@ -280,4 +280,39 @@ class VoucherApiTest {
         }
         assertThat(http.getForEntity("/actuator/health", String.class).getStatusCode().value()).isEqualTo(200);
     }
+
+    @Test
+    void grpcChecksAuthenticationAndReturnsExactReadOnlyQuotesFromDatabase() throws Exception {
+        long id = create("GRPC");
+        var channel = io.grpc.ManagedChannelBuilder.forAddress("127.0.0.1", grpc.port()).usePlaintext().build();
+        try {
+            var bare = com.fcourt.voucher.grpc.VoucherValidationGrpc.newBlockingStub(channel)
+                    .withDeadlineAfter(5, java.util.concurrent.TimeUnit.SECONDS);
+            var input = com.fcourt.voucher.grpc.ValidateVoucherRequest.newBuilder().setCode(" grpc ").setBranchId(7).setOrderAmount("200000").build();
+            assertThatThrownBy(() -> bare.validate(input)).isInstanceOfSatisfying(io.grpc.StatusRuntimeException.class,
+                    error -> assertThat(error.getStatus().getCode()).isEqualTo(io.grpc.Status.Code.UNAUTHENTICATED));
+            var headers = new io.grpc.Metadata();
+            headers.put(io.grpc.Metadata.Key.of("x-service-token", io.grpc.Metadata.ASCII_STRING_MARSHALLER), "wrong");
+            assertThatThrownBy(() -> bare.withInterceptors(io.grpc.stub.MetadataUtils.newAttachHeadersInterceptor(headers)).validate(input))
+                    .isInstanceOfSatisfying(io.grpc.StatusRuntimeException.class,
+                            error -> assertThat(error.getStatus().getCode()).isEqualTo(io.grpc.Status.Code.UNAUTHENTICATED));
+            var validHeaders = new io.grpc.Metadata();
+            validHeaders.put(io.grpc.Metadata.Key.of("x-service-token", io.grpc.Metadata.ASCII_STRING_MARSHALLER), "fixture-service-token");
+            var client = bare.withInterceptors(io.grpc.stub.MetadataUtils.newAttachHeadersInterceptor(validHeaders));
+            var quote = client.validate(input);
+            assertThat(quote.getValid()).isTrue();
+            assertThat(quote.getVoucherId()).isEqualTo(id);
+            assertThat(quote.getDiscountAmount()).isEqualTo("30000.00");
+            assertThat(quote.getFinalAmount()).isEqualTo("170000.00");
+            assertThat(client.validate(input.toBuilder().setBranchId(8).build()).getReason()).isEqualTo("WRONG_BRANCH");
+            assertThatThrownBy(() -> client.validate(input.toBuilder().setOrderAmount("100.001").build()))
+                    .isInstanceOfSatisfying(io.grpc.StatusRuntimeException.class,
+                            error -> assertThat(error.getStatus().getCode()).isEqualTo(io.grpc.Status.Code.INVALID_ARGUMENT));
+            assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers WHERE id=?", Integer.class, id)).isZero();
+            jdbc.update("UPDATE vouchers SET used_count=usage_limit WHERE id=?", id);
+            assertThat(client.validate(input).getReason()).isEqualTo("USAGE_LIMIT_REACHED");
+            mvc.perform(delete("/api/admin/vouchers/" + id).with(admin())).andExpect(status().isNoContent());
+            assertThat(client.validate(input).getReason()).isEqualTo("NOT_FOUND");
+        } finally { channel.shutdownNow().awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS); }
+    }
 }
