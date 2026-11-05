@@ -125,4 +125,20 @@ class BookingApiTest {
         mvc.perform(get("/api/internal/bookings/1/voucher-snapshot").header("X-Service-Token","integration"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.customerId").value(10));
     }
+
+    @Test void voucherAppliedOutboxIsAtomicWithPaidBookingAndNeverDuplicated() throws Exception {
+        UUID application=UUID.randomUUID();
+        jdbc.update("UPDATE bookings SET voucher_application_id=?,voucher_id=7,original_amount=100000,discount_amount=20000,total_price=80000,payment_frozen=true WHERE id=1",application);
+        consume(event(UUID.randomUUID(),"PaymentSubmittedEvent","80000"));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM booking_outbox",Long.class)).isZero();
+        String paid=event(UUID.randomUUID(),"PaymentConfirmedEvent","80000");consume(paid);consume(paid);
+        consume(event(UUID.randomUUID(),"PaymentConfirmedEvent","80000"));
+        var out=json.readTree(jdbc.queryForObject("SELECT payload::text FROM booking_outbox",String.class));
+        assertThat(out.path("type").asText()).isEqualTo("VoucherAppliedEvent");
+        assertThat(out.path("voucher").path("applicationId").asText()).isEqualTo(application.toString());
+        assertThat(out.path("voucher").path("customerId").asLong()).isEqualTo(10);
+        assertThat(out.path("voucher").path("paymentId").asLong()).isEqualTo(42);
+        assertThat(out.path("voucher").path("finalAmount").decimalValue()).isEqualByComparingTo("80000");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM booking_outbox",Long.class)).isEqualTo(1);
+    }
 }
