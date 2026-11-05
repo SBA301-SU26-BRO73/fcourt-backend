@@ -32,6 +32,7 @@ class BookingApiTest {
     @Autowired MockMvc mvc;
     @Autowired TransactionTemplate tx;
     @Autowired ObjectMapper json;
+    @Autowired BookingVoucherBridge voucherBridge;
     @BeforeEach void seed() {
         jdbc.execute("TRUNCATE booking_outbox,booking_inbox,bookings CASCADE");
         for(int i=1;i<=4;i++) jdbc.update("""
