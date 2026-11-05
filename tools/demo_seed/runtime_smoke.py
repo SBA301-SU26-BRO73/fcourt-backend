@@ -45,6 +45,8 @@ def main():
     bases={name:f"http://127.0.0.1:{port}" for name,port in ports.items()}
     container="fcourt-seed-api-"+secrets.token_hex(6);redis_container=container+"-redis"
     password=secrets.token_urlsafe(32);processes=[];logs=[];jwks={}
+    os_keys={"PATH","SYSTEMROOT","WINDIR","TEMP","TMP","JAVA_HOME","USERPROFILE","APPDATA","LOCALAPPDATA","PROGRAMDATA","COMSPEC","PATHEXT","LANG","LC_ALL","TZ","USER","LOGNAME","HOME"}
+    service_environment={key:value for key,value in os.environ.items() if key.upper() in os_keys}
     class Keys(BaseHTTPRequestHandler):
         def log_message(self,*unused): pass
         def do_GET(self):
@@ -91,7 +93,7 @@ $fixtureRsa.Dispose()
             for path in files or [ROOT/service/"database/V1__init_schema.sql"]: runner.execute(db,path.read_text(encoding="utf8"))
         seed.apply(manifest,password_hash,runner,allow_fixtures=True)
         for name,jar in jars.items():
-            env=dict(os.environ,SPRING_DATASOURCE_URL=f"jdbc:postgresql://127.0.0.1:{pg}/{name}_db",SPRING_DATASOURCE_USERNAME="postgres",SPRING_DATASOURCE_PASSWORD=password,
+            env=dict(service_environment,SPRING_DATASOURCE_URL=f"jdbc:postgresql://127.0.0.1:{pg}/{name}_db",SPRING_DATASOURCE_USERNAME="postgres",SPRING_DATASOURCE_PASSWORD=password,
                      SERVER_PORT=str(ports[name]),AUTH_JWK_SET_URI=issuer+"/jwks",AUTH_JWT_ISSUER=issuer,AUTH_JWT_AUDIENCE="fcourt",
                      BOOKING_URL=bases["booking"],FACILITY_URL=bases["facility"],SPRING_DATA_REDIS_HOST="127.0.0.1",SPRING_DATA_REDIS_PORT=str(redis_port))
             log=(args.output/(name+".log")).open("w",encoding="utf8");logs.append(log)
