@@ -22,7 +22,7 @@ class VoucherUsageEvents {
         String type = event.path("type").asText();
         if (!java.util.Set.of("VoucherAppliedEvent", "BookingCancelledEvent", "PaymentRejectedEvent").contains(type)) return;
         UUID eventId = UUID.fromString(event.path("eventId").asText());
-        var jdbc = applications.jdbc;
+        var jdbc = applications.jdbc();
         if (jdbc.update("INSERT INTO voucher_inbox(event_id) VALUES (?) ON CONFLICT DO NOTHING", eventId) == 0) return;
         JsonNode data = event.path(type.equals("VoucherAppliedEvent") ? "voucher" : event.has("booking") ? "booking" : "payment");
         long bookingId = positive(data, data.has("bookingId") ? "bookingId" : "id");
