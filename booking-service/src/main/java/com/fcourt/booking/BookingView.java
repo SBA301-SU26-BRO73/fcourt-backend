@@ -7,11 +7,11 @@ import java.util.List;
 record BookingView(long id,String bookingCode,Long branchId,String branchName,String branchAddress,
         String branchPhone,String courtName,LocalDate date,List<Slot> slots,BigDecimal totalPrice,
         String status,String customerName,Instant holdExpiresAt,String checkInCode,String qrImageUrl,
-        String receiptImageUrl,String paymentStatus,Instant createdAt,BigDecimal refundAmount,String cancellationReason) {
+        String receiptImageUrl,String paymentStatus,Instant createdAt,BigDecimal refundAmount,String cancellationReason,long courtId) {
     record Slot(LocalTime startTime,LocalTime endTime,BigDecimal price) {}
     BookingView withSlots(List<Slot> loaded) {
         return new BookingView(id,bookingCode,branchId,branchName,branchAddress,branchPhone,courtName,date,loaded,totalPrice,
-            status,customerName,holdExpiresAt,checkInCode,qrImageUrl,receiptImageUrl,paymentStatus,createdAt,refundAmount,cancellationReason);
+            status,customerName,holdExpiresAt,checkInCode,qrImageUrl,receiptImageUrl,paymentStatus,createdAt,refundAmount,cancellationReason,courtId);
     }
     record Page(List<BookingView> items,int page,int size,long total) {}
 }
