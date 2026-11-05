@@ -250,4 +250,13 @@ class ReviewIntegrationTest {
         mvc.perform(get("/api/public/branches")).andExpect(status().isOk()).andExpect(jsonPath("$.content[0].averageRating").value(3))
                 .andExpect(jsonPath("$.content[0].reviewCount").value(2));
     }
+
+    @Test void failedRatingUpdateRollsBackReviewCountersAndSharedCacheVersion() {
+        org.mockito.Mockito.doAnswer(invocation->{invocation.callRealMethod();throw new IllegalStateException("simulated rating failure");})
+                .when(reviewRepository).updateRating(7,5);
+        assertThatThrownBy(()->service.create(new CreateReviewRequest(1L,5,null,null),actor(10,"CUSTOMER"))).isInstanceOf(IllegalStateException.class);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM reviews",Long.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM branch_review_stats",Long.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT version FROM review_cache_version",Long.class)).isZero();
+    }
 }
