@@ -135,4 +135,30 @@ class VoucherApiTest {
         mvc.perform(post("/api/admin/vouchers").with(admin()).contentType("application/json").content(body.toString()))
                 .andExpect(status().isConflict());
     }
+
+    @Test
+    void adminCannotAccessForeignVouchersWhileSuperAdminCanManageBothBranches() throws Exception {
+        long owned = create("OWNED");
+        var superAdmin = jwt().jwt(token -> token.subject("999").claim("roles", List.of("SUPER_ADMIN")));
+        BRANCHES.set("[{\"id\":7,\"adminId\":100},{\"id\":8,\"adminId\":200}]");
+        var foreign = request("FOREIGN").put("branchId", 8);
+        String result = mvc.perform(post("/api/admin/vouchers").with(superAdmin).contentType("application/json").content(foreign.toString()))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        long foreignId = json.readTree(result).path("id").asLong();
+        mvc.perform(get("/api/admin/vouchers").with(superAdmin)).andExpect(status().isOk()).andExpect(jsonPath("$.total").value(2));
+        mvc.perform(get("/api/admin/vouchers/" + foreignId).with(superAdmin)).andExpect(status().isOk());
+        mvc.perform(put("/api/admin/vouchers/" + foreignId).with(superAdmin).contentType("application/json").content(foreign.toString()))
+                .andExpect(status().isOk());
+        BRANCHES.set("[{\"id\":7,\"adminId\":100}]");
+        mvc.perform(get("/api/admin/vouchers").with(admin())).andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1));
+        mvc.perform(get("/api/admin/vouchers/" + foreignId).with(admin())).andExpect(status().isNotFound());
+        mvc.perform(put("/api/admin/vouchers/" + foreignId).with(admin()).contentType("application/json").content(foreign.toString()))
+                .andExpect(status().isNotFound());
+        mvc.perform(delete("/api/admin/vouchers/" + foreignId).with(admin())).andExpect(status().isNotFound());
+        mvc.perform(put("/api/admin/vouchers/" + owned).with(admin()).contentType("application/json").content(foreign.toString()))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/admin/vouchers").with(admin()).contentType("application/json").content(foreign.toString()))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/admin/vouchers?branchId=8").with(admin())).andExpect(status().isForbidden());
+    }
 }
