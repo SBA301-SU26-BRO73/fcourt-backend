@@ -203,4 +203,16 @@ class VoucherApplyTest {
                 assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_inbox",Long.class)).isEqualTo(2));
         assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isEqualTo(1);
     }
+
+    @Test void uncertainAttachmentIsRetainedForSafeRetryAndDiscountNeverGoesNegative() throws Exception {
+        voucher("SAVE",10);jdbc.update("UPDATE vouchers SET discount_type='FIXED_AMOUNT',discount_value=200000,max_discount_amount=NULL,min_order_amount=0");
+        ATTACH_STATUS.set(503);
+        assertThatThrownBy(()->apply(1,10)).isInstanceOfSatisfying(org.springframework.web.server.ResponseStatusException.class,
+                error->assertThat(error.getStatusCode().value()).isEqualTo(503));
+        var reserved=applications.booking(1,false).orElseThrow();assertThat(reserved.status()).isEqualTo("RESERVED");
+        ATTACH_STATUS.set(200);var retry=apply(1,10);
+        assertThat(retry.applicationId()).isEqualTo(reserved.applicationId());
+        assertThat(retry.discountAmount()).isEqualByComparingTo("100000");assertThat(retry.finalAmount()).isZero();
+        assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isZero();
+    }
 }
