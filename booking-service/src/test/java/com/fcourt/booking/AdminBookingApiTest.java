@@ -158,4 +158,16 @@ class AdminBookingApiTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].id").value(3))
                 .andExpect(jsonPath("$.items[3].id").value(5));
     }
+
+    @Test
+    void invalidFiltersAreRejectedBeforeOwnershipLookup() throws Exception {
+        for (String query : List.of("branchId=0", "courtId=-1", "courtId=abc", "fromDate=2030-02-30",
+                "fromDate=2030-01-11&toDate=2030-01-10", "page=-1", "page=100001", "size=0", "size=101",
+                "status=OTHER", "paymentStatus=OTHER", "sortBy=guest_phone", "direction=DROP")) {
+            mvc.perform(get("/api/admin/bookings?" + query).with(admin())).andExpect(status().isBadRequest());
+        }
+        mvc.perform(get("/api/admin/bookings").with(admin()).param("search", "x".repeat(201)))
+                .andExpect(status().isBadRequest());
+        assertThat(CALLS.get()).isZero();
+    }
 }
