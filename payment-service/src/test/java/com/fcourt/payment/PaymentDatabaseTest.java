@@ -251,6 +251,15 @@ class PaymentDatabaseTest {
         assertThat(jdbc.queryForObject("SELECT confirmed_by FROM payments",Long.class)).isEqualTo(9);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM payment_outbox",Long.class)).isEqualTo(2);
     }
+
+    @Test void confirmationTimestampMatchesStoredPaymentAndPublishedEvent() throws Exception {
+        var payment=submitted();ownBranch();var confirmed=approvals.decide(payment.id(),true,null,admin());
+        var stored=jdbc.queryForObject("SELECT confirmed_at FROM payments WHERE id=?",java.sql.Timestamp.class,payment.id()).toInstant();
+        assertThat(confirmed.confirmedAt()).isEqualTo(stored);
+        var event=store.json.readTree(jdbc.queryForObject("SELECT payload::text FROM payment_outbox WHERE event_type='PaymentConfirmedEvent'",String.class));
+        assertThat(java.time.Instant.parse(event.path("payment").path("confirmedAt").asText())).isEqualTo(stored);
+        assertThat(approvals.decide(payment.id(),true,null,admin()).confirmedAt()).isEqualTo(stored);
+    }
     @Test
     void foreignBranchAndMissingReasonCannotChangePayment() throws Exception {
         var p=submitted();
