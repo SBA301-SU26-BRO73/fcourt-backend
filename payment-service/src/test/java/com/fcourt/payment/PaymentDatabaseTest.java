@@ -16,6 +16,26 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest(properties="payment.events-enabled=false")
 @org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 class PaymentDatabaseTest {
+    @Test void receiptPriceConflictRollsBackPaymentAndCleansUploadedBill() throws Exception {
+        var upstream=org.mockito.Mockito.mock(PaymentUpstreams.class);
+        var checkout=org.mockito.Mockito.mock(CheckoutService.class);
+        var storage=org.mockito.Mockito.mock(ReceiptStorage.class);
+        var mapper=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+        var order=mapper.readValue(CheckoutApiTest.BOOKING,PaymentUpstreams.Booking.class);
+        org.mockito.Mockito.when(upstream.booking(42,null,"guest")).thenReturn(order);
+        var info=new CheckoutInfo(42L,"BK00000042",7L,"Thu Duc","Court",order.date(),order.slots(),order.totalPrice(),
+                "VCB","970436","00123","FCOURT","FC BK00000042",order.holdExpiresAt(),"Customer");
+        org.mockito.Mockito.when(checkout.checkout(42,null,"guest")).thenReturn(info);
+        org.mockito.Mockito.when(storage.upload(org.mockito.ArgumentMatchers.any())).thenReturn("https://res.cloudinary.com/demo/new-bill.png");
+        org.mockito.Mockito.doThrow(new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT))
+                .when(upstream).freeze(42,null,"guest",info.amount());
+        var receipts=new ReceiptService(checkout,upstream,store,storage,tx,fixed());
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->receipts.upload(42,null,"guest",image())).hasMessageContaining("409");
+        assertThat(store.find(42)).isNull();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM payment_outbox",Long.class)).isZero();
+        org.mockito.Mockito.verify(storage).delete("https://res.cloudinary.com/demo/new-bill.png");
+    }
+
     @Test void freeVoucherPaymentIssuesTicketAndConfirmationExactlyOnce() throws Exception {
         var upstream=org.mockito.Mockito.mock(PaymentUpstreams.class);
         var checkout=org.mockito.Mockito.mock(CheckoutService.class);
