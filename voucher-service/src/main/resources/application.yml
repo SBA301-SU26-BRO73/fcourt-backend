@@ -1,6 +1,9 @@
 server:
   port: ${SERVER_PORT:8086}
 spring:
+  jackson:
+    deserialization:
+      accept-float-as-int: false
   application:
     name: voucher-service
   datasource:
