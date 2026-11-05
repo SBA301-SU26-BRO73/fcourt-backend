@@ -181,4 +181,18 @@ class ReviewIntegrationTest {
                 .andExpect(status().isBadRequest());
         assertThat(BOOKING_CALLS.get()).isZero();
     }
+
+    @Test void concurrentDuplicateBookingReviewsOnlyCountOneVote() throws Exception {
+        var start=new CountDownLatch(1);
+        try(var executor=Executors.newFixedThreadPool(2)){
+            var first=executor.submit(()->{start.await();try{service.create(new CreateReviewRequest(1L,5,null,null),actor(10,"CUSTOMER"));return 201;}catch(org.springframework.web.server.ResponseStatusException error){return error.getStatusCode().value();}});
+            var second=executor.submit(()->{start.await();try{service.create(new CreateReviewRequest(1L,1,null,null),actor(10,"CUSTOMER"));return 201;}catch(org.springframework.web.server.ResponseStatusException error){return error.getStatusCode().value();}});
+            start.countDown();assertThat(List.of(first.get(10,TimeUnit.SECONDS),second.get(10,TimeUnit.SECONDS))).containsExactlyInAnyOrder(201,409);
+        }
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM reviews",Long.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT review_count FROM branch_review_stats",Long.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT version FROM review_cache_version",Long.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT rating_sum FROM branch_review_stats",Long.class))
+                .isEqualTo(jdbc.queryForObject("SELECT rating FROM reviews",Long.class));
+    }
 }
