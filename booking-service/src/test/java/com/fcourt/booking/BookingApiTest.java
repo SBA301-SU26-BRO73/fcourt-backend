@@ -177,4 +177,13 @@ class BookingApiTest {
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
         assertThat(jdbc.queryForObject("SELECT total_price FROM bookings WHERE id=1",java.math.BigDecimal.class)).isEqualByComparingTo("100000");
     }
+
+    @Test void voucherUsageOutboxPreservesOriginalPaymentTime() throws Exception {
+        jdbc.update("UPDATE bookings SET voucher_application_id=?,voucher_id=7,original_amount=100000,discount_amount=20000,total_price=80000,payment_frozen=true WHERE id=1",UUID.randomUUID());
+        var paid=(com.fasterxml.jackson.databind.node.ObjectNode)json.readTree(event(UUID.randomUUID(),"PaymentConfirmedEvent","80000"));
+        String time="2026-01-02T03:04:05.123456Z";
+        ((com.fasterxml.jackson.databind.node.ObjectNode)paid.path("payment")).put("confirmedAt",time);consume(paid.toString());
+        var published=json.readTree(jdbc.queryForObject("SELECT payload::text FROM booking_outbox",String.class));
+        assertThat(published.path("voucher").path("usedAt").asText()).isEqualTo(time);
+    }
 }
