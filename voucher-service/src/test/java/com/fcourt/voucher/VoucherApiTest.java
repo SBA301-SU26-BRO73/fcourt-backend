@@ -181,6 +181,19 @@ class VoucherApiTest {
                 .andExpect(jsonPath("$.totalDiscountAmount").value(100.50)).andExpect(jsonPath("$.items[0].userId").value(20));
     }
 
+    @Test void historyRejectsInvalidPagingAndRechecksOwnershipOnEveryRequest() throws Exception {
+        long id=create("LIVE_AUDIT");String path="/api/admin/vouchers/"+id+"/usages";CALLS.set(0);
+        for(String query:List.of("page=-1","page=100001","size=0","size=101","size=abc")){
+            mvc.perform(get(path+"?"+query).with(admin())).andExpect(status().isBadRequest());
+        }
+        mvc.perform(get("/api/admin/vouchers/0/usages").with(admin())).andExpect(status().isBadRequest());
+        assertThat(CALLS.get()).isZero();
+        mvc.perform(get(path).with(admin())).andExpect(status().isOk());
+        BRANCHES.set("[]");mvc.perform(get(path).with(admin())).andExpect(status().isNotFound());
+        UPSTREAM_STATUS.set(500);mvc.perform(get(path).with(admin())).andExpect(status().isServiceUnavailable());
+        UPSTREAM_STATUS.set(403);mvc.perform(get(path).with(admin())).andExpect(status().isForbidden());
+    }
+
     @Test
     void createsReadsUpdatesAndSoftDeletesVoucherWithoutAllowingClientCounters() throws Exception {
         var body = request(" save_20 ").put("usedCount", 9);
