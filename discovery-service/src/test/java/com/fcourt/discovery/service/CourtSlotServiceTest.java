@@ -117,6 +117,51 @@ class CourtSlotServiceTest {
         assert503(() -> service.find(1, DATE));
     }
 
+    private Slot locked(long id, String time, Restriction restriction) {
+        LocalTime start = LocalTime.parse(time);
+        return new Slot(id, start, start.plusMinutes(30), new BigDecimal("75000.00"), true, restriction);
+    }
+
+    @Test
+    void passesPublicLockMetadataOnlyOnOutOfServiceSlots() {
+        var event = new Restriction("PRIVATE_EVENT", "Giai dau", "Event desk", "0901234567");
+        schedule(DATE, false, locked(1, "14:00", event), locked(2, "14:30", null),
+                new Slot(3L, LocalTime.of(15, 0), LocalTime.of(15, 30), new BigDecimal("75000.00"), false, event));
+        var result = service.find(1, DATE);
+        assertThat(result).extracting(r -> r.status())
+                .containsExactly(Status.OUT_OF_SERVICE, Status.OUT_OF_SERVICE, Status.AVAILABLE);
+        assertThat(result.get(0).restriction()).isEqualTo(new com.fcourt.discovery.dto.response.CourtSlotResponse.Restriction(
+                "PRIVATE_EVENT", "Giai dau", "Event desk", "0901234567"));
+        assertThat(result.get(1).restriction()).isNull();
+        assertThat(result.get(2).restriction()).as("metadata never promotes or decorates an available slot").isNull();
+    }
+
+    @Test
+    void dropsMalformedLockMetadataWithoutChangingTheLock() {
+        var bad = List.of(
+                new Restriction("UNKNOWN", "x", null, null),
+                new Restriction(null, "x", null, null),
+                new Restriction("PRIVATE_EVENT", "x".repeat(501), null, null),
+                new Restriction("PRIVATE_EVENT", null, "n".repeat(101), null),
+                new Restriction("PRIVATE_EVENT", null, null, "tel:0901234567"));
+        for (var restriction : bad) {
+            schedule(DATE, false, locked(1, "14:00", restriction));
+            var slot = service.find(1, DATE).getFirst();
+            assertThat(slot.status()).isEqualTo(Status.OUT_OF_SERVICE);
+            assertThat(slot.restriction()).isNull();
+        }
+    }
+
+    @Test
+    void closureOverBookedSlotKeepsRestrictionWithTheClosure() {
+        var event = new Restriction("OUT_OF_SERVICE", null, null, null);
+        schedule(DATE, false, locked(1, "14:00", event));
+        when(source.occupancy(1, DATE)).thenReturn(new Occupancy(1L, DATE, List.of(1L)));
+        var slot = service.find(1, DATE).getFirst();
+        assertThat(slot.status()).isEqualTo(Status.OUT_OF_SERVICE);
+        assertThat(slot.restriction().type()).isEqualTo("OUT_OF_SERVICE");
+    }
+
     @Test
     void refreshesHoldOnEveryRequestWithoutCaching() {
         schedule(DATE, false, slot(1, "11:00", false));
