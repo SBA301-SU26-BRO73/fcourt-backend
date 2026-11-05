@@ -186,4 +186,14 @@ class BookingApiTest {
         var published=json.readTree(jdbc.queryForObject("SELECT payload::text FROM booking_outbox",String.class));
         assertThat(published.path("voucher").path("usedAt").asText()).isEqualTo(time);
     }
+
+    @Test void malformedPaymentTimestampRollsBackBookingAndVoucherOutbox() throws Exception {
+        jdbc.update("UPDATE bookings SET voucher_application_id=?,voucher_id=7,original_amount=100000,discount_amount=20000,total_price=80000,payment_frozen=true WHERE id=1",UUID.randomUUID());
+        var paid=(com.fasterxml.jackson.databind.node.ObjectNode)json.readTree(event(UUID.randomUUID(),"PaymentConfirmedEvent","80000"));
+        ((com.fasterxml.jackson.databind.node.ObjectNode)paid.path("payment")).put("confirmedAt","invalid-date");
+        assertThatThrownBy(()->consume(paid.toString())).isInstanceOf(RuntimeException.class);
+        assertThat(jdbc.queryForObject("SELECT status FROM bookings WHERE id=1",String.class)).isEqualTo("PENDING_PAYMENT");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM booking_outbox",Long.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM booking_inbox",Long.class)).isZero();
+    }
 }
