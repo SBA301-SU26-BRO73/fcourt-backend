@@ -157,4 +157,12 @@ class BookingApiTest {
         var order=jdbc.queryForMap("SELECT payment_frozen,total_price FROM bookings WHERE id=1");
         assertThat((java.math.BigDecimal)order.get("total_price")).isEqualByComparingTo(Boolean.TRUE.equals(order.get("payment_frozen"))?"100000":"80000");
     }
+
+    @Test void databaseRejectsPartialVoucherSnapshotsAndNegativeFinalTotals() {
+        assertThatThrownBy(()->jdbc.update("UPDATE bookings SET voucher_application_id=? WHERE id=1",UUID.randomUUID()))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        assertThatThrownBy(()->jdbc.update("UPDATE bookings SET voucher_application_id=?,voucher_id=7,original_amount=100000,discount_amount=100001,total_price=-1 WHERE id=1",UUID.randomUUID()))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        assertThat(jdbc.queryForObject("SELECT total_price FROM bookings WHERE id=1",java.math.BigDecimal.class)).isEqualByComparingTo("100000");
+    }
 }
