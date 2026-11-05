@@ -40,6 +40,9 @@ class OnlineHoldReleaseWorker {
                   row.get("booking_id"));
             } catch (org.springframework.web.server.ResponseStatusException e) {
               // Durable occupancy now rejects competing bookings even after Redis release.
+              if (e.getStatusCode().is5xxServerError()
+                  || e.getStatusCode().value() == 401
+                  || e.getStatusCode().value() == 403) break;
             }
           }
         });

@@ -44,6 +44,8 @@ same resource ID and its current state; changed identity returns 409.
   has not arrived. Unavailable payment fails closed and retries later.
 - Expiry deactivates live slots and appends BookingCancelledEvent atomically.
   Existing payment events confirm/cancel bookings with inbox deduplication.
+- Partial indexes bound pending recovery scans. Workers stop the current batch
+  on unavailable or unauthorized upstreams and leave remaining rows for retry.
 
 ## Service configuration
 

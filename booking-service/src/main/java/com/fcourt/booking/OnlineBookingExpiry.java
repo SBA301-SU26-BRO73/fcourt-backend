@@ -39,7 +39,8 @@ class OnlineBookingExpiry {
     var ids =
         jdbc.queryForList(
             "SELECT b.id FROM bookings b JOIN online_hold_releases r ON r.booking_id=b.id WHERE"
-                + " b.status='PENDING_PAYMENT' AND b.hold_expires_at<=? ORDER BY b.id LIMIT 10",
+                + " b.status='PENDING_PAYMENT' AND b.hold_expires_at<=? ORDER BY"
+                + " b.hold_expires_at,b.id LIMIT 10",
             Long.class,
             java.sql.Timestamp.from(clock.instant()));
     for (long id : ids) {
@@ -47,6 +48,9 @@ class OnlineBookingExpiry {
         expire(id);
       } catch (org.springframework.web.server.ResponseStatusException e) {
         /* dependency unavailable: retain occupancy for retry */
+        if (e.getStatusCode().is5xxServerError()
+            || e.getStatusCode().value() == 401
+            || e.getStatusCode().value() == 403) break;
       }
     }
   }

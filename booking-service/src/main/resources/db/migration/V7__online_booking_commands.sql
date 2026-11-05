@@ -10,3 +10,7 @@ CREATE TABLE online_hold_releases (
     hold_hash varchar(64) NOT NULL UNIQUE,
     released_at timestamptz
 );
+CREATE INDEX idx_online_hold_releases_pending ON online_hold_releases(booking_id)
+    WHERE released_at IS NULL;
+CREATE INDEX idx_online_pending_expiry ON bookings(hold_expires_at,id)
+    WHERE status='PENDING_PAYMENT';

@@ -336,4 +336,44 @@ class OnlineBookingTest {
             jdbc.queryForObject("SELECT count(*) FROM booking_slots WHERE active", Integer.class))
         .isEqualTo(2);
   }
+
+  @Test
+  void unavailableAuthoritiesStopRecoveryWithoutAcknowledgingRows() {
+    service.create(customer, UUID.randomUUID(), request);
+    int eventsBeforeRecovery =
+        jdbc.queryForObject("SELECT count(*) FROM booking_outbox", Integer.class);
+    long second =
+        jdbc.queryForObject(
+            "INSERT INTO bookings(court_id,customer_id,date,total_price,booking_code) VALUES"
+                + " (22,200,?,100000,'QUEUE2') RETURNING id",
+            Long.class,
+            DAY);
+    jdbc.update(
+        "INSERT INTO online_hold_releases(booking_id,hold_hash) VALUES (?,?)",
+        second,
+        OnlineBooking.hash(UUID.randomUUID().toString()));
+    doThrow(new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE))
+        .when(upstream)
+        .release(anyString());
+    new OnlineHoldReleaseWorker(jdbc, upstream, tx).run();
+    verify(upstream, times(1)).release(anyString());
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT count(*) FROM online_hold_releases WHERE released_at IS NULL",
+                Integer.class))
+        .isEqualTo(2);
+    jdbc.update(
+        "UPDATE bookings SET hold_expires_at=?", java.sql.Timestamp.from(NOW.minusSeconds(1)));
+    doThrow(new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE))
+        .when(upstream)
+        .mayExpire(anyLong(), any());
+    new OnlineBookingExpiry(jdbc, upstream, tx, json, clock).run();
+    verify(upstream, times(1)).mayExpire(anyLong(), any());
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT count(*) FROM bookings WHERE status='PENDING_PAYMENT'", Integer.class))
+        .isEqualTo(2);
+    assertThat(jdbc.queryForObject("SELECT count(*) FROM booking_outbox", Integer.class))
+        .isEqualTo(eventsBeforeRecovery);
+  }
 }

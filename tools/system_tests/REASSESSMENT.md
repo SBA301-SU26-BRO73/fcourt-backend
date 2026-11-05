@@ -13,7 +13,7 @@ recovery, migration and deployment configuration.
 | Scope | Result |
 |---|---|
 | Auth Java verify | 157 tests, zero failures/errors/skips |
-| Booking Java verify | 50 tests, zero failures/errors/skips |
+| Booking Java verify | 51 tests, zero failures/errors/skips |
 | Payment Java verify | 62 tests, zero failures/errors/skips |
 | Staff Java verify | 125 tests and coverage gate passed |
 | Hold Java verify | 22 tests, zero failures/errors/skips |
