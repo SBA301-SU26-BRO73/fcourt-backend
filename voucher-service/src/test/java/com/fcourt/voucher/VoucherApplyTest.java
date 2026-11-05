@@ -257,4 +257,19 @@ class VoucherApplyTest {
         assertThat(usage.get("used_at_source")).isEqualTo("PAYMENT_CONFIRMED");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_usages",Long.class)).isEqualTo(1);
     }
+
+    @Test void invalidTimestampOrFailedCounterRollsBackHistoryInboxAndApplication() throws Exception {
+        voucher("SAVE",10);var application=apply(1,10);
+        var event=applied(application,UUID.randomUUID());((ObjectNode)event.path("voucher")).put("usedAt","not-a-date");
+        assertThatThrownBy(()->events.accept(event.toString())).isInstanceOf(java.time.DateTimeException.class);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_usages",Long.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_inbox",Long.class)).isZero();
+        jdbc.update("UPDATE vouchers SET used_count=usage_limit");
+        ((ObjectNode)event.path("voucher")).put("usedAt",NOW.toString());
+        assertThatThrownBy(()->events.accept(event.toString())).isInstanceOf(IllegalStateException.class);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_usages",Long.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_inbox",Long.class)).isZero();
+        assertThat(applications.booking(1,false).orElseThrow().status()).isEqualTo("RESERVED");
+        assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isEqualTo(10);
+    }
 }
