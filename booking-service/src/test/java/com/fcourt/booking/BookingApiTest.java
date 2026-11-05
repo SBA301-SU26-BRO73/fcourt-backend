@@ -100,4 +100,28 @@ class BookingApiTest {
         assertThat(jdbc.queryForObject("SELECT checkin_code FROM bookings WHERE id=1",String.class)).isNull();
     }
     String eventUnchecked(String amount) { try{return event(UUID.randomUUID(),"PaymentConfirmedEvent",amount);}catch(Exception e){throw new RuntimeException(e);} }
+
+    @Test void voucherAttachmentRequiresMachineAndCustomerIdentityAndFreezeProtectsPrice() throws Exception {
+        jdbc.update("UPDATE bookings SET hold_expires_at=? WHERE id=1",java.sql.Timestamp.from(Instant.now().plusSeconds(3600)));
+        UUID application=UUID.randomUUID();
+        String body="{\"applicationId\":\""+application+"\",\"voucherId\":7,\"originalAmount\":100000,\"discountAmount\":20000,\"finalAmount\":80000}";
+        mvc.perform(post("/api/internal/bookings/1/voucher").with(jwt().jwt(j->j.subject("10"))).contentType("application/json").content(body))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/internal/bookings/1/voucher").with(jwt().jwt(j->j.subject("20"))).header("X-Service-Token","integration")
+                .contentType("application/json").content(body)).andExpect(status().isNotFound());
+        mvc.perform(post("/api/internal/bookings/1/voucher").with(jwt().jwt(j->j.subject("10"))).header("X-Service-Token","integration")
+                .contentType("application/json").content(body)).andExpect(status().isOk()).andExpect(jsonPath("$.totalPrice").value(80000));
+        mvc.perform(post("/api/internal/bookings/1/payment-freeze").with(jwt().jwt(j->j.subject("10"))).header("X-Service-Token","integration")
+                .contentType("application/json").content("{\"amount\":100000}")).andExpect(status().isConflict());
+        mvc.perform(post("/api/internal/bookings/1/payment-freeze").with(jwt().jwt(j->j.subject("10"))).header("X-Service-Token","integration")
+                .contentType("application/json").content("{\"amount\":80000}")).andExpect(status().isOk()).andExpect(jsonPath("$.paymentFrozen").value(true));
+        mvc.perform(post("/api/internal/bookings/1/voucher").with(jwt().jwt(j->j.subject("10"))).header("X-Service-Token","integration")
+                .contentType("application/json").content(body)).andExpect(status().isOk());
+        mvc.perform(post("/api/internal/bookings/1/voucher").with(jwt().jwt(j->j.subject("10"))).header("X-Service-Token","integration")
+                .contentType("application/json").content(body.replace(application.toString(),UUID.randomUUID().toString())))
+                .andExpect(status().isConflict());
+        mvc.perform(get("/api/internal/bookings/1/voucher-snapshot")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/internal/bookings/1/voucher-snapshot").header("X-Service-Token","integration"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.customerId").value(10));
+    }
 }
