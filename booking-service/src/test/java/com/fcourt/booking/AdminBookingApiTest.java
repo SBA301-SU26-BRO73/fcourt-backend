@@ -121,4 +121,22 @@ class AdminBookingApiTest {
         mvc.perform(get("/api/admin/bookings?search=090111").with(admin())).andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(1)).andExpect(jsonPath("$.items[0].id").value(1));
     }
+
+    @Test
+    void dateBoundsStatusAndPaymentFiltersAreIndependentAndInclusive() throws Exception {
+        mvc.perform(get("/api/admin/bookings?fromDate=2030-01-10&toDate=2030-01-10").with(admin()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(2));
+        mvc.perform(get("/api/admin/bookings?status=CANCELLED&fromDate=2030-01-10&toDate=2030-01-10").with(admin()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.items[0].id").value(3));
+        mvc.perform(get("/api/admin/bookings?paymentStatus=PAID").with(admin()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.items[0].id").value(5));
+        mvc.perform(get("/api/admin/bookings?branchId=7&courtId=21").with(admin()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(0));
+        mvc.perform(get("/api/admin/bookings?toDate=2030-01-09").with(admin()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(0));
+        mvc.perform(get("/api/admin/bookings?fromDate=2030-01-12").with(admin()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1));
+    }
 }
