@@ -38,7 +38,7 @@ public class DiscoverySecurity {
                         .requestMatchers(HttpMethod.POST, "/api/reviews", "/api/admin/reviews/*/reply").authenticated()
                         .anyRequest().denyAll())
                 .oauth2ResourceServer(resource -> resource
-                        .bearerTokenResolver(request -> request.getServletPath().startsWith("/api/public/") ? null : bearer.resolve(request))
+                        .bearerTokenResolver(request -> request.getRequestURI().startsWith(request.getContextPath() + "/api/public/") ? null : bearer.resolve(request))
                         .jwt(jwt -> {})).build();
     }
 }
