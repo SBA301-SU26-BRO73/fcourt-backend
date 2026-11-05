@@ -170,4 +170,18 @@ class AdminBookingApiTest {
                 .andExpect(status().isBadRequest());
         assertThat(CALLS.get()).isZero();
     }
+
+    @Test
+    void searchTreatsSqlWildcardsAndQuotesAsLiteralInput() throws Exception {
+        mvc.perform(get("/api/admin/bookings").with(admin()).param("search", "%_!"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.items[0].id").value(5));
+        mvc.perform(get("/api/admin/bookings").with(admin()).param("search", "' OR 1=1 --"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(0));
+        mvc.perform(get("/api/admin/bookings").with(admin()).param("search", "   "))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(4));
+        jdbc.update("UPDATE bookings SET customer_name=NULL,guest_phone=NULL WHERE id=2");
+        mvc.perform(get("/api/admin/bookings?courtId=12").with(admin())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1)).andExpect(jsonPath("$.items[0].customerPhone").isEmpty());
+    }
 }
