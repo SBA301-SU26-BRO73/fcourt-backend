@@ -215,4 +215,21 @@ class VoucherApplyTest {
         assertThat(retry.discountAmount()).isEqualByComparingTo("100000");assertThat(retry.finalAmount()).isZero();
         assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isZero();
     }
+
+    @Test void expiryCannotReleaseFrozenPaymentsButCancellationReleasesUnpaidQuota() throws Exception {
+        voucher("SAVE",10);var first=apply(1,10);
+        ORDERS.get(1L).put("holdExpiresAt",NOW.minusSeconds(1).toString()).put("paymentFrozen",true);
+        expiry.reconcile(first);assertThat(applications.booking(1,false).orElseThrow().status()).isEqualTo("RESERVED");
+        ORDERS.get(1L).put("paymentFrozen",false);expiry.reconcile(first);
+        assertThat(applications.booking(1,false).orElseThrow().status()).isEqualTo("RELEASED");
+        var second=apply(2,20);
+        var cancel=JSON.createObjectNode().put("eventId",UUID.randomUUID().toString()).put("type","PaymentRejectedEvent");
+        cancel.putObject("payment").put("id",99).put("bookingId",2).put("branchId",7).put("amount",second.finalAmount());
+        events.accept(cancel.toString());assertThat(applications.booking(2,false).orElseThrow().status()).isEqualTo("RELEASED");
+        assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isZero();
+        var paid=apply(3,10);events.accept(applied(paid,UUID.randomUUID()).toString());
+        ((ObjectNode)cancel.path("payment")).put("bookingId",3);cancel.put("eventId",UUID.randomUUID().toString());events.accept(cancel.toString());
+        assertThat(applications.booking(3,false).orElseThrow().status()).isEqualTo("APPLIED");
+        assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isEqualTo(1);
+    }
 }
