@@ -42,6 +42,26 @@ class AdminBranchAuthorityTest {
     @AfterEach
     void stop() { server.stop(0); }
 
+    @Test
+    void failsClosedForForeignDuplicateMissingAndMalformedBranchData() {
+        for (String invalid : List.of("null", "{}", "not-json", "[null]", "[{\"id\":7}]",
+                "[{\"id\":7,\"adminId\":200}]", "[{\"id\":0,\"adminId\":100}]",
+                "[{\"id\":7,\"adminId\":100},{\"id\":7,\"adminId\":100}]")) {
+            body.set(invalid);
+            assertThatThrownBy(() -> authority.ownedBranches(token("ADMIN"))).isInstanceOfSatisfying(
+                    ResponseStatusException.class, error -> assertThat(error.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE));
+        }
+        for (int code : List.of(401, 403, 404, 500)) {
+            status.set(code);
+            assertThatThrownBy(() -> authority.ownedBranches(token("ADMIN"))).isInstanceOfSatisfying(
+                    ResponseStatusException.class, error -> assertThat(error.getStatusCode()).isEqualTo(
+                            code == 401 || code == 403 ? HttpStatus.FORBIDDEN : HttpStatus.SERVICE_UNAVAILABLE));
+        }
+        server.stop(0);
+        assertThatThrownBy(() -> authority.ownedBranches(token("ADMIN"))).isInstanceOfSatisfying(
+                ResponseStatusException.class, error -> assertThat(error.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE));
+    }
+
     private Jwt token(String role) {
         return Jwt.withTokenValue("fixture-token").header("alg", "RS256").subject("100")
                 .claim("roles", List.of(role)).build();
