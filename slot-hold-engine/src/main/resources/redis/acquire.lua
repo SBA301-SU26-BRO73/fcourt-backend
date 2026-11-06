@@ -10,4 +10,6 @@ for i = 1, #KEYS - 1 do
     redis.call('set', KEYS[i], ARGV[1], 'PXAT', expires)
 end
 redis.call('set', KEYS[#KEYS], ARGV[3], 'PXAT', expires)
+local request = cjson.decode(ARGV[3])
+redis.call('publish', 'fcourt:slot-changes', cjson.encode({courtId=request.courtId,date=request.date}))
 return expires
