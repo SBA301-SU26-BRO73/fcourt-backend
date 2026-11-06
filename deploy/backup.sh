@@ -9,7 +9,7 @@ stamp=$(date -u +%Y%m%dT%H%M%SZ)
 file="$backup_dir/cluster-$stamp.sql"
 tmp=$(mktemp "$backup_dir/.backup.XXXXXX")
 trap 'rm -f "$tmp"' EXIT HUP INT TERM
-docker compose -f compose.yml exec -T postgres pg_dumpall -U postgres > "$tmp"
+docker compose --env-file .env --env-file runtime.env -f compose.yml exec -T postgres pg_dumpall -U postgres > "$tmp"
 test -s "$tmp"
 mv "$tmp" "$file"
 printf 'Backup created: %s\n' "$file"

@@ -1,7 +1,6 @@
 name: fcourt-production
 x-app: &app
   restart: unless-stopped
-  env_file: runtime.env
   networks: [private]
   security_opt: [no-new-privileges:true]
   cap_drop: [ALL]
@@ -27,7 +26,8 @@ x-runtime: &runtime
     STAFF_URL: 'http://staff-operations-service:8090'
     HOLD_GRPC_TARGET: 'slot-hold-engine:9087'
     BOOKING_GRPC_TARGET: 'booking-service:9088'
-    STAFF_GRPC_PLAINTEXT: 'true'
+    STAFF_GRPC_PLAINTEXT: 'false'
+    POS_URL: 'http://pos-retail-service:8091'
     MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: 'never'
 services:
   postgres:
@@ -80,6 +80,9 @@ services:
       kafka: {condition: service_started}
     environment:
       <<: *runtime
+      AUTH_JWT_PRIVATE_KEY: ${AUTH_JWT_PRIVATE_KEY:-}
+      AUTH_JWT_KEY_ID: ${AUTH_JWT_KEY_ID:-}
+      AUTH_CLOUDINARY_URL: ${AUTH_CLOUDINARY_URL:-}
       SERVER_PORT: '8081'
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '5'
       SPRING_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/auth_db'
@@ -94,6 +97,11 @@ services:
       kafka: {condition: service_started}
     environment:
       <<: *runtime
+      PAYOS_CLIENT_ID: ${PAYOS_CLIENT_ID:-}
+      PAYOS_API_KEY: ${PAYOS_API_KEY:-}
+      PAYOS_CHECKSUM_KEY: ${PAYOS_CHECKSUM_KEY:-}
+      PAYOS_RETURN_URL: ${PAYOS_RETURN_URL:-}
+      PAYOS_CANCEL_URL: ${PAYOS_CANCEL_URL:-}
       SERVER_PORT: '8082'
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '5'
       SPRING_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/subscription_db'
@@ -164,6 +172,7 @@ services:
       kafka: {condition: service_started}
     environment:
       <<: *runtime
+      BOOKING_HOLD_SERVICE_TOKEN: ${BOOKING_HOLD_SERVICE_TOKEN:-}
       SERVER_PORT: '8087'
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '5'
   booking-service:
@@ -175,6 +184,9 @@ services:
       kafka: {condition: service_started}
     environment:
       <<: *runtime
+      BOOKING_HOLD_SERVICE_TOKEN: ${BOOKING_HOLD_SERVICE_TOKEN:-}
+      POS_BOOKING_SERVICE_TOKEN: ${POS_BOOKING_SERVICE_TOKEN:-}
+      POS_SETTLEMENT_SERVICE_TOKEN: ${POS_SETTLEMENT_SERVICE_TOKEN:-}
       SERVER_PORT: '8088'
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '5'
       SPRING_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/booking_db'
@@ -189,6 +201,7 @@ services:
       kafka: {condition: service_started}
     environment:
       <<: *runtime
+      CLOUDINARY_URL: ${CLOUDINARY_URL:-}
       SERVER_PORT: '8089'
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '5'
       SPRING_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/payment_db'
@@ -217,6 +230,8 @@ services:
       kafka: {condition: service_started}
     environment:
       <<: *runtime
+      POS_BOOKING_SERVICE_TOKEN: ${POS_BOOKING_SERVICE_TOKEN:-}
+      POS_SETTLEMENT_SERVICE_TOKEN: ${POS_SETTLEMENT_SERVICE_TOKEN:-}
       SERVER_PORT: '8091'
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '5'
       SPRING_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/pos_retail_db'
@@ -231,6 +246,12 @@ services:
       kafka: {condition: service_started}
     environment:
       <<: *runtime
+      NOTIFICATION_SMTP_HOST: ${NOTIFICATION_SMTP_HOST:-}
+      NOTIFICATION_SMTP_PORT: ${NOTIFICATION_SMTP_PORT:-}
+      NOTIFICATION_SMTP_USER: ${NOTIFICATION_SMTP_USER:-}
+      NOTIFICATION_SMTP_PASSWORD: ${NOTIFICATION_SMTP_PASSWORD:-}
+      NOTIFICATION_MAIL_FROM: ${NOTIFICATION_MAIL_FROM:-}
+      NOTIFICATION_RESET_PASSWORD_URL: ${NOTIFICATION_RESET_PASSWORD_URL:-}
       SERVER_PORT: '8092'
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '5'
       SPRING_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/notification_db'

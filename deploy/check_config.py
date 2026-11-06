@@ -22,6 +22,8 @@ def validate(config):
         if ':' not in tag or tag.endswith(':latest') or 'REPLACE' in image:
             raise ValueError('Supply immutable release images: ' + name)
         env = services[name]['environment']
+        if name != 'auth-service' and env.get('AUTH_JWT_PRIVATE_KEY'):
+            raise ValueError('Signing key exposed outside auth-service')
         if name != 'slot-hold-engine':
             if 'postgres:5432/' not in env.get('SPRING_DATASOURCE_URL', ''):
                 raise ValueError('Missing private datasource: ' + name)
@@ -31,16 +33,17 @@ def validate(config):
         if not env.get('AUTH_JWT_ISSUER', '').startswith('https://'):
             raise ValueError('Production issuer requires HTTPS')
     auth = services['auth-service']['environment']
-    for key in ('AUTH_JWT_PRIVATE_KEY', 'AUTH_JWT_KEY_ID', 'BOOKING_HOLD_SERVICE_TOKEN'):
+    for key in ('AUTH_JWT_PRIVATE_KEY', 'AUTH_JWT_KEY_ID'):
         if not auth.get(key) or 'REPLACE' in auth[key]:
             raise ValueError('Missing runtime secret: ' + key)
-    if len(auth['BOOKING_HOLD_SERVICE_TOKEN'].encode()) < 32:
+    token = services['booking-service']['environment'].get('BOOKING_HOLD_SERVICE_TOKEN', '')
+    if len(token.encode()) < 32 or 'REPLACE' in token:
         raise ValueError('Service token must have at least 32 bytes')
     return True
 
 if __name__ == '__main__':
     try:
-        rendered = subprocess.run(['docker', 'compose', '-f', 'compose.yml', 'config', '--format', 'json'],
+        rendered = subprocess.run(['docker', 'compose', '--env-file', '.env', '--env-file', 'runtime.env', '-f', 'compose.yml', 'config', '--format', 'json'],
                                   cwd=Path(__file__).parent, capture_output=True, check=True)
         validate(json.loads(rendered.stdout))
     except (ValueError, KeyError, subprocess.CalledProcessError):

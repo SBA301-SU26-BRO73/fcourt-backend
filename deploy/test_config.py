@@ -10,6 +10,8 @@ class ConfigurationTest(unittest.TestCase):
             'AUTH_JWT_ISSUER': 'https://test.example', 'AUTH_JWT_PRIVATE_KEY': 'test-key',
             'AUTH_JWT_KEY_ID': 'test-id', 'BOOKING_HOLD_SERVICE_TOKEN': 'x'*32}}
             for name in SERVICES}}
+        for name in SERVICES:
+            if name != 'auth-service': self.config['services'][name]['environment'].pop('AUTH_JWT_PRIVATE_KEY')
         self.config['services'].update({name: {} for name in ('postgres', 'redis', 'kafka', 'nginx')})
 
     def test_complete_private_topology(self):
@@ -25,8 +27,13 @@ class ConfigurationTest(unittest.TestCase):
     def test_missing_runtime_credentials_rejected(self):
         for name in ('AUTH_JWT_PRIVATE_KEY', 'AUTH_JWT_KEY_ID', 'BOOKING_HOLD_SERVICE_TOKEN'):
             cfg=copy.deepcopy(self.config)
-            cfg['services']['auth-service']['environment'][name]=''
+            service='booking-service' if name=='BOOKING_HOLD_SERVICE_TOKEN' else 'auth-service'
+            cfg['services'][service]['environment'][name]=''
             with self.assertRaises(ValueError): validate(cfg)
+
+    def test_signing_key_cannot_leak_to_another_service(self):
+        self.config['services']['payment-service']['environment']['AUTH_JWT_PRIVATE_KEY']='secret'
+        with self.assertRaises(ValueError): validate(self.config)
 
     def test_mutable_image_rejected(self):
         self.config['services']['payment-service']['image']='team/payment:latest'
