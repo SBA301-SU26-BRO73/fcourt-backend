@@ -55,7 +55,7 @@ class BookingSecurity {
                         a ->
                                 a.dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR)
                                         .permitAll()
-                                        .requestMatchers("/actuator/health", "/api/bookings/{id}")
+                                        .requestMatchers("/actuator/health", "/api/bookings/{id}", "/ws-fcourt")
                                         .permitAll()
                                         .requestMatchers(
                                                 org.springframework.http.HttpMethod.GET,
