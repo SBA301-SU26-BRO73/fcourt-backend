@@ -59,10 +59,12 @@ class CheckoutService {
         if (!booking.holdExpiresAt().isAfter(clock.instant())) {
             throw new ResponseStatusException(HttpStatus.GONE, "Hold expired");
         }
+        var profile = upstreams.customerProfile(authorization);
         return new CheckoutInfo(booking.id(), booking.bookingCode(), booking.branchId(),
                 booking.branchName(), booking.courtName(), booking.date(), List.copyOf(booking.slots()),
                 amount, bank.bankName(), bank.bankBin(), bank.bankAccountNumber(), bank.bankAccountName(),
-                "FC " + booking.bookingCode(), booking.holdExpiresAt(), booking.customerName());
+                "FC " + booking.bookingCode(), booking.holdExpiresAt(), booking.customerName(),
+                profile == null ? null : profile.email(), profile == null ? null : profile.id());
     }
 
     private boolean blank(String value) { return value == null || value.isBlank(); }
