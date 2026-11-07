@@ -145,6 +145,19 @@ class FacilityApiIntegrationTest {
     }
 
     @Test
+    void bookingContextContainsOnlyAvailableVenueMetadata() throws Exception {
+        long owner=9918;
+        long branch=id(postJson("/api/admin/branches",branchBody("Booking fixture","06:00","22:00"),owner).andExpect(status().isCreated()));
+        long court=id(postJson("/api/admin/branches/"+branch+"/courts",courtBody("Court context","100000"),owner).andExpect(status().isCreated()));
+        mvc.perform(get("/api/internal/courts/{id}/booking-context",court)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.branchId").value(branch)).andExpect(jsonPath("$.courtName").value("Court context"))
+                .andExpect(jsonPath("$.bankAccountNumber").doesNotExist()).andExpect(jsonPath("$.adminId").doesNotExist());
+        mvc.perform(patch("/api/admin/courts/{id}/status",court).with(as(owner,"ADMIN"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"MAINTENANCE\"}")).andExpect(status().isOk());
+        mvc.perform(get("/api/internal/courts/{id}/booking-context",court)).andExpect(status().isConflict());
+    }
+
+    @Test
     void courtsAndTemplatesFollowValidationRulesAndPublishSnapshots() throws Exception {
         long owner = 9202;
         long branchId = id(postJson("/api/admin/branches", branchBody("Events", "06:00", "22:00"), owner)

@@ -1,0 +1,46 @@
+server:
+  port: ${SERVER_PORT:8086}
+spring:
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: voucher-service
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    listener:
+      ack-mode: record
+  jackson:
+    deserialization:
+      accept-float-as-int: false
+      fail-on-numbers-for-enums: true
+  application:
+    name: voucher-service
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5486/voucher_db}
+    username: ${DATABASE_USER:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+  mvc:
+    problemdetails:
+      enabled: true
+voucher:
+  facility-url: ${FACILITY_URL:http://localhost:8083}
+  jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+  jwt-issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
+  jwt-audience: ${AUTH_JWT_AUDIENCE:fcourt}
+  grpc:
+    enabled: ${VOUCHER_GRPC_ENABLED:true}
+    host: ${VOUCHER_GRPC_HOST:127.0.0.1}
+    port: ${VOUCHER_GRPC_PORT:9086}
+    token: ${VOUCHER_GRPC_TOKEN:}
+    certificate: ${VOUCHER_GRPC_CERTIFICATE:}
+    private-key: ${VOUCHER_GRPC_PRIVATE_KEY:}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
