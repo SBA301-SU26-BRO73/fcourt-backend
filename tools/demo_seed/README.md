@@ -12,10 +12,13 @@ payment records make the referenced demo identities/booking states consistent.
 - 1 ADMIN, 3 STAFF, 5 CUSTOMER accounts with supplied bcrypt password hash.
 - One subscription to an existing active plan supporting >=10 courts/3 branches.
 - 3 branches, 10 courts (4/3/3), 2240 uniform 30-minute weekly templates (06–22).
-- 3 active staff assignments and 2 branch-scoped vouchers used once each.
-- 30 bookings, 5 each CONFIRMED/CHECKED_IN/COMPLETED/AWAITING_CONFIRMATION/
+- 3 active staff assignments and 2 unused branch-scoped vouchers.
+- 31 bookings: 5 each CONFIRMED/CHECKED_IN/COMPLETED/AWAITING_CONFIRMATION/
   PENDING_PAYMENT/CANCELLED, with matching payment states and discount sums.
-- 50 actual booking_slots: cancelled bookings own no slots. Completed examples
+- One additional CONFIRMED all-day booking on demoDate+1, court 1, all 32 slots
+  from 06:00 to 22:00. The owner confirmed this meaning of "Bao sân"; no new
+  booking status or maintenance feature is invented.
+- 82 actual booking_slots: cancelled bookings own no slots. Completed examples
   are on demoDate-1; others on demoDate. Check-in/payment times match state.
 
 Every record is clearly named DEMO. Seed dates are relative to explicit demoDate,
@@ -44,16 +47,15 @@ requires an explicit container. --user defaults postgres. Run after service
 schemas/catalogs have been initialized. Plan/court type IDs are validated against
 subscription_db; no silent replacement of another owner's catalog is attempted.
 The staff schema must include Flyway V2 (profile columns) from SCRUM-26. Facility
-must include its owning service's V3 migration (`bank_bin`, facility PR #20).
+must include its owning service's V3 migration (`bank_bin`, hourly base price).
 The seeder checks for bank_bin before writing any seed rows and never adds or
-baselines another service's schema itself. Fixture tests apply the inherited V1
-schemas plus staff V2 and facility V3 before seeding; profile
+baselines another service's schema itself. Payment requires V2/V3/V4 for checkout,
+ticket/expiry and customer ownership. Fixture tests apply all current migrations
+from the owning services in numeric version order before seeding; profile
 email/name/phone match the corresponding IAM fixture accounts.
 
-Tests vendor the exact facility V3 SQL from commit
-`5fc2ffe83226b90dd23e2cf31782534ec9099545` in `fixtures/facility_v3.sql`.
-This is a test-only compatibility snapshot, not a runtime migration. Update the
-fixture against the owning service when its contract changes.
+The old `fixtures/facility_v3.sql` snapshot is historical; tests now use the
+owning service's current migrations, including constraints added after V3.
 
 For explicitly fake local fixture data only:
 
@@ -91,11 +93,21 @@ completed demo actions. Run on a designated demo/test database container.
 Runtime services pointed at legacy bootstrap DBs still need their documented
 reviewed Flyway baseline/migrations.
 
-Percentage discounts are capped and rounded once to 0.01 using ROUND_HALF_UP
-before subtracting from the two-slot total. Payment amount + discount equals the
-original booking total exactly, including prices such as 10000.01 or 10000.03.
-Stored-row verification uses these rounded values, not fractions PostgreSQL
-would silently round during insertion.
+The owner approved leaving vouchers unused because the current checkout API
+does not apply voucher discounts. Slot sum, booking total, checkout snapshot and
+payment amount are therefore equal; discount is zero. Fractional prices such as
+10000.01 remain exact to cents, including the 32-slot invoice. The manifest price
+must fit numeric(10,2) for a full day. Seeded phone strings follow the ten-digit
+Vietnamese format, and ticket codes are matching 32-digit strings in both DBs.
+
+Each payment now has a typed checkout snapshot, expiry, customer ownership and
+ticket/QR metadata. Court hourly base prices are populated. Fixture bank accounts
+are numeric format examples, not verified accounts or evidence of real transfers.
+
+Generation version `runtime-v2` is part of the immutable fingerprint. Use a new
+seedKey and free idBase for an old dataset; the seeder never rewrites previous
+demo/user actions. Phone suffixes derive from IDs modulo 100000000; a collision
+with existing data fails through the owning schema's uniqueness rules.
 
 Manifests made before the bankBin requirement must be updated. Use a new seedKey
 and free idBase for an existing older dataset: changed manifest fingerprints
@@ -107,7 +119,9 @@ remain rejected; the tool does not rewrite old seed rows or banking details.
 python -m unittest discover -s tools/demo_seed -p test_seed.py -v
 ```
 
-**17 tests pass, no skips**, including original service SQL schemas and seeds on
+The current reassessment runs the complete seed suite against current service
+migrations. See REASSESSMENT.md for exact counts and live Backend API smoke.
+Earlier validation recorded **17 tests**, including original service SQL schemas and seeds on
 a real PostgreSQL 16 container with no external port/user data volume. Verifies
 rerun, partial failure/resume, ownership collisions, changed-manifest/data refusal,
 sequence advancement, quote/dollar-value roundtrip, CLI dry-run and credential
