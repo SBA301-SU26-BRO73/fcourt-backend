@@ -152,4 +152,27 @@ class PricingRulesIntegrationTest {
         assertThat(court.get("minPrice").decimalValue()).isEqualByComparingTo("50000");
         assertThat(court.get("maxPrice").decimalValue()).isEqualByComparingTo("75000");
     }
+
+    @Test
+    void copyWeekdayRulesRejectsOverlappingWeekendCopiesAndPreservesExistingWeekendRules() throws Exception {
+        long owner = 9302;
+        long branchId = id(postJson("/api/admin/branches", FacilityApiIntegrationTest.branchBody("Copy", "06:00", "22:00"),
+                owner).andExpect(status().isCreated()));
+        long courtId = id(postJson("/api/admin/branches/" + branchId + "/courts",
+                FacilityApiIntegrationTest.courtBody("C1", "100000"), owner).andExpect(status().isCreated()));
+        postJson("/api/admin/courts/" + courtId + "/apply-template", "{}", owner).andExpect(status().isOk());
+        String rules = "/api/admin/courts/" + courtId + "/pricing-rules";
+
+        // These rules are valid on different weekdays, but would overlap when both become weekend rules.
+        postJson(rules, rule("Monday", "17:00", "20:00", 100000, true, "[1]"), owner)
+                .andExpect(status().isCreated());
+        postJson(rules, rule("Tuesday", "18:00", "21:00", 120000, true, "[2]"), owner)
+                .andExpect(status().isCreated());
+        postJson(rules, rule("Existing weekend", "06:00", "07:00", 80000, false, "[6]"), owner)
+                .andExpect(status().isCreated());
+
+        postJson(rules + "/copy-weekday-to-weekend", "{}", owner).andExpect(status().isConflict());
+        mvc.perform(get(rules).with(as(owner, "ADMIN")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(3)));
+    }
 }
