@@ -142,6 +142,18 @@ class BookingApiTest {
         assertThat(jdbc.queryForObject("SELECT count(*) FROM booking_outbox",Long.class)).isEqualTo(1);
     }
 
+    @Test void latePaymentAfterCancellationKeepsBookingCancelledButRecordsVoucherUse() throws Exception {
+        UUID application=UUID.randomUUID();
+        jdbc.update("UPDATE bookings SET voucher_application_id=?,voucher_id=7,original_amount=100000,discount_amount=20000,total_price=80000,payment_frozen=true,status='CANCELLED' WHERE id=1",application);
+        consume(event(UUID.randomUUID(),"PaymentConfirmedEvent","80000"));
+        assertThat(jdbc.queryForObject("SELECT status FROM bookings WHERE id=1",String.class)).isEqualTo("CANCELLED");
+        assertThat(jdbc.queryForObject("SELECT payment_status FROM bookings WHERE id=1",String.class)).isEqualTo("CONFIRMED");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM booking_outbox",Long.class)).isEqualTo(1);
+        var out=json.readTree(jdbc.queryForObject("SELECT payload::text FROM booking_outbox",String.class));
+        assertThat(out.path("type").asText()).isEqualTo("VoucherAppliedEvent");
+        assertThat(out.path("voucher").path("applicationId").asText()).isEqualTo(application.toString());
+    }
+
     @Test void concurrentApplyAndFreezeCannotAcceptTwoDifferentPrices() throws Exception {
         jdbc.update("UPDATE bookings SET hold_expires_at=? WHERE id=1",java.sql.Timestamp.from(Instant.now().plusSeconds(3600)));
         var actor=org.springframework.security.oauth2.jwt.Jwt.withTokenValue("fixture").header("alg","RS256").subject("10").build();

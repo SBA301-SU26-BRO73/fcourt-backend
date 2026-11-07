@@ -48,7 +48,7 @@ def main():
     if any(not jar.is_file() for jar in jars.values()) or not classpath_file.is_file():raise SystemExit("Build all eight jars, test classes and the staff test dependency classpath first")
     args.output.mkdir(parents=True,exist_ok=True)
     png=args.output/"receipt-fixture.png";png.write_bytes(fixture_png())
-    control_key=secrets.token_urlsafe(36);hold_key=secrets.token_urlsafe(36);payment_key=secrets.token_urlsafe(36);staff_key=secrets.token_urlsafe(36)
+    control_key=secrets.token_urlsafe(36);hold_key=secrets.token_urlsafe(36);payment_key=secrets.token_urlsafe(36);staff_key=secrets.token_urlsafe(36);booking_integration_key=secrets.token_urlsafe(36)
     processes=[];logs=[];infra=None;proxy=None
     os_keys={"PATH","SYSTEMROOT","WINDIR","TEMP","TMP","JAVA_HOME","USERPROFILE","APPDATA","LOCALAPPDATA","PROGRAMDATA","COMSPEC","PATHEXT","LANG","LC_ALL","TZ","USER","LOGNAME","HOME"}
     service_environment={key:value for key,value in os.environ.items() if key.upper() in os_keys}
@@ -80,6 +80,7 @@ def main():
                      STAFF_URL=bases["staff"],FACILITY_URL=bases["facility"],DISCOVERY_URL=bases["discovery"],BOOKING_URL=bases["booking"],HOLD_URL=bases["hold"],PAYMENT_URL=bases["payment"],
                      REDIS_HOST="127.0.0.1",REDIS_PORT=str(info["redisPort"]),REDIS_ADDRESS=f"redis://127.0.0.1:{info['redisPort']}",SPRING_DATA_REDIS_HOST="127.0.0.1",SPRING_DATA_REDIS_PORT=str(info["redisPort"]),
                      KAFKA_BOOTSTRAP_SERVERS=info["kafka"],BOOKING_HOLD_SERVICE_TOKEN=hold_key,PAYMENT_BOOKING_SERVICE_TOKEN=payment_key,
+                     BOOKING_INTEGRATION_TOKEN=booking_integration_key,
                      SUBSCRIPTION_URL="",AUTH_JWT_PRIVATE_KEY="",AUTH_JWT_KEY_ID="local-fixture",AUTH_JWT_ACCESS_TTL="15m",
                      STAFF_BOOKING_SERVICE_TOKEN=staff_key,STAFF_OFFLINE_SIGNING_KEY=secrets.token_urlsafe(36),FCOURT_LOCAL_TEST="true",FCOURT_FIXTURE_CONTROL_KEY=control_key)
             log=(args.output/(name+".log")).open("w",encoding="utf8");logs.append(log)
