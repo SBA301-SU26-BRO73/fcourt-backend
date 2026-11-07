@@ -1,0 +1,9 @@
+Xin chào {{name}},
+
+Đơn {{bookingCode}} bắt đầu lúc {{when}}.
+Chi nhánh: {{branchName}}
+Sân: {{courtName}}
+Đường đi: {{mapUrl}}
+Mã check-in: {{ticketCode}}
+
+Vui lòng chuẩn bị trang phục và giày thể thao phù hợp.
