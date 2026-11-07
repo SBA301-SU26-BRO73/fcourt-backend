@@ -1,7 +1,7 @@
 name: gateway system test runner
 on:
   pull_request:
-    paths: ['tools/system_tests/**', '.github/workflows/gateway-system-tests.yml']
+    paths: ['tools/system_tests/**', 'tools/flutter_support_e2e.py', 'auth-service/**', 'facility-service/**', 'discovery-service/**', 'slot-hold-engine/**', 'booking-service/**', 'payment-service/**', 'staff-operations-service/**', 'reporting-service/**', '.github/workflows/gateway-system-tests.yml']
   push:
     branches: ['test/scrum-91-*']
     paths: ['tools/system_tests/**', '.github/workflows/gateway-system-tests.yml']
@@ -16,3 +16,29 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m unittest discover -s tools/system_tests -v
+  local-cluster:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: '**/pom.xml'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build isolated service jars and test launchers
+        run: |
+          for service in auth-service facility-service discovery-service slot-hold-engine booking-service payment-service staff-operations-service reporting-service; do
+            mvn -B -ntp -DskipTests -f "$service/pom.xml" package || exit 1
+          done
+          mvn -B -ntp -f staff-operations-service/pom.xml dependency:build-classpath -DincludeScope=test -Dmdep.outputFile=target/test-classpath.txt
+      - run: python tools/system_tests/local_cluster.py --execute
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: local-gateway-flow-report
+          path: tools/system_tests/target/local-cluster/report.*

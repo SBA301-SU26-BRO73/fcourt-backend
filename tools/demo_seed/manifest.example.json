@@ -16,7 +16,7 @@
       "ward": "DEMO ward",
       "city": "Ha Noi",
       "bankName": "DEMO BANK",
-      "bankAccountNumber": "DEMO-ACCOUNT-01",
+      "bankAccountNumber": "000000000001",
       "bankAccountName": "DEMO OWNER",
       "bankQrImageUrl": "https://res.cloudinary.com/demo/image/upload/replace-qr-1.png",
       "bankBin": "000000"
@@ -27,7 +27,7 @@
       "ward": "DEMO ward",
       "city": "Ho Chi Minh City",
       "bankName": "DEMO BANK",
-      "bankAccountNumber": "DEMO-ACCOUNT-02",
+      "bankAccountNumber": "000000000002",
       "bankAccountName": "DEMO OWNER",
       "bankQrImageUrl": "https://res.cloudinary.com/demo/image/upload/replace-qr-2.png",
       "bankBin": "000000"
@@ -38,7 +38,7 @@
       "ward": "DEMO ward",
       "city": "Ho Chi Minh City",
       "bankName": "DEMO BANK",
-      "bankAccountNumber": "DEMO-ACCOUNT-03",
+      "bankAccountNumber": "000000000003",
       "bankAccountName": "DEMO OWNER",
       "bankQrImageUrl": "https://res.cloudinary.com/demo/image/upload/replace-qr-3.png",
       "bankBin": "000000"
