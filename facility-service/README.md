@@ -26,6 +26,7 @@ $env:AUTH_JWK_SET_URI = 'http://localhost:8081/.well-known/jwks.json'
 | `FACILITY_BOOTSTRAP_SNAPSHOTS` | `true` |
 | `SUBSCRIPTION_BASE_URL` | empty (use default limits below) |
 | `DISCOVERY_BASE_URL` | empty (court locks answer 503 until set; used to detect bookings/holds) |
+| `DISCOVERY_INTERNAL_SLOT_TOKEN` | empty (must match discovery-service; court locks answer 503 until configured) |
 | `SUBSCRIPTION_DEFAULT_MAX_BRANCHES` / `SUBSCRIPTION_DEFAULT_MAX_COURTS` | `3` / `15` |
 
 ### Schema
@@ -113,8 +114,9 @@ may cross midnight or span up to 31 days, must end in the future).
 or scope, **404** unknown/foreign court, branch or lock, **409** `code=LOCK_OVERLAP` (an active lock already covers
 part of the window, `lockIds` listed) or `code=BOOKING_CONFLICT` (`conflicts:[{courtId,date,slotId,startTime,
 endTime,status BOOKED|HOLD}]`, nothing is created), **503** bookings/holds cannot be verified. Before inserting,
-the service reads `GET {DISCOVERY_BASE_URL}/api/public/courts/{id}/slots?date=` for every court and date of the
-window; with `DISCOVERY_BASE_URL` empty, locking answers 503 (fail closed). A booking or hold created between that
+the service reads `GET {DISCOVERY_BASE_URL}/api/internal/courts/{id}/slot-conflicts?date=` for every court and date of the
+window, using `DISCOVERY_INTERNAL_SLOT_TOKEN` shared with discovery-service; if either setting is empty, locking
+answers 503 (fail closed). A booking or hold created between that
 check and the commit is not detected (point-in-time check, same limitation as SCRUM-22).
 
 **Discovery read API**: `GET /api/internal/courts/{courtId}/slot-schedule?date=YYYY-MM-DD`, shape of

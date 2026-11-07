@@ -2,6 +2,7 @@ package com.fcourt.discovery.controller;
 
 import com.fcourt.discovery.dto.response.CourtSlotResponse;
 import com.fcourt.discovery.dto.response.CourtSlotResponse.Status;
+import com.fcourt.discovery.dto.response.BlockingSlotResponse;
 import com.fcourt.discovery.service.CourtSlotService;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,31 @@ class CourtSlotControllerTest {
                     org.springframework.http.converter.json.Jackson2ObjectMapperBuilder.json()
                             .featuresToDisable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
                             .build())).build();
+    private final MockMvc internalHttp = MockMvcBuilders.standaloneSetup(
+            new CourtSlotInternalController(service, "test-token")).build();
+
+    @Test
+    void internalLockCheckReturnsOnlyBookingAndHoldOccupancy() throws Exception {
+        when(service.blockingSlots(1, LocalDate.of(2030, 1, 1))).thenReturn(List.of(
+                new BlockingSlotResponse(10, LocalTime.of(18, 0), LocalTime.of(18, 30), "BOOKED"),
+                new BlockingSlotResponse(11, LocalTime.of(18, 30), LocalTime.of(19, 0), "HOLD")));
+        internalHttp.perform(get("/api/internal/courts/1/slot-conflicts?date=2030-01-01")
+                        .header("X-Internal-Service-Token", "test-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(2)))
+                .andExpect(jsonPath("$[0].status").value("BOOKED"))
+                .andExpect(jsonPath("$[1].status").value("HOLD"));
+    }
+
+    @Test
+    void internalLockCheckRejectsMissingOrInvalidToken() throws Exception {
+        internalHttp.perform(get("/api/internal/courts/1/slot-conflicts?date=2030-01-01"))
+                .andExpect(status().isUnauthorized());
+        internalHttp.perform(get("/api/internal/courts/1/slot-conflicts?date=2030-01-01")
+                        .header("X-Internal-Service-Token", "wrong"))
+                .andExpect(status().isUnauthorized());
+        verifyNoInteractions(service);
+    }
 
     @Test
     void publicArrayMatchesHoldEngineAndDisablesCaching() throws Exception {

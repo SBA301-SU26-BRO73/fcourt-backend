@@ -16,7 +16,7 @@ import com.fcourt.facility.api.LockDtos.LockResponse;
 import com.fcourt.facility.api.LockDtos.LockSlotsRequest;
 import com.fcourt.facility.api.LockDtos.LockType;
 import com.fcourt.facility.integration.SlotAvailabilityClient;
-import com.fcourt.facility.integration.SlotAvailabilityClient.Slot;
+import com.fcourt.facility.integration.SlotAvailabilityClient.SlotConflict;
 import com.fcourt.facility.persistence.BranchStore;
 import com.fcourt.facility.persistence.CourtStore;
 import com.fcourt.facility.persistence.CourtStore.OwnedCourt;
@@ -83,8 +83,8 @@ class LockServiceTest {
         return new LockSlotsRequest(courtId, from, to, null, "Maintenance", null, null, null, null);
     }
 
-    static Slot slot(long id, String start, String end, String status) {
-        return new Slot(id, LocalTime.parse(start), LocalTime.parse(end), status);
+    static SlotConflict slot(long id, String start, String end, String status) {
+        return new SlotConflict(id, LocalTime.parse(start), LocalTime.parse(end), status);
     }
 
     static ProblemDetail problem(Throwable error) {
@@ -126,11 +126,10 @@ class LockServiceTest {
     @Test
     void refusesToLockBookedAndHeldSlotsAndWritesNothing() {
         ownsCourt(5);
-        when(availability.slots(5, DAY)).thenReturn(List.of(
+        when(availability.conflicts(5, DAY)).thenReturn(List.of(
                 slot(1, "12:30", "13:00", "BOOKED"),   // before the window
                 slot(2, "13:00", "13:30", "BOOKED"),
                 slot(3, "13:30", "14:00", "HOLD"),
-                slot(4, "14:00", "14:30", "AVAILABLE"),
                 slot(5, "18:00", "18:30", "BOOKED"))); // after the window
 
         assertThatThrownBy(() -> service.lockCourt(ADMIN, request(5, DAY.atTime(13, 0), DAY.atTime(18, 0))))
@@ -149,20 +148,20 @@ class LockServiceTest {
     @Test
     void checksEveryDateOfAMultiDayWindow() {
         ownsCourt(5);
-        when(availability.slots(5, DAY)).thenReturn(List.of());
-        when(availability.slots(5, DAY.plusDays(1))).thenReturn(List.of(slot(9, "00:00", "00:30", "BOOKED")));
+        when(availability.conflicts(5, DAY)).thenReturn(List.of());
+        when(availability.conflicts(5, DAY.plusDays(1))).thenReturn(List.of(slot(9, "00:00", "00:30", "BOOKED")));
 
         assertThatThrownBy(() -> service.lockCourt(ADMIN, request(5, DAY.atTime(22, 0), DAY.plusDays(1).atTime(2, 0))))
                 .satisfies(error -> assertThat(problem(error).getProperties()).containsEntry("code", "BOOKING_CONFLICT"));
-        verify(availability).slots(5, DAY);
-        verify(availability).slots(5, DAY.plusDays(1));
+        verify(availability).conflicts(5, DAY);
+        verify(availability).conflicts(5, DAY.plusDays(1));
         verify(locks, never()).insert(any());
     }
 
     @Test
     void failsClosedWhenBookingsCannotBeVerified() {
         ownsCourt(5);
-        when(availability.slots(anyLong(), any())).thenThrow(
+        when(availability.conflicts(anyLong(), any())).thenThrow(
                 new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "unavailable"));
 
         assertThatThrownBy(() -> service.lockCourt(ADMIN, request(5, DAY.atTime(13, 0), DAY.atTime(18, 0))))
@@ -174,7 +173,7 @@ class LockServiceTest {
     @Test
     void locksFreeWindowAndDefaultsToOutOfService() {
         ownsCourt(5);
-        when(availability.slots(5, DAY)).thenReturn(List.of(slot(2, "13:00", "13:30", "AVAILABLE")));
+        when(availability.conflicts(5, DAY)).thenReturn(List.of());
 
         LockResponse created = service.lockCourt(ADMIN, new LockSlotsRequest(5L, DAY.atTime(13, 0), DAY.atTime(18, 0),
                 null, "  Floor repair ", "internal", " ", null, null));
@@ -190,7 +189,7 @@ class LockServiceTest {
     @Test
     void refusesOverlapWithAnExistingLock() {
         ownsCourt(5);
-        when(availability.slots(5, DAY)).thenReturn(List.of());
+        when(availability.conflicts(5, DAY)).thenReturn(List.of());
         var existing = new LockResponse(40, UUID.randomUUID(), 3, 5, LockType.OUT_OF_SERVICE, DAY.atTime(15, 0),
                 DAY.atTime(16, 0), "x", null, null, null, null, ADMIN, OffsetDateTime.now());
         when(locks.overlapping(5, DAY.atTime(13, 0), DAY.atTime(18, 0))).thenReturn(List.of(existing));
@@ -214,7 +213,7 @@ class LockServiceTest {
     void branchWideLockCreatesOneLockPerCourtUnderOneGroup() {
         when(branches.findOwned(3, ADMIN)).thenReturn(Optional.of(branch()));
         when(courts.listByBranch(3)).thenReturn(List.of(court(10), court(11), court(12)));
-        when(availability.slots(anyLong(), any())).thenReturn(List.of());
+        when(availability.conflicts(anyLong(), any())).thenReturn(List.of());
 
         var request = new BranchLockRequest(3L, true, null, DAY.atTime(13, 0), DAY.atTime(18, 0),
                 LockType.PRIVATE_EVENT, "Tournament", null, "Giai dau", "Ban to chuc", "0901234567");
@@ -232,8 +231,8 @@ class LockServiceTest {
     void branchWideLockIsAllOrNothingWhenOneCourtHasABooking() {
         when(branches.findOwned(3, ADMIN)).thenReturn(Optional.of(branch()));
         when(courts.listByBranch(3)).thenReturn(List.of(court(10), court(11)));
-        when(availability.slots(10, DAY)).thenReturn(List.of());
-        when(availability.slots(11, DAY)).thenReturn(List.of(slot(2, "13:00", "13:30", "BOOKED")));
+        when(availability.conflicts(10, DAY)).thenReturn(List.of());
+        when(availability.conflicts(11, DAY)).thenReturn(List.of(slot(2, "13:00", "13:30", "BOOKED")));
 
         var request = new BranchLockRequest(3L, true, null, DAY.atTime(13, 0), DAY.atTime(18, 0),
                 null, "Tournament", null, null, null, null);

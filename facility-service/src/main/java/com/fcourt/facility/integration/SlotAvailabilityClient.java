@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -13,19 +14,21 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Reads the live slot status (AVAILABLE / HOLD / BOOKED / OUT_OF_SERVICE / EXPIRED) from
- * discovery-service, which already merges facility schedule, booking occupancy and Redis holds
- * (SCRUM-22). Used to refuse a lock that would collide with a booking or an active hold.
- * When {@code DISCOVERY_BASE_URL} is empty or discovery fails, locking fails closed with 503:
- * a conflict that cannot be checked is never assumed absent.
+ * Reads booking/hold occupancy from discovery-service, including occupancy hidden by the public
+ * OUT_OF_SERVICE state (SCRUM-49). Used to refuse a lock that would collide with a booking or hold.
+ * When the discovery URL/token is empty or discovery fails, locking fails closed with 503: a
+ * conflict that cannot be checked is never assumed absent.
  */
 @Component
 public class SlotAvailabilityClient {
-    public record Slot(Long slotId, LocalTime startTime, LocalTime endTime, String status) { }
+    public record SlotConflict(Long slotId, LocalTime startTime, LocalTime endTime, String status) { }
 
     private final RestClient client;
+    private final String internalToken;
 
-    public SlotAvailabilityClient(@Value("${facility.discovery.base-url:}") String baseUrl) {
+    public SlotAvailabilityClient(@Value("${facility.discovery.base-url:}") String baseUrl,
+            @Value("${facility.discovery.internal-token:}") String internalToken) {
+        this.internalToken = internalToken;
         if (baseUrl == null || baseUrl.isBlank()) {
             this.client = null;
         } else {
@@ -36,17 +39,22 @@ public class SlotAvailabilityClient {
         }
     }
 
-    public List<Slot> slots(long courtId, LocalDate date) {
-        if (client == null) throw unavailable();
+    public List<SlotConflict> conflicts(long courtId, LocalDate date) {
+        if (client == null || internalToken == null || internalToken.isBlank()) throw unavailable();
         try {
-            Slot[] slots = client.get().uri("/api/public/courts/{id}/slots?date={date}", courtId, date)
-                    .retrieve().body(Slot[].class);
-            if (slots == null) throw unavailable();
-            for (Slot slot : slots) {
-                if (slot == null || slot.slotId() == null || slot.startTime() == null || slot.endTime() == null
-                        || slot.status() == null) throw unavailable();
+            SlotConflict[] conflicts = client.get()
+                    .uri("/api/internal/courts/{id}/slot-conflicts?date={date}", courtId, date)
+                    .header("X-Internal-Service-Token", internalToken)
+                    .retrieve().body(SlotConflict[].class);
+            if (conflicts == null) throw unavailable();
+            for (SlotConflict conflict : conflicts) {
+                if (conflict == null || conflict.slotId() == null || conflict.startTime() == null
+                        || conflict.endTime() == null || conflict.status() == null
+                        || !Set.of("BOOKED", "HOLD").contains(conflict.status())) {
+                    throw unavailable();
+                }
             }
-            return List.of(slots);
+            return List.of(conflicts);
         } catch (RestClientException error) {
             throw unavailable();
         }
