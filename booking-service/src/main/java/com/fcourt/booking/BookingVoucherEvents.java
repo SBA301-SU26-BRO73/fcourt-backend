@@ -9,7 +9,8 @@ final class BookingVoucherEvents {
     private BookingVoucherEvents() {}
 
     static void confirmed(JdbcTemplate jdbc, ObjectMapper json, Map<String, Object> booking, JsonNode payment) {
-        if (booking.get("voucher_application_id") == null) return;
+        if (booking.get("voucher_application_id") == null
+                || !Set.of("PENDING_PAYMENT", "AWAITING_CONFIRMATION", "CANCELLED").contains(booking.get("status"))) return;
         UUID eventId = UUID.randomUUID();
         var voucher = new LinkedHashMap<String, Object>();
         voucher.put("applicationId", booking.get("voucher_application_id"));
