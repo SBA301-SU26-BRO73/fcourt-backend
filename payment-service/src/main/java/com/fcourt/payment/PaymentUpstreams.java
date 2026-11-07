@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -17,11 +18,31 @@ import org.springframework.web.server.ResponseStatusException;
 class PaymentUpstreams {
     private final RestClient booking;
     private final RestClient facility;
+    private final RestClient auth;
 
+    @Autowired
     PaymentUpstreams(@Qualifier("bookingClient") RestClient booking,
-                     @Qualifier("facilityClient") RestClient facility) {
+                     @Qualifier("facilityClient") RestClient facility,
+                     @Qualifier("authClient") RestClient auth) {
         this.booking = booking;
         this.facility = facility;
+        this.auth = auth;
+    }
+
+    PaymentUpstreams(RestClient booking, RestClient facility) {
+        this(booking, facility, null);
+    }
+
+    Profile customerProfile(String authorization) {
+        if (authorization == null || !authorization.startsWith("Bearer ") || auth == null) return null;
+        try {
+            var profile = auth.get().uri("/api/auth/profile")
+                    .header(HttpHeaders.AUTHORIZATION, authorization).retrieve().body(Profile.class);
+            return profile != null && profile.id() != null && profile.id() > 0
+                    && profile.email() != null && !profile.email().isBlank() ? profile : null;
+        } catch (RestClientException error) {
+            throw unavailable();
+        }
     }
 
     Booking booking(long id, String authorization, String holdToken) {
@@ -68,4 +89,5 @@ class PaymentUpstreams {
                    String courtName, LocalDate date, List<CheckoutInfo.Slot> slots,
                    BigDecimal totalPrice, String status, Instant holdExpiresAt, String customerName, String customerPhone, BigDecimal refundAmount) { }
     record Bank(Long id, String bankName, String bankBin, String bankAccountNumber, String bankAccountName) { }
+    record Profile(Long id, String email) { }
 }

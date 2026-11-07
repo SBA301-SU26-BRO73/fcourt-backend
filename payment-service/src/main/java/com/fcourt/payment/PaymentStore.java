@@ -40,11 +40,22 @@ class PaymentStore {
     }
     void event(String type, PaymentRecord payment) {
         UUID eventId = UUID.randomUUID();
+        var payload = new java.util.LinkedHashMap<String, Object>();
+        payload.put("eventId", eventId);
+        payload.put("type", type);
+        payload.put("payment", payment);
+        if (payment.checkout() != null && payment.customerId() != null
+                && payment.customerId().equals(payment.checkout().recipientUserId())
+                && payment.checkout().customerEmail() != null
+                && !payment.checkout().customerEmail().isBlank()) {
+            payload.put("recipient", Map.of("email", payment.checkout().customerEmail(),
+                    "fullName", payment.checkout().customerName() == null
+                            ? "Quý khách" : payment.checkout().customerName()));
+        }
         jdbc.update("""
                 INSERT INTO payment_outbox(event_id,booking_id,event_type,payload)
                 VALUES (?,?,?,?::jsonb)
-                """, eventId, payment.bookingId(), type, encode(Map.of(
-                    "eventId", eventId, "type", type, "payment", payment)));
+                """, eventId, payment.bookingId(), type, encode(payload));
         events.publishEvent(new PaymentStatusChanged(payment.bookingId()));
     }
     String encode(Object value) {
@@ -59,7 +70,8 @@ class PaymentStore {
                     rs.getBigDecimal("amount"),rs.getString("status"),rs.getString("bill_image_url"),
                     time == null ? null : time.toInstant(),rs.getString("rejection_reason"),
                     checkout == null ? null : json.readValue(checkout, CheckoutInfo.class),
-                    rs.getString("check_in_code"),rs.getString("qr_image_url"));
+                    rs.getString("check_in_code"),rs.getString("qr_image_url"),
+                    rs.getObject("customer_id", Long.class));
         } catch (JsonProcessingException e) { throw new IllegalStateException("Invalid stored checkout", e); }
     }
 }
