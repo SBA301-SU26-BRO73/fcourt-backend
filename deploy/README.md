@@ -18,7 +18,7 @@ provide high availability or prove 24/7 operation.
    expose only 80/443 publicly. Do not publish PostgreSQL, Redis, Kafka or gRPC.
 3. Install Docker Engine and Compose v2. Copy this directory to `/opt/fcourt/deploy`.
    Copy `.env.example` to `.env`, `runtime.env.example` to `runtime.env`; chmod both
-   600 and fill credentials privately. Runtime secrets are interpolated only into
+   600 and fill credentials privately. Set a unique strong `*_DB_PASSWORD` for each database role. The PostgreSQL initializer and matching application share that role-specific secret; never reuse a service password for another database. Runtime secrets are interpolated only into
    the services that consume them; the auth signing key is not injected into other
    containers. Include both env files in Compose commands. Use a persistent RSA PKCS8 signing key and
    stable key ID: an ephemeral key invalidates active sessions on every restart.
