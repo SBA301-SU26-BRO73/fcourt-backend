@@ -44,7 +44,7 @@ class PaymentSecurity {
     }
     @Bean @Order(2)
     SecurityFilterChain historySecurity(HttpSecurity http) throws Exception {
-        return http.securityMatcher("/api/payments/my-transactions","/api/refunds/**").csrf(c->c.disable())
+        return http.securityMatcher("/api/payments/my-transactions","/api/refunds/**","/api/payments/*/confirm-free").csrf(c->c.disable())
             .sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(a->a.anyRequest().authenticated()).oauth2ResourceServer(o->o.jwt(j->{})).build();
     }

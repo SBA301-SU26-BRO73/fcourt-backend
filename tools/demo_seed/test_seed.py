@@ -24,6 +24,33 @@ PUBLIC_DEMO_HASH = re.search(r"\$2a\$10\$[./A-Za-z0-9]{53}", (ROOT / "auth-servi
 
 
 class ManifestTest(unittest.TestCase):
+    def test_runtime_ticket_and_all_day_booking_contracts(self):
+        rows=seed.build_rows(seed.validate(copy.deepcopy(EXAMPLE),True),PUBLIC_DEMO_HASH)
+        bookings=rows["booking_db"]["bookings"]
+        payments={p["booking_id"]:p for p in rows["payment_db"]["payments"]}
+        self.assertEqual(len(bookings),31)
+        for booking in bookings:
+            payment=payments[booking["id"]]
+            self.assertEqual(payment["amount"],booking["total_price"])
+            self.assertEqual(payment["discount_amount"],Decimal(0))
+            if booking["status"] in {"CONFIRMED","CHECKED_IN","COMPLETED"}:
+                self.assertRegex(booking["checkin_code"],r"^[0-9]{32}$")
+                self.assertEqual(payment["check_in_code"],booking["checkin_code"])
+                self.assertEqual(payment["qr_image_url"],booking["qr_image_url"])
+            snapshot=payment["checkout"]
+            self.assertEqual(Decimal(snapshot["amount"]),payment["amount"])
+            self.assertEqual(snapshot["bookingId"],booking["id"])
+            self.assertEqual(snapshot["branchId"],booking["branch_id"])
+        full=bookings[-1]
+        slots=[s for s in rows["booking_db"]["booking_slots"] if s["booking_id"]==full["id"]]
+        self.assertEqual(len(slots),32)
+        self.assertEqual(str(slots[0]["slot_start"]),"06:00:00")
+        self.assertEqual(str(slots[-1]["slot_end"]),"22:00:00")
+        self.assertEqual(sum(s["price_at_booking"] for s in slots),full["total_price"])
+        self.assertEqual(full["status"],"CONFIRMED")
+        for user in rows["auth_db"]["users"]: self.assertRegex(user["phone"],r"^0[35789][0-9]{8}$")
+        self.assertTrue(all(v["usage_count"]==0 for v in rows["voucher_db"]["vouchers"]))
+
     def test_fixture_requires_explicit_opt_in(self):
         with self.assertRaises(seed.SeedError):
             seed.validate(copy.deepcopy(EXAMPLE))
@@ -48,17 +75,17 @@ class ManifestTest(unittest.TestCase):
         m = copy.deepcopy(EXAMPLE); m["branches"][0]["bankBin"] = "000001"
         self.assertEqual(seed.validate(m, True)["branches"][0]["bankBin"], "000001")
 
-    def test_fractional_discounts_use_half_up_cents_and_exact_totals(self):
-        for price, expected in [("10000.01", "2000.00"), ("10000.03", "2000.01"), ("49999.99", "10000.00")]:
+    def test_fractional_prices_remain_exact_without_unsupported_discounts(self):
+        for price in ["10000.01", "10000.03", "49999.99"]:
             m = copy.deepcopy(EXAMPLE); m["slotPrice"] = price
             rows = seed.build_rows(seed.validate(m, True), PUBLIC_DEMO_HASH)
             payment = rows["payment_db"]["payments"][1]
             with self.subTest(price=price):
-                self.assertEqual(payment["discount_amount"], Decimal(expected))
+                self.assertEqual(payment["discount_amount"], Decimal("0.00"))
                 for row in rows["payment_db"]["payments"]:
                     self.assertGreaterEqual(row["amount"].as_tuple().exponent, -2)
                     self.assertGreaterEqual(row["discount_amount"].as_tuple().exponent, -2)
-                    self.assertEqual(row["amount"] + row["discount_amount"], Decimal(price)*2)
+                    self.assertEqual(row["amount"], sum(Decimal(str(s["price"])) for s in row["checkout"]["slots"]))
 
     def test_rows_have_consistent_refs_totals_slots_and_terminal_states(self):
         m = seed.validate(copy.deepcopy(EXAMPLE), True)
@@ -66,14 +93,14 @@ class ManifestTest(unittest.TestCase):
         bookings = rows["booking_db"]["bookings"]
         payments = {p["id"]: p for p in rows["payment_db"]["payments"]}
         slots = rows["booking_db"]["booking_slots"]
-        self.assertEqual(len(bookings), 30); self.assertEqual(len(slots), 50)
+        self.assertEqual(len(bookings), 31); self.assertEqual(len(slots), 82)
         keys = {(s["court_id"], s["booking_date"], s["slot_start"]) for s in slots}
-        self.assertEqual(len(keys), 50)
+        self.assertEqual(len(keys), 82)
         for booking in bookings:
             payment = payments[booking["payment_id"]]
             self.assertEqual(payment["amount"] + payment["discount_amount"], booking["total_price"])
             actual = [s for s in slots if s["booking_id"] == booking["id"]]
-            self.assertEqual(len(actual), 0 if booking["status"] == "CANCELLED" else 2)
+            self.assertEqual(len(actual), 0 if booking["status"] == "CANCELLED" else 32 if booking is bookings[-1] else 2)
             self.assertLessEqual(len(booking["booking_code"]), 10)
 
     def test_sql_quotes_and_dollar_delimiters_are_data_not_code(self):
@@ -89,7 +116,7 @@ class ManifestTest(unittest.TestCase):
             self.assertEqual(seed.main(["--manifest", str(HERE / "manifest.example.json"), "--allow-fixture-assets"]), 0)
         result = json.loads(output.getvalue())
         self.assertEqual(result["mode"], "dry-run"); self.assertFalse(result["assetsVerified"])
-        self.assertEqual(result["rows"]["bookings"], 30)
+        self.assertEqual(result["rows"]["bookings"], 31)
 
     def test_cli_missing_password_fails_before_connection_without_private_fields(self):
         output = io.StringIO()
@@ -121,14 +148,10 @@ class PostgreSQLSeedTest(unittest.TestCase):
                        "staff_db":"staff-operations-service", "voucher_db":"voucher-service", "payment_db":"payment-service", "booking_db":"booking-service"}
             for db, service in mapping.items():
                 cls.db.execute("postgres", f'CREATE DATABASE "{db}";')
-                cls.db.execute(db, (ROOT / service / "database/V1__init_schema.sql").read_text(encoding="utf-8"))
-            cls.db.execute("staff_db", (ROOT / "staff-operations-service/src/main/resources/db/migration/V2__staff_management.sql").read_text(encoding="utf-8"))
-            cls.db.execute("facility_db", (HERE / "fixtures/facility_v3.sql").read_text(encoding="utf-8"))
-            for service, db, script in [("booking-service", "booking_db", "V2__booking_read_model.sql"),
-                                        ("payment-service", "payment_db", "V2__receipt_submission.sql")]:
-                cls.db.execute(db, (ROOT / service / "src/main/resources/db/migration" / script).read_text(encoding="utf-8"))
-            for service, db in [("auth-service", "auth_db"), ("subscription-service", "subscription_db")]:
-                cls.db.execute(db, (ROOT / service / "database/V2__seed_sample_data.sql").read_text(encoding="utf-8"))
+                migrations=ROOT / service / "src/main/resources/db/migration"
+                files=sorted(migrations.glob("V*.sql"),key=lambda p:int(p.name.split("__")[0][1:]))
+                if not files: files=[ROOT / service / "database/V1__init_schema.sql"]
+                for script in files: cls.db.execute(db,script.read_text(encoding="utf-8"))
         except BaseException:
             cls.cleanup(); raise
 
@@ -148,9 +171,9 @@ class PostgreSQLSeedTest(unittest.TestCase):
         m = self.manifest("test-repeat", 100000)
         result = seed.apply(m, PUBLIC_DEMO_HASH, self.db, allow_fixtures=True)
         self.assertEqual(result["branches"], 3); self.assertEqual(result["courts"], 10)
-        self.assertEqual(result["time_slot_templates"], 2240); self.assertEqual(result["bookings"], 30)
+        self.assertEqual(result["time_slot_templates"], 2240); self.assertEqual(result["bookings"], 31)
         self.assertEqual(seed.apply(m, PUBLIC_DEMO_HASH, self.db, allow_fixtures=True), result)
-        self.assertEqual(self.db.execute("booking_db", "SELECT count(*) FROM bookings WHERE id BETWEEN 100000 AND 109999;"), "30")
+        self.assertEqual(self.db.execute("booking_db", "SELECT count(*) FROM bookings WHERE id BETWEEN 100000 AND 109999;"), "31")
         self.assertEqual(self.db.execute("auth_db", "SELECT count(*) FROM users WHERE id BETWEEN 1 AND 15;"), "15")
         next_id = int(self.db.execute("auth_db", "SELECT nextval('users_id_seq');"))
         self.assertGreaterEqual(next_id, 110000)
@@ -162,7 +185,7 @@ class PostgreSQLSeedTest(unittest.TestCase):
         self.assertEqual(self.db.execute("booking_db", "SELECT count(*) FROM bookings WHERE id BETWEEN 1200000 AND 1209999 AND customer_id IS NOT NULL AND customer_name IS NULL;"), "0")
         self.assertEqual(self.db.execute("booking_db", "SELECT payment_status FROM bookings WHERE id=1200025;"), "REJECTED")
         self.assertEqual(self.db.execute("booking_db", "SELECT qr_image_url FROM bookings WHERE id=1200000;"), "/api/payments/1200000/ticket/qr")
-        self.assertEqual(self.db.execute("payment_db", "SELECT count(*) FROM payments WHERE id BETWEEN 1200000 AND 1209999 AND booking_id=id;"), "30")
+        self.assertEqual(self.db.execute("payment_db", "SELECT count(*) FROM payments WHERE id BETWEEN 1200000 AND 1209999 AND booking_id=id;"), "31")
         self.assertEqual(self.db.execute("payment_db", "SELECT count(*) FROM payments WHERE id BETWEEN 1200000 AND 1209999 AND bill_image_url IS NOT NULL AND submitted_at IS NULL;"), "0")
 
     def test_missing_read_model_schema_fails_before_writing_any_seed_rows(self):
@@ -183,11 +206,11 @@ class PostgreSQLSeedTest(unittest.TestCase):
                 return self.db.execute(db, sql)
         with self.assertRaises(seed.SeedError): seed.apply(m, PUBLIC_DEMO_HASH, Interrupted(), allow_fixtures=True)
         result = seed.apply(m, PUBLIC_DEMO_HASH, self.db, allow_fixtures=True)
-        self.assertEqual(result["booking_slots"], 50)
+        self.assertEqual(result["booking_slots"], 82)
         self.assertEqual(self.db.execute("auth_db", "SELECT count(*) FROM users WHERE id BETWEEN 200000 AND 209999;"), "9")
 
     def test_fractional_price_apply_and_rerun_match_persisted_money(self):
-        for index, (price, discount) in enumerate([("10000.01", "2000.00"), ("10000.03", "2000.01"), ("49999.99", "10000.00")]):
+        for index, price in enumerate(["10000.01", "10000.03", "49999.99"]):
             base = 600000 + index*100000
             m = self.manifest("test-fraction-"+str(index), base); m["slotPrice"] = price
             with self.subTest(price=price):
@@ -195,9 +218,9 @@ class PostgreSQLSeedTest(unittest.TestCase):
                 self.assertEqual(seed.apply(m, PUBLIC_DEMO_HASH, self.db, allow_fixtures=True), first)
                 actual = self.db.execute("payment_db", f"SELECT amount::text || '|' || discount_amount::text FROM payments WHERE id={base+1};")
                 amount, reduction = map(Decimal, actual.split("|"))
-                self.assertEqual(reduction, Decimal(discount))
+                self.assertEqual(reduction, Decimal("0.00"))
                 self.assertEqual(amount+reduction, Decimal(price)*2)
-                self.assertEqual(self.db.execute("booking_db", f"SELECT count(*) FROM bookings WHERE id BETWEEN {base} AND {base+9999};"), "30")
+                self.assertEqual(self.db.execute("booking_db", f"SELECT count(*) FROM bookings WHERE id BETWEEN {base} AND {base+9999};"), "31")
 
     def test_bank_bins_are_seeded_with_facility_v3_and_replay_unchanged(self):
         m = self.manifest("test-bank-bins", 1000000)
@@ -205,6 +228,27 @@ class PostgreSQLSeedTest(unittest.TestCase):
         first = seed.apply(m, PUBLIC_DEMO_HASH, self.db, allow_fixtures=True)
         self.assertEqual(seed.apply(m, PUBLIC_DEMO_HASH, self.db, allow_fixtures=True), first)
         self.assertEqual(self.db.execute("facility_db", "SELECT string_agg(bank_bin, ',' ORDER BY id) FROM branches WHERE id BETWEEN 1000000 AND 1000002;"), "000001,000002,000003")
+
+    def test_runtime_snapshots_and_all_day_ticket_survive_database_round_trip(self):
+        m=self.manifest("test-runtime",1400000)
+        seed.apply(m,PUBLIC_DEMO_HASH,self.db,allow_fixtures=True)
+        snapshot=json.loads(self.db.execute("payment_db","SELECT checkout::text FROM payments WHERE id=1400030;"))
+        self.assertEqual(len(snapshot["slots"]),32)
+        self.assertEqual(Decimal(str(snapshot["amount"])),Decimal("1600000"))
+        self.assertEqual(self.db.execute("payment_db","SELECT check_in_code FROM payments WHERE id=1400030;"),
+                         self.db.execute("booking_db","SELECT checkin_code FROM bookings WHERE id=1400030;"))
+        self.assertEqual(self.db.execute("booking_db","SELECT count(*) FROM booking_slots WHERE booking_id=1400030;"),"32")
+        self.assertEqual(self.db.execute("voucher_db","SELECT sum(usage_count) FROM vouchers WHERE id BETWEEN 1400000 AND 1400001;"),"0")
+        self.assertEqual(self.db.execute("facility_db","SELECT count(*) FROM courts WHERE id BETWEEN 1400000 AND 1400009 AND default_price_per_hour=100000;"),"10")
+
+    def test_missing_runtime_payment_columns_fail_before_any_seed_write(self):
+        m=self.manifest("test-no-ticket",1500000)
+        self.db.execute("payment_db","ALTER TABLE payments RENAME COLUMN check_in_code TO hidden_check_in_code;")
+        try:
+            with self.assertRaisesRegex(seed.SeedError,"V2/V3/V4"):
+                seed.apply(m,PUBLIC_DEMO_HASH,self.db,allow_fixtures=True)
+            self.assertEqual(self.db.execute("auth_db","SELECT count(*) FROM users WHERE id BETWEEN 1500000 AND 1509999;"),"0")
+        finally:self.db.execute("payment_db","ALTER TABLE payments RENAME COLUMN hidden_check_in_code TO check_in_code;")
 
     def test_missing_facility_bank_schema_fails_before_writing_any_seed_rows(self):
         m = self.manifest("test-missing-schema", 900000)

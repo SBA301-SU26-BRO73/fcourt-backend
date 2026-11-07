@@ -211,9 +211,14 @@ VALIDATION_SCRUM_63.md.
 
 ## Manual check-in — SCRUM-65
 
-POST /api/staff/check-in/manual accepts `{"checkInCode":"FC-89234"}` with
+POST /api/staff/check-in/manual accepts
+`{"checkInCode":"00000000000000000000000000000001"}` with
 STAFF Bearer and UUID Idempotency-Key. Uses the same active-assignment, atomic
 booking state/date/code check and retry protocol as QR, with channel MANUAL.
+Send the code exactly as printed on the ticket, including leading zeros. Codes
+are opaque strings, not numbers; neither an `FC-` prefix nor a fixed length is
+required. Only surrounding whitespace is stripped. Legacy printed booking-code
+aliases such as `FC-89234` remain supported by the booking authority.
 Unknown code is 404, wrong date/status or already checked-in is 409; invalid
 body is 400. A code in another branch must not reveal that booking.
 
