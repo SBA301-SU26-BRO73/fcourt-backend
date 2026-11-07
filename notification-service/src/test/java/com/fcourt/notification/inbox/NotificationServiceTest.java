@@ -43,7 +43,8 @@ class NotificationServiceTest {
         planner = mock(EmailPlanner.class);
         processed = mock(ProcessedEventRepository.class);
         sender = mock(EmailSender.class);
-        service = new NotificationService(new ObjectMapper(), planner, processed, sender);
+        service = new NotificationService(new ObjectMapper(), planner, processed, sender,
+                org.mockito.Mockito.mock(com.fcourt.notification.reminder.ReminderProjection.class));
     }
 
     @Test

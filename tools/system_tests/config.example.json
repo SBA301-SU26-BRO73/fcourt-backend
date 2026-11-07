@@ -6,6 +6,7 @@
   "pollIntervalSeconds": 0.5,
   "slotPrice": 50000,
   "receiptFile": "fixture-receipt.png",
+  "legalDocumentFile": "REPLACE_AUTHORIZED_TEST_DOCUMENT.png",
   "credentials": {
     "superAdmin": {"emailEnv":"FCOURT_E2E_SUPERADMIN_EMAIL","passwordEnv":"FCOURT_E2E_SUPERADMIN_PASSWORD"},
     "customer": {"emailEnv":"FCOURT_E2E_CUSTOMER_EMAIL","passwordEnv":"FCOURT_E2E_CUSTOMER_PASSWORD"},
@@ -17,7 +18,7 @@
   "branch": {"name":"E2E venue","address":"REPLACE_VENUE_ADDRESS","city":"REPLACE_CITY","ward":"REPLACE_WARD","openTime":"06:00","closeTime":"22:00","bankName":"REPLACE_BANK","bankAccountNumber":"REPLACE_ACCOUNT","bankAccountName":"REPLACE_OWNER","bankBin":"REPLACE_BIN"},
   "court": {"name":"E2E court","courtTypeId":6,"imageUrl":"REPLACE_AUTHORIZED_IMAGE_URL"},
   "routes": {
-    "registerOwner":{"method":"POST","path":"/api/auth/register"},
+    "registerOwner":{"method":"POST","path":"/api/auth/register/court-owner"},
     "login":{"method":"POST","path":"/api/auth/login"},
     "approveOwner":{"method":"PUT","path":"/api/super-admin/users/{ownerId}/approve"},
     "createBranch":{"method":"POST","path":"/api/admin/branches"},

@@ -31,6 +31,8 @@ stable key once with
 | `AUTH_JWT_ACCESS_TTL` / `AUTH_JWT_REFRESH_TTL` | `15m` / `30d` |
 | `AUTH_CLOUDINARY_URL` | `cloudinary://key:secret@cloud` for court owner documents; uploads give 503 when blank |
 | `AUTH_PASSWORD_RESET_TTL` | `30m` |
+| `AUTH_GOOGLE_CLIENT_ID` | Google OAuth Web client ID used as the ID token audience; required for Google sign-in |
+| `AUTH_GOOGLE_JWK_SET_URI` | Google public keys at `https://www.googleapis.com/oauth2/v3/certs` |
 | `AUTH_EVENTS_ENABLED` / `AUTH_EVENTS_TOPIC` / `AUTH_EVENTS_DELAY_MS` | `true` / `fcourt.auth.events` / `1000` |
 
 Tests: `./mvnw clean verify` (Docker required: Testcontainers Postgres and Kafka).
@@ -51,6 +53,7 @@ comes from the `roles` array or a single `role` claim. `/api/super-admin/**` req
 | POST | `/api/auth/register/customer` | `{fullName, email, phone, password}` | `201 AuthResponse`, account `ACTIVE` |
 | POST | `/api/auth/register/court-owner` | multipart: `fullName, email, phone, password, legalDocuments[]` (1..5), `courtImages[]` (0..10) | `201 {id, status:"PENDING_APPROVAL", message}`, no session |
 | POST | `/api/auth/login` | `{email, password}` | `AuthResponse` |
+| POST | `/api/auth/google` | `{idToken}` | `AuthResponse`; verified Google customer identity |
 | POST | `/api/auth/refresh` | `{refreshToken}` | `AuthResponse` (the old refresh token is revoked) |
 | POST | `/api/auth/logout` | `{refreshToken}` | `204`, idempotent |
 | GET | `/api/auth/profile` | | `UserResponse` (needs a Bearer token) |
