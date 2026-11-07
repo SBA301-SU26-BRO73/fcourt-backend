@@ -18,11 +18,22 @@ provide high availability or prove 24/7 operation.
    expose only 80/443 publicly. Do not publish PostgreSQL, Redis, Kafka or gRPC.
 3. Install Docker Engine and Compose v2. Copy this directory to `/opt/fcourt/deploy`.
    Copy `.env.example` to `.env`, `runtime.env.example` to `runtime.env`; chmod both
-   600 and fill credentials privately. Set a unique strong `*_DB_PASSWORD` for each database role. The PostgreSQL initializer and matching application share that role-specific secret; never reuse a service password for another database. Runtime secrets are interpolated only into
+   600 and fill credentials privately. Set a unique strong `*_DB_PASSWORD` for each
+   database role. The PostgreSQL initializer and matching application share that
+   role-specific secret. Never reuse a service password for another database.
+   Runtime secrets are interpolated only into
    the services that consume them; the auth signing key is not injected into other
    containers. Include both env files in Compose commands. Use a persistent RSA PKCS8 signing key and
    stable key ID: an ephemeral key invalidates active sessions on every restart.
    SMTP/Cloudinary/PayOS require their real provider settings before acceptance.
+   If upgrading an existing PostgreSQL volume that used shared `APP_DB_PASSWORD`,
+   the init script will not run again. Set eleven distinct database passwords in
+   `.env` and stop the application services. Recreate only PostgreSQL with:
+   `docker compose --env-file /opt/fcourt/deploy/.env --env-file /opt/fcourt/deploy/runtime.env -f /opt/fcourt/deploy/compose.yml up -d postgres`
+   Then rotate roles before restarting applications:
+   `docker compose --env-file /opt/fcourt/deploy/.env --env-file /opt/fcourt/deploy/runtime.env -f /opt/fcourt/deploy/compose.yml exec -T postgres sh /opt/fcourt/rotate-database-passwords.sh`
+   This updates role credentials without touching the data volume. Never remove
+   the volume to rotate passwords.
 4. Replace `fcourt.example` in `nginx.conf`, set PUBLIC_ORIGIN to the same HTTPS
    issuer, point DNS at EC2 and obtain a Let's Encrypt certificate. Bootstrap using
    Certbot standalone on port 80 before Nginx starts; place its configuration tree
