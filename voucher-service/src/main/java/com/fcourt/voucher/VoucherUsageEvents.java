@@ -14,8 +14,11 @@ class VoucherUsageEvents {
     private final VoucherRedemptions applications;
     private final ObjectMapper json;
     private final VoucherBookingClient booking;
-    VoucherUsageEvents(VoucherRedemptions applications, ObjectMapper json, VoucherBookingClient booking) {
-        this.applications = applications; this.json = json; this.booking = booking;
+    private final VoucherUsageRepository history;
+    VoucherUsageEvents(VoucherRedemptions applications, ObjectMapper json,
+            VoucherBookingClient booking, VoucherUsageRepository history) {
+        this.applications = applications; this.json = json;
+        this.booking = booking; this.history = history;
     }
 
     @KafkaListener(topics={"fcourt.booking.events","fcourt.payment.events"})
@@ -54,6 +57,12 @@ class VoucherUsageEvents {
             return;
         }
         if (!"RESERVED".equals(application.status())) throw invalid();
+        java.time.Instant usedAt = null;
+        if (data.has("usedAt")) {
+            if (!data.path("usedAt").isTextual()) throw invalid();
+            usedAt = java.time.Instant.parse(data.path("usedAt").textValue());
+        }
+        history.record(application, paymentId, usedAt);
         if (jdbc.update("UPDATE vouchers SET used_count=used_count+1,updated_at=now() WHERE id=? AND used_count<usage_limit", application.voucherId()) != 1)
             throw new IllegalStateException("Reserved voucher quota is inconsistent");
         jdbc.update("UPDATE voucher_redemptions SET status='APPLIED',payment_id=?,updated_at=now() WHERE booking_id=?", paymentId, bookingId);
