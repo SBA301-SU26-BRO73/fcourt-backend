@@ -50,8 +50,8 @@ class VoucherService {
         var branches = authority.branches(jwt);
         var current = repository.find(id, branches, true).orElseThrow(VoucherService::missing);
         requireBranch(branches, request.branchId());
-        if (request.usageLimit() < current.usedCount())
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "usageLimit must not be below usedCount");
+        if (request.usageLimit() < current.usedCount() + repository.reservations(id))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "usageLimit must cover used and reserved applications");
         try { return repository.update(id, request).at(clock.instant()); }
         catch (DuplicateKeyException error) { throw duplicate(); }
     }

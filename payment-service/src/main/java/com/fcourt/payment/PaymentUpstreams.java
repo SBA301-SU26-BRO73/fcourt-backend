@@ -18,19 +18,30 @@ import org.springframework.web.server.ResponseStatusException;
 class PaymentUpstreams {
     private final RestClient booking;
     private final RestClient facility;
+    private final String bookingIntegrationToken;
     private final RestClient auth;
 
     @Autowired
     PaymentUpstreams(@Qualifier("bookingClient") RestClient booking,
                      @Qualifier("facilityClient") RestClient facility,
-                     @Qualifier("authClient") RestClient auth) {
+                     @Qualifier("authClient") RestClient auth,
+                     @org.springframework.beans.factory.annotation.Value("${payment.booking-integration-token:${BOOKING_INTEGRATION_TOKEN:}}") String token) {
         this.booking = booking;
         this.facility = facility;
         this.auth = auth;
+        this.bookingIntegrationToken = token;
     }
 
     PaymentUpstreams(RestClient booking, RestClient facility) {
-        this(booking, facility, null);
+        this(booking, facility, null, "");
+    }
+
+    PaymentUpstreams(RestClient booking, RestClient facility, String token) {
+        this(booking, facility, null, token);
+    }
+
+    PaymentUpstreams(RestClient booking, RestClient facility, RestClient auth) {
+        this(booking, facility, auth, "");
     }
 
     Profile customerProfile(String authorization) {
@@ -44,6 +55,27 @@ class PaymentUpstreams {
             throw unavailable();
         }
     }
+
+    void freeze(long id, String authorization, String holdToken, BigDecimal amount) {
+        if (bookingIntegrationToken.isBlank()) throw unavailable();
+        try {
+            var ack = booking.post().uri("/api/internal/bookings/{id}/payment-freeze", id).headers(headers -> {
+                headers.set("X-Service-Token", bookingIntegrationToken);
+                if (authorization != null) headers.set(HttpHeaders.AUTHORIZATION, authorization);
+                if (holdToken != null) headers.set("X-Hold-Token", holdToken);
+            }).body(java.util.Map.of("amount", amount)).retrieve().body(FreezeAck.class);
+            if (ack == null || ack.id() == null || ack.id() != id || !ack.paymentFrozen()
+                    || ack.totalPrice() == null || ack.totalPrice().compareTo(amount) != 0) throw unavailable();
+        } catch (HttpClientErrorException error) {
+            int status = error.getStatusCode().value();
+            if (status == 401 || status == 403 || status == 404 || status == 409 || status == 410)
+                throw new ResponseStatusException(error.getStatusCode(), "Giá đơn đã thay đổi hoặc thanh toán không còn hợp lệ");
+            throw unavailable();
+        } catch (RestClientException error) { throw unavailable(); }
+    }
+
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
+    record FreezeAck(Long id, BigDecimal totalPrice, boolean paymentFrozen) {}
 
     Booking booking(long id, String authorization, String holdToken) {
         try {
@@ -87,7 +119,8 @@ class PaymentUpstreams {
 
     record Booking(Long id, String bookingCode, Long branchId, String branchName,
                    String courtName, LocalDate date, List<CheckoutInfo.Slot> slots,
-                   BigDecimal totalPrice, String status, Instant holdExpiresAt, String customerName, String customerPhone, BigDecimal refundAmount) { }
+                   BigDecimal totalPrice, String status, Instant holdExpiresAt, String customerName, String customerPhone, BigDecimal refundAmount,
+                   java.util.UUID voucherApplicationId) { }
     record Bank(Long id, String bankName, String bankBin, String bankAccountNumber, String bankAccountName) { }
     record Profile(Long id, String email) { }
 }

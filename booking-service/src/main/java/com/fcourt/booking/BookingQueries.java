@@ -76,6 +76,8 @@ class BookingQueries {
         return new BookingView(id,r.getString("booking_code"),r.getObject("branch_id",Long.class),r.getString("branch_name"),
             r.getString("branch_address"),r.getString("branch_phone"),r.getString("court_name"),r.getObject("date",LocalDate.class),List.of(),
             r.getBigDecimal("total_price"),r.getString("status"),r.getString("customer_name"),expiry==null?null:expiry.toInstant(),
-            r.getString("checkin_code"),r.getString("qr_image_url"),r.getString("receipt_image_url"),r.getString("payment_status"),r.getTimestamp("created_at").toInstant(),r.getBigDecimal("refund_amount"),r.getString("cancellation_reason"));
+            r.getString("checkin_code"),r.getString("qr_image_url"),r.getString("receipt_image_url"),r.getString("payment_status"),r.getTimestamp("created_at").toInstant(),r.getBigDecimal("refund_amount"),r.getString("cancellation_reason"),
+            r.getObject("voucher_application_id",java.util.UUID.class),r.getObject("voucher_id",Long.class),
+            r.getBigDecimal("original_amount"),r.getBigDecimal("discount_amount"),r.getBoolean("payment_frozen"));
     }
 }

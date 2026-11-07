@@ -197,4 +197,11 @@ class CheckoutApiTest {
             assertThat(e.getStatusCode()).isEqualTo(HttpStatus.GONE);
         }
     }
+
+    @Test void zeroAmountRequiresAnAuthoritativeVoucherApplication() throws Exception {
+        bookingResponse(BOOKING.replace("160000.00","0").replace("\"status\":", "\"voucherApplicationId\":\"00000000-0000-0000-0000-000000000001\",\"status\":"));
+        bankResponse(BANK);
+        mvc.perform(get("/api/payments/checkout-info/42").header("X-Hold-Token","guest-token"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.amount").value(0));
+    }
 }

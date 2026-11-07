@@ -33,7 +33,7 @@ import org.testcontainers.junit.jupiter.*;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"voucher.grpc.port=0", "voucher.grpc.token=fixture-service-token"})
+        properties = {"voucher.grpc.port=0", "voucher.grpc.token=fixture-service-token", "voucher.events-enabled=false"})
 @AutoConfigureMockMvc
 @org.springframework.test.annotation.DirtiesContext
 class VoucherApiTest {
@@ -95,7 +95,7 @@ class VoucherApiTest {
     @Autowired VoucherService service;
 
     @BeforeEach void reset() {
-        jdbc.execute("TRUNCATE vouchers RESTART IDENTITY");
+        jdbc.execute("TRUNCATE vouchers RESTART IDENTITY CASCADE");
         BRANCHES.set("[{\"id\":7,\"adminId\":100}]");
         CALLS.set(0);
         UPSTREAM_STATUS.set(200);
