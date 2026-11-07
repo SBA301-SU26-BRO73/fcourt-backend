@@ -89,15 +89,9 @@ GROUP BY b.id ORDER BY b.date,min(s.slot_start),b.id
         if (dependencies.courts(branch, jwt).stream().noneMatch(c -> c.id() == court))
             throw missing();
         var selected = select(dependencies.canonicalSlots(court, date), ids, false);
-        var starts =
-                jdbc.queryForList(
-                        "SELECT slot_start FROM booking_slots WHERE court_id=? AND booking_date=?"
-                                + " AND active",
-                        LocalTime.class,
-                        court,
-                        date);
+        var occupied = SlotOccupancy.active(jdbc,court,date);
         return selected.stream()
-                .filter(s -> starts.contains(s.startTime()))
+                .filter(s -> occupied.stream().anyMatch(o -> o.overlaps(s.startTime(),s.endTime())))
                 .map(CounterDependencies.Slot::slotId)
                 .toList();
     }
@@ -105,18 +99,12 @@ GROUP BY b.id ORDER BY b.date,min(s.slot_start),b.id
     Occupancy occupancy(long court, LocalDate date) {
         if (court <= 0 || date == null) throw bad();
         var canonical = dependencies.canonicalSlots(court, date);
-        var starts =
-                jdbc.queryForList(
-                        "SELECT slot_start FROM booking_slots WHERE court_id=? AND booking_date=?"
-                                + " AND active",
-                        LocalTime.class,
-                        court,
-                        date);
+        var occupied = SlotOccupancy.active(jdbc,court,date);
         return new Occupancy(
                 court,
                 date,
                 canonical.stream()
-                        .filter(s -> starts.contains(s.startTime()))
+                        .filter(s -> occupied.stream().anyMatch(o -> o.overlaps(s.startTime(),s.endTime())))
                         .map(CounterDependencies.Slot::slotId)
                         .toList());
     }
@@ -153,14 +141,9 @@ GROUP BY b.id ORDER BY b.date,min(s.slot_start),b.id
         jdbc.queryForList(
                 "SELECT pg_advisory_xact_lock(hashtextextended(?,0))",
                 "counter:" + request.courtId() + ":" + request.date());
+        var occupied = SlotOccupancy.active(jdbc,request.courtId(),request.date());
         for (var slot : slots)
-            if (!jdbc.queryForList(
-                            "SELECT id FROM booking_slots WHERE court_id=? AND booking_date=? AND"
-                                    + " slot_start=? AND active",
-                            request.courtId(),
-                            request.date(),
-                            slot.startTime())
-                    .isEmpty()) throw conflict();
+            if (occupied.stream().anyMatch(o -> o.overlaps(slot.startTime(),slot.endTime()))) throw conflict();
         dependencies.reserve(
                 request.branchId(),
                 request.actorId(),
