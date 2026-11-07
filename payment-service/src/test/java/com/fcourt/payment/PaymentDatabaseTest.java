@@ -66,6 +66,45 @@ class PaymentDatabaseTest {
     java.time.Clock fixed() { return java.time.Clock.fixed(CheckoutApiTest.NOW,java.time.ZoneOffset.UTC); }
 
     @Test
+    void bookingExpiryNeverDiscardsAnAcceptedReceiptAndRequiresCredential() throws Exception {
+        String secret="fixture-payment-booking-secret-not-production";
+        var now=CheckoutApiTest.NOW.plusSeconds(3600);
+        var controller=new BookingExpiryController(store,tx,java.time.Clock.fixed(now,java.time.ZoneOffset.UTC),secret);
+        var request=new BookingExpiryController.Request(42,now.minusSeconds(1));
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> controller.decide(null,request))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        assertThat(controller.decide(secret,request).getBody().mayExpire()).isTrue();
+        var storage=org.mockito.Mockito.mock(ReceiptStorage.class);
+        org.mockito.Mockito.when(storage.upload(org.mockito.ArgumentMatchers.any())).thenReturn("https://res.cloudinary.com/fixture/bill.png");
+        receipts(fixed(),storage).upload(42,null,"guest",image());
+        assertThat(controller.decide(secret,request).getBody().mayExpire()).isFalse();
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> controller.decide(secret,new BookingExpiryController.Request(42,now.plusSeconds(1))))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+    }
+
+    @Test
+    void bookingExpiryWaitsForConcurrentReceiptCommit() throws Exception {
+        String secret="fixture-payment-booking-secret-not-production";
+        var now=CheckoutApiTest.NOW.plusSeconds(3600);
+        var controller=new BookingExpiryController(store,tx,java.time.Clock.fixed(now,java.time.ZoneOffset.UTC),secret);
+        var locked=new java.util.concurrent.CountDownLatch(1);
+        var release=new java.util.concurrent.CountDownLatch(1);
+        try(var pool=java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+            var upload=pool.submit(() -> tx.executeWithoutResult(ignored -> {
+                jdbc.queryForObject("SELECT pg_advisory_xact_lock(?)",Object.class,42L);locked.countDown();
+                try { release.await(); } catch(InterruptedException e){Thread.currentThread().interrupt();throw new IllegalStateException(e);}
+                jdbc.update("INSERT INTO payments(branch_id,amount,status,booking_id,submitted_at) VALUES (7,100000,'PENDING',42,now())");
+            }));
+            locked.await();
+            var decision=pool.submit(() -> controller.decide(secret,new BookingExpiryController.Request(42,now.minusSeconds(1))));
+            try { org.assertj.core.api.Assertions.assertThatThrownBy(() -> decision.get(100,java.util.concurrent.TimeUnit.MILLISECONDS))
+                    .isInstanceOf(java.util.concurrent.TimeoutException.class); }
+            finally { release.countDown(); }
+            upload.get();assertThat(decision.get().getBody().mayExpire()).isFalse();
+        }
+    }
+
+    @Test
     void receiptAndOutboxPersistAtomicallyAndRetryDoesNotUploadAgain() throws Exception {
         var storage=org.mockito.Mockito.mock(ReceiptStorage.class);
         org.mockito.Mockito.when(storage.upload(org.mockito.ArgumentMatchers.any())).thenReturn("https://res.cloudinary.com/demo/bill.png");

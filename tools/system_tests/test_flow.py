@@ -44,6 +44,14 @@ class Handler(BaseHTTPRequestHandler):
         size = int(self.headers.get("Content-Length", "0"))
         raw = self.rfile.read(size)
         body = json.loads(raw) if raw and "application/json" in self.headers.get("Content-Type", "") else {}
+        if raw and "multipart/form-data" in self.headers.get("Content-Type", ""):
+            from email.parser import BytesParser
+            message = BytesParser().parsebytes(("Content-Type: "+self.headers["Content-Type"]+"\r\n\r\n").encode()+raw)
+            parts = list(message.walk())[1:]
+            body = {p.get_param("name", header="content-disposition"):p.get_payload(decode=True).decode()
+                    for p in parts if p.get_filename() is None}
+            if route == "registerOwner":
+                s["ownerMultipart"] = any(p.get_param("name", header="content-disposition") == "legalDocuments" and p.get_payload(decode=True) == PNG for p in parts)
         s["calls"].append((route, self.command, self.headers.get("Authorization"), self.headers.get("Idempotency-Key")))
         code, result = 200, {}
         expected_role = {"approveOwner":"super", "createBranch":"owner", "createCourt":"owner", "createSlot":"owner",
@@ -55,13 +63,17 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(302); self.send_header("Location", "/credential-leak"); self.end_headers(); return
         elif s.get("error") == route:
             code, result = 503, {"private":"bank-private-value token-secret-customer"}
-        elif route == "registerOwner": result, code = {"id":101}, 201
+        elif route == "registerOwner":
+            if not s.get("ownerMultipart") or "role" in body: code=400
+            else: result, code = {"id":101}, 201
         elif route == "login":
             email = body["email"]
             role = "super" if email.startswith("super@") else "customer" if email.startswith("customer@") else "staff" if "staff" in email else "owner"
             result = {"accessToken":"token-secret-"+role}
         elif route == "createBranch": s["branch"] = body; result, code = {"id":201}, 201
-        elif route == "createCourt": result, code = {"id":301}, 201
+        elif route == "createCourt":
+            if body.get("defaultPricePerHour",0)<=0: code=400
+            else: result, code = {"id":301}, 201
         elif route == "createSlot": s["templates"].append(body); result, code = {"id":400+len(s["templates"])}, 201
         elif route == "createStaff": result, code = {"id":601}, 201
         elif route == "search": result = {"content":[{"id":201,"courtCount":1}]}
@@ -110,13 +122,14 @@ class FlowTests(unittest.TestCase):
         self.addCleanup(self.server.server_close); self.addCleanup(self.server.shutdown)
     def run_flow(self, env=None, now=None):
         return Flow(self.config, Gateway(self.config,"fixture-run-1",self.receipt), ENV if env is None else env,
-                    now or datetime(2030,1,1,3,tzinfo=timezone.utc)).run()
+                    now or datetime(2030,1,1,3,20,tzinfo=timezone.utc)).run()
     def test_complete_workflow_and_saga_over_http(self):
         report = self.run_flow()
         self.assertEqual("PASS", report["overall"], report)
         self.assertFalse(report["liveAcceptance"])
         self.assertGreaterEqual(len(report["steps"]), 28)
         self.assertEqual(2, self.server.state["uploaded"])
+        self.assertTrue(self.server.state["ownerMultipart"])
         self.assertEqual(["BOOKED","AVAILABLE"], self.server.state["slots"])
         self.assertEqual("CHECKED_IN", self.server.state["bookings"][501]["status"])
         calls = self.server.state["calls"]
@@ -149,6 +162,14 @@ class FlowTests(unittest.TestCase):
     def test_no_future_slot_prevents_all_requests(self):
         report = self.run_flow(now=datetime(2030,1,1,16,tzinfo=timezone.utc))
         self.assertEqual("FAIL",report["overall"]); self.assertEqual([],self.server.state["calls"])
+    def test_outside_admission_window_prevents_all_writes(self):
+        report = self.run_flow(now=datetime(2030,1,1,3,1,tzinfo=timezone.utc))
+        self.assertEqual("FAIL",report["overall"]); self.assertEqual([],self.server.state["calls"])
+    def test_invalid_owner_document_prevents_network(self):
+        document=Path(self.temp.name)/"document.png"; document.write_bytes(b"invalid")
+        self.config["legalDocumentFile"]=document.name
+        with self.assertRaises(Failure): Gateway(self.config,"fixture",self.receipt)
+        self.assertEqual([],self.server.state["calls"])
     def test_invalid_receipt_prevents_network(self):
         self.receipt.write_bytes(b"not an image")
         with self.assertRaises(Failure): Gateway(self.config,"fixture",self.receipt)
