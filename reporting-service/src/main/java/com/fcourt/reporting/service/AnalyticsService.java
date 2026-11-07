@@ -103,7 +103,8 @@ public class AnalyticsService {
                     .orElseThrow(AnalyticsService::denied);
             ids = List.of(owner.id());
             filter = new CourtFilter(court.id(), CourtFilter.normalize(court.name()));
-            capacityPerDay = "ACTIVE".equals(court.status()) ? slotsPerDay(owner) : 0;
+            capacityPerDay = "ACTIVE".equals(owner.status()) && "ACTIVE".equals(court.status())
+                    ? slotsPerDay(owner) : 0;
         } else {
             Map<Long, Integer> active = store.activeCourts(ids);
             capacityPerDay = branches.stream()
