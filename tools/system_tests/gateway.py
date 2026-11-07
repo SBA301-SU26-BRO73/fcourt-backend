@@ -28,10 +28,10 @@ def validate_config(config, execute=False):
         raise Failure("Gateway requires verified HTTPS, except loopback fixtures")
     if execute and "replace" in origin.hostname.lower():
         raise Failure("Real gateway URL has not been supplied")
-    if config.get("scope") == "fixture" and not local:
+    if config.get("scope") in {"fixture", "local_cluster"} and not local:
         raise Failure("Fixture scope is restricted to loopback")
-    if config.get("scope") not in {"fixture", "live_gateway"}:
-        raise Failure("Specify fixture or live_gateway scope")
+    if config.get("scope") not in {"fixture", "local_cluster", "live_gateway"}:
+        raise Failure("Specify fixture, local_cluster or live_gateway scope")
     if execute and config["scope"] == "live_gateway" and "REPLACE_" in json.dumps(config):
         raise Failure("Replace all gateway, venue, bank and controlled-account placeholders")
     for route in config["routes"].values():
@@ -49,6 +49,16 @@ class Gateway:
         self.receipt = Path(receipt).read_bytes()
         if not 0 < len(self.receipt) <= 5*1024*1024 or not (self.receipt.startswith(b"\x89PNG\r\n\x1a\n") or self.receipt.startswith(b"\xff\xd8\xff")):
             raise Failure("Provide an explicit PNG/JPEG test receipt up to 5 MiB")
+        document = config.get("legalDocumentFile")
+        if config["scope"] == "fixture" and (not document or "REPLACE_" in document):
+            self.document = self.receipt
+        else:
+            try:
+                self.document = (Path(receipt).parent / document).read_bytes()
+            except (OSError, TypeError):
+                raise Failure("Provide an explicit authorized owner test document") from None
+        if not 0 < len(self.document) <= 5*1024*1024 or not self.document.startswith((b"\x89PNG\r\n\x1a\n", b"\xff\xd8\xff", b"%PDF-")):
+            raise Failure("Owner document must be PNG/JPEG/PDF up to 5 MiB")
         self.opener = urllib.request.build_opener(NoRedirect(), urllib.request.HTTPSHandler(context=ssl.create_default_context()))
 
     def request(self, name, body=None, token=None, bindings=None, expected=(200,), upload=False):
@@ -66,8 +76,18 @@ class Gateway:
             headers["Idempotency-Key"] = str(key)
         if upload:
             boundary = "fcourt-fixture-" + uuid.uuid4().hex
-            mime = "image/png" if self.receipt.startswith(b"\x89PNG") else "image/jpeg"
-            data = (f"--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"fixture-receipt.png\"\r\nContent-Type: {mime}\r\n\r\n").encode()+self.receipt+(f"\r\n--{boundary}--\r\n").encode()
+            fields = []
+            owner = upload == "owner"
+            if owner:
+                import re
+                for field, value in (body or {}).items():
+                    if not re.fullmatch(r"[A-Za-z][A-Za-z0-9]*", field): raise Failure("Invalid multipart field")
+                    fields.append((f'--{boundary}\r\nContent-Disposition: form-data; name="{field}"\r\n\r\n{value}\r\n').encode())
+            content = self.document if owner else self.receipt
+            mime = "application/pdf" if content.startswith(b"%PDF-") else "image/png" if content.startswith(b"\x89PNG") else "image/jpeg"
+            field = "legalDocuments" if owner else "file"
+            fields.append((f'--{boundary}\r\nContent-Disposition: form-data; name="{field}"; filename="fixture-upload"\r\nContent-Type: {mime}\r\n\r\n').encode()+content+b"\r\n")
+            data = b"".join(fields)+(f"--{boundary}--\r\n").encode()
             headers["Content-Type"] = "multipart/form-data; boundary=" + boundary
         elif body is not None:
             data = json.dumps(body).encode()

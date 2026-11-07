@@ -39,6 +39,9 @@ spring:
         max.block.ms: 5000
 
 auth:
+  google:
+    client-id: ${AUTH_GOOGLE_CLIENT_ID:}
+    jwk-set-uri: ${AUTH_GOOGLE_JWK_SET_URI:https://www.googleapis.com/oauth2/v3/certs}
   jwt:
     # The defaults validate the tokens auth-service issues itself via /.well-known/jwks.json.
     # Other services point jwk-set-uri at this service.

@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -18,19 +19,41 @@ class PaymentUpstreams {
     private final RestClient booking;
     private final RestClient facility;
     private final String bookingIntegrationToken;
+    private final RestClient auth;
 
-    PaymentUpstreams(@Qualifier("bookingClient") RestClient booking,
-                     @Qualifier("facilityClient") RestClient facility) {
-        this(booking, facility, "");
-    }
-
-    @org.springframework.beans.factory.annotation.Autowired
+    @Autowired
     PaymentUpstreams(@Qualifier("bookingClient") RestClient booking,
                      @Qualifier("facilityClient") RestClient facility,
+                     @Qualifier("authClient") RestClient auth,
                      @org.springframework.beans.factory.annotation.Value("${payment.booking-integration-token:${BOOKING_INTEGRATION_TOKEN:}}") String token) {
         this.booking = booking;
         this.facility = facility;
+        this.auth = auth;
         this.bookingIntegrationToken = token;
+    }
+
+    PaymentUpstreams(RestClient booking, RestClient facility) {
+        this(booking, facility, null, "");
+    }
+
+    PaymentUpstreams(RestClient booking, RestClient facility, String token) {
+        this(booking, facility, null, token);
+    }
+
+    PaymentUpstreams(RestClient booking, RestClient facility, RestClient auth) {
+        this(booking, facility, auth, "");
+    }
+
+    Profile customerProfile(String authorization) {
+        if (authorization == null || !authorization.startsWith("Bearer ") || auth == null) return null;
+        try {
+            var profile = auth.get().uri("/api/auth/profile")
+                    .header(HttpHeaders.AUTHORIZATION, authorization).retrieve().body(Profile.class);
+            return profile != null && profile.id() != null && profile.id() > 0
+                    && profile.email() != null && !profile.email().isBlank() ? profile : null;
+        } catch (RestClientException error) {
+            throw unavailable();
+        }
     }
 
     void freeze(long id, String authorization, String holdToken, BigDecimal amount) {
@@ -99,4 +122,5 @@ class PaymentUpstreams {
                    BigDecimal totalPrice, String status, Instant holdExpiresAt, String customerName, String customerPhone, BigDecimal refundAmount,
                    java.util.UUID voucherApplicationId) { }
     record Bank(Long id, String bankName, String bankBin, String bankAccountNumber, String bankAccountName) { }
+    record Profile(Long id, String email) { }
 }

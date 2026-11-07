@@ -19,6 +19,9 @@ class PaymentConfiguration {
     @Bean
     RestClient facilityClient(@Value("${payment.facility-url}") String url) { return client(url); }
 
+    @Bean
+    RestClient authClient(@Value("${payment.auth-url}") String url) { return client(url); }
+
     private RestClient client(String url) {
         var factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(2));
