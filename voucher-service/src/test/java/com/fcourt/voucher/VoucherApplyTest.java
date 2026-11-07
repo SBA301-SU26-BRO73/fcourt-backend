@@ -243,4 +243,17 @@ class VoucherApplyTest {
         assertThat(applications.booking(1,false).orElseThrow().status()).isEqualTo("APPLIED");
         assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isEqualTo(1);
     }
+
+    @Test void bookingCancellationDoesNotReleaseFrozenVoucherBeforePaymentDecision() throws Exception {
+        voucher("SAVE",10);var application=apply(1,10);
+        ORDERS.get(1L).put("status","CANCELLED").put("paymentFrozen",true);
+        var cancelled=JSON.createObjectNode().put("eventId",UUID.randomUUID().toString()).put("type","BookingCancelledEvent");
+        cancelled.putObject("booking").put("id",1).put("bookingId",1).put("branchId",7).put("customerId",10)
+                .put("paymentId",99).put("paymentStatus","PENDING");
+        events.accept(cancelled.toString());
+        assertThat(applications.booking(1,false).orElseThrow().status()).isEqualTo("RESERVED");
+        events.accept(applied(application,UUID.randomUUID()).toString());
+        assertThat(applications.booking(1,false).orElseThrow().status()).isEqualTo("APPLIED");
+        assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isEqualTo(1);
+    }
 }

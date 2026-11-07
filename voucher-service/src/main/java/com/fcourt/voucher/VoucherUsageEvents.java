@@ -13,7 +13,10 @@ import org.springframework.transaction.annotation.Transactional;
 class VoucherUsageEvents {
     private final VoucherRedemptions applications;
     private final ObjectMapper json;
-    VoucherUsageEvents(VoucherRedemptions applications, ObjectMapper json) { this.applications = applications; this.json = json; }
+    private final VoucherBookingClient booking;
+    VoucherUsageEvents(VoucherRedemptions applications, ObjectMapper json, VoucherBookingClient booking) {
+        this.applications = applications; this.json = json; this.booking = booking;
+    }
 
     @KafkaListener(topics={"fcourt.booking.events","fcourt.payment.events"})
     @Transactional
@@ -31,6 +34,7 @@ class VoucherUsageEvents {
             if (type.equals("VoucherAppliedEvent")) throw new IllegalStateException("Voucher application is not synchronized");
             return;
         }
+        if (type.equals("BookingCancelledEvent") && booking.internal(bookingId).paymentFrozen()) return;
         applications.lockVoucher(found.get().voucherId());
         var application = applications.booking(bookingId, true).orElseThrow();
         if (positive(data, "branchId") != application.branchId()) throw invalid();
