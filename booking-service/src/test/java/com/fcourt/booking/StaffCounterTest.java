@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
 @SpringBootTest(
         properties = {
             "booking.events-enabled=false",
+            "booking.online-release-enabled=false", "booking.online-expiry-enabled=false",
             "STAFF_BOOKING_SERVICE_TOKEN=fixture-staff-booking-token-not-production", "POS_BOOKING_SERVICE_TOKEN=fixture-pos-booking-secret-not-production", "booking.pos-dispatch-enabled=false"
         })
 class StaffCounterTest {

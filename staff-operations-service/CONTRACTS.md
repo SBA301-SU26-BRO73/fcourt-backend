@@ -215,7 +215,10 @@ These flags are derived hints, not automatic status changes or automatic checkou
 
 POST /api/internal/bookings/check-in also accepts channel MANUAL. Same branch,
 actor, date/code validation and atomic CONFIRMED -> CHECKED_IN guard as QR.
-Manual code is opaque (example FC-89234), not a booking ID or unrestricted search.
+Manual code is opaque (including a 32-digit ticket with leading zeros), not a
+booking ID or unrestricted search. Forward the string with only surrounding
+whitespace stripped; do not add a prefix or convert it to a number. `FC-89234`
+is a legacy printed-code example, not a required format.
 Resolve within authorized branch; unknown/foreign code returns non-disclosing
 404, wrong date/already used/wrong state 409. Same key/channel/code replays
 the original decision; reusing a key with a different channel/code conflicts.

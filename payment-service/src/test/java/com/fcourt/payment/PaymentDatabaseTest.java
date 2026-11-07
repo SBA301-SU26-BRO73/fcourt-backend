@@ -16,6 +16,47 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest(properties="payment.events-enabled=false")
 @org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 class PaymentDatabaseTest {
+    @Test void receiptPriceConflictRollsBackPaymentAndCleansUploadedBill() throws Exception {
+        var upstream=org.mockito.Mockito.mock(PaymentUpstreams.class);
+        var checkout=org.mockito.Mockito.mock(CheckoutService.class);
+        var storage=org.mockito.Mockito.mock(ReceiptStorage.class);
+        var mapper=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+        var order=mapper.readValue(CheckoutApiTest.BOOKING,PaymentUpstreams.Booking.class);
+        org.mockito.Mockito.when(upstream.booking(42,null,"guest")).thenReturn(order);
+        var info=new CheckoutInfo(42L,"BK00000042",7L,"Thu Duc","Court",order.date(),order.slots(),order.totalPrice(),
+                "VCB","970436","00123","FCOURT","FC BK00000042",order.holdExpiresAt(),"Customer");
+        org.mockito.Mockito.when(checkout.checkout(42,null,"guest")).thenReturn(info);
+        org.mockito.Mockito.when(storage.upload(org.mockito.ArgumentMatchers.any())).thenReturn("https://res.cloudinary.com/demo/new-bill.png");
+        org.mockito.Mockito.doThrow(new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT))
+                .when(upstream).freeze(42,null,"guest",info.amount());
+        var receipts=new ReceiptService(checkout,upstream,store,storage,tx,fixed());
+        org.assertj.core.api.Assertions.assertThatThrownBy(()->receipts.upload(42,null,"guest",image())).hasMessageContaining("409");
+        assertThat(store.find(42)).isNull();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM payment_outbox",Long.class)).isZero();
+        org.mockito.Mockito.verify(storage).delete("https://res.cloudinary.com/demo/new-bill.png");
+    }
+
+    @Test void freeVoucherPaymentIssuesTicketAndConfirmationExactlyOnce() throws Exception {
+        var upstream=org.mockito.Mockito.mock(PaymentUpstreams.class);
+        var checkout=org.mockito.Mockito.mock(CheckoutService.class);
+        var mapper=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+        String body=CheckoutApiTest.BOOKING.replace("160000.00","0").replace("\"status\":",
+                "\"voucherApplicationId\":\"00000000-0000-0000-0000-000000000001\",\"status\":");
+        var order=mapper.readValue(body,PaymentUpstreams.Booking.class);
+        org.mockito.Mockito.when(upstream.booking(42,"Bearer free-user",null)).thenReturn(order);
+        var info=new CheckoutInfo(42L,"BK00000042",7L,"Thu Duc","Court",order.date(),order.slots(),java.math.BigDecimal.ZERO,
+                "VCB","970436","00123","FCOURT","FC BK00000042",order.holdExpiresAt(),"Customer");
+        org.mockito.Mockito.when(checkout.checkout(42,"Bearer free-user",null)).thenReturn(info);
+        var free=new FreeVoucherPayment(upstream,checkout,store,tx,fixed());
+        var customer=org.springframework.security.oauth2.jwt.Jwt.withTokenValue("free-user").header("alg","RS256").subject("10").build();
+        var first=free.confirm(42,customer);var retry=free.confirm(42,customer);
+        assertThat(first.amount()).isZero();assertThat(first.status()).isEqualTo("CONFIRMED");
+        assertThat(first.checkInCode()).matches("[0-9]{32}");assertThat(retry.id()).isEqualTo(first.id());
+        assertThat(jdbc.queryForObject("SELECT customer_id FROM payments WHERE booking_id=42",Long.class)).isEqualTo(10);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM payment_outbox WHERE event_type='PaymentConfirmedEvent'",Long.class)).isEqualTo(1);
+        org.mockito.Mockito.verify(upstream,org.mockito.Mockito.times(1)).freeze(42,"Bearer free-user",null,java.math.BigDecimal.ZERO);
+    }
+
     @Container
     static final PostgreSQLContainer<?> DATABASE = new PostgreSQLContainer<>("postgres:16-alpine")
             .withDatabaseName("payment_db");
@@ -64,6 +105,45 @@ class PaymentDatabaseTest {
         return new org.springframework.mock.web.MockMultipartFile("file","bill.png","image/png",out.toByteArray());
     }
     java.time.Clock fixed() { return java.time.Clock.fixed(CheckoutApiTest.NOW,java.time.ZoneOffset.UTC); }
+
+    @Test
+    void bookingExpiryNeverDiscardsAnAcceptedReceiptAndRequiresCredential() throws Exception {
+        String secret="fixture-payment-booking-secret-not-production";
+        var now=CheckoutApiTest.NOW.plusSeconds(3600);
+        var controller=new BookingExpiryController(store,tx,java.time.Clock.fixed(now,java.time.ZoneOffset.UTC),secret);
+        var request=new BookingExpiryController.Request(42,now.minusSeconds(1));
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> controller.decide(null,request))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        assertThat(controller.decide(secret,request).getBody().mayExpire()).isTrue();
+        var storage=org.mockito.Mockito.mock(ReceiptStorage.class);
+        org.mockito.Mockito.when(storage.upload(org.mockito.ArgumentMatchers.any())).thenReturn("https://res.cloudinary.com/fixture/bill.png");
+        receipts(fixed(),storage).upload(42,null,"guest",image());
+        assertThat(controller.decide(secret,request).getBody().mayExpire()).isFalse();
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> controller.decide(secret,new BookingExpiryController.Request(42,now.plusSeconds(1))))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+    }
+
+    @Test
+    void bookingExpiryWaitsForConcurrentReceiptCommit() throws Exception {
+        String secret="fixture-payment-booking-secret-not-production";
+        var now=CheckoutApiTest.NOW.plusSeconds(3600);
+        var controller=new BookingExpiryController(store,tx,java.time.Clock.fixed(now,java.time.ZoneOffset.UTC),secret);
+        var locked=new java.util.concurrent.CountDownLatch(1);
+        var release=new java.util.concurrent.CountDownLatch(1);
+        try(var pool=java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+            var upload=pool.submit(() -> tx.executeWithoutResult(ignored -> {
+                jdbc.queryForObject("SELECT pg_advisory_xact_lock(?)",Object.class,42L);locked.countDown();
+                try { release.await(); } catch(InterruptedException e){Thread.currentThread().interrupt();throw new IllegalStateException(e);}
+                jdbc.update("INSERT INTO payments(branch_id,amount,status,booking_id,submitted_at) VALUES (7,100000,'PENDING',42,now())");
+            }));
+            locked.await();
+            var decision=pool.submit(() -> controller.decide(secret,new BookingExpiryController.Request(42,now.minusSeconds(1))));
+            try { org.assertj.core.api.Assertions.assertThatThrownBy(() -> decision.get(100,java.util.concurrent.TimeUnit.MILLISECONDS))
+                    .isInstanceOf(java.util.concurrent.TimeoutException.class); }
+            finally { release.countDown(); }
+            upload.get();assertThat(decision.get().getBody().mayExpire()).isFalse();
+        }
+    }
 
     @Test
     void receiptAndOutboxPersistAtomicallyAndRetryDoesNotUploadAgain() throws Exception {
@@ -170,6 +250,15 @@ class PaymentDatabaseTest {
         assertThat(approvals.pending(7,0,admin())).isEmpty();
         assertThat(jdbc.queryForObject("SELECT confirmed_by FROM payments",Long.class)).isEqualTo(9);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM payment_outbox",Long.class)).isEqualTo(2);
+    }
+
+    @Test void confirmationTimestampMatchesStoredPaymentAndPublishedEvent() throws Exception {
+        var payment=submitted();ownBranch();var confirmed=approvals.decide(payment.id(),true,null,admin());
+        var stored=jdbc.queryForObject("SELECT confirmed_at FROM payments WHERE id=?",java.sql.Timestamp.class,payment.id()).toInstant();
+        assertThat(confirmed.confirmedAt()).isEqualTo(stored);
+        var event=new com.fasterxml.jackson.databind.ObjectMapper().readTree(jdbc.queryForObject("SELECT payload::text FROM payment_outbox WHERE event_type='PaymentConfirmedEvent'",String.class));
+        assertThat(java.time.Instant.parse(event.path("payment").path("confirmedAt").asText())).isEqualTo(stored);
+        assertThat(approvals.decide(payment.id(),true,null,admin()).confirmedAt()).isEqualTo(stored);
     }
     @Test
     void foreignBranchAndMissingReasonCannotChangePayment() throws Exception {

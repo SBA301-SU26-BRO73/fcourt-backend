@@ -63,6 +63,32 @@ class CheckoutApiTest {
     }
 
     @Test
+    void signedInCheckoutSnapshotsEmailFromAuthProfile() {
+        var bookingBuilder = RestClient.builder().baseUrl("http://booking-auth-test");
+        var facilityBuilder = RestClient.builder().baseUrl("http://facility-auth-test");
+        var authBuilder = RestClient.builder().baseUrl("http://auth-test");
+        var bookingServer = MockRestServiceServer.bindTo(bookingBuilder).build();
+        var facilityServer = MockRestServiceServer.bindTo(facilityBuilder).build();
+        var authServer = MockRestServiceServer.bindTo(authBuilder).build();
+        bookingServer.expect(requestTo("http://booking-auth-test/api/bookings/42"))
+                .andRespond(withSuccess(BOOKING, MediaType.APPLICATION_JSON));
+        facilityServer.expect(requestTo("http://facility-auth-test/api/public/branches/7"))
+                .andRespond(withSuccess(BANK, MediaType.APPLICATION_JSON));
+        authServer.expect(requestTo("http://auth-test/api/auth/profile"))
+                .andExpect(org.springframework.test.web.client.match.MockRestRequestMatchers.header(
+                        "Authorization", "Bearer customer-token"))
+                .andRespond(withSuccess("{\"id\":17,\"email\":\"player@example.com\"}", MediaType.APPLICATION_JSON));
+        var service = new CheckoutService(new PaymentUpstreams(bookingBuilder.build(),
+                facilityBuilder.build(), authBuilder.build()), Clock.fixed(NOW, ZoneOffset.UTC));
+
+        assertThat(service.checkout(42, "Bearer customer-token", "guest-token").customerEmail())
+                .isEqualTo("player@example.com");
+        bookingServer.verify();
+        facilityServer.verify();
+        authServer.verify();
+    }
+
+    @Test
     void checkoutUsesServerAmountAndPreservesLeadingZeroInBankAccount() throws Exception {
         bookingResponse(BOOKING);
         bankResponse(BANK);
@@ -170,5 +196,12 @@ class CheckoutApiTest {
         } catch (org.springframework.web.server.ResponseStatusException e) {
             assertThat(e.getStatusCode()).isEqualTo(HttpStatus.GONE);
         }
+    }
+
+    @Test void zeroAmountRequiresAnAuthoritativeVoucherApplication() throws Exception {
+        bookingResponse(BOOKING.replace("160000.00","0").replace("\"status\":", "\"voucherApplicationId\":\"00000000-0000-0000-0000-000000000001\",\"status\":"));
+        bankResponse(BANK);
+        mvc.perform(get("/api/payments/checkout-info/42").header("X-Hold-Token","guest-token"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.amount").value(0));
     }
 }
