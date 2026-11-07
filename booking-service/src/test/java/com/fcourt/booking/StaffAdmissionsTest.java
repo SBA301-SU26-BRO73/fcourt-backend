@@ -223,4 +223,43 @@ class StaffAdmissionsTest {
                                 "SELECT count(*) FROM booking_staff_commands", Integer.class))
                 .isEqualTo(1);
     }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+        "00000000000000000000000000000001",
+        "12345678901234567890123456789012"
+    })
+    void manualAcceptsExactNumericTicketAndReplaysOnce(String code) throws Exception {
+        jdbc.update("UPDATE bookings SET checkin_code=? WHERE id=42", code);
+        String key = "staff:check-in:100:" + UUID.randomUUID();
+        var request = new HashMap<String, Object>();
+        request.put("branchId", 7);
+        request.put("actorId", 100);
+        request.put("date", date.toString());
+        request.put("checkedInAt", "2026-11-01T02:15:00Z");
+        request.put("checkInCode", "  " + code + "  ");
+        request.put("channel", "MANUAL");
+        for (int i = 0; i < 2; i++) {
+            mvc.perform(post("/api/internal/bookings/check-in")
+                            .with(jwt().jwt(j -> j.subject("100")))
+                            .header("Idempotency-Key", key)
+                            .contentType("application/json")
+                            .content(json.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.bookingId").value(42))
+                    .andExpect(jsonPath("$.status").value("CHECKED_IN"));
+        }
+        request.put("checkInCode", code);
+        request.put("channel", "QR");
+        mvc.perform(post("/api/internal/bookings/check-in")
+                        .with(jwt().jwt(j -> j.subject("100")))
+                        .header("Idempotency-Key", "staff:check-in:100:" + UUID.randomUUID())
+                        .contentType("application/json")
+                        .content(json.writeValueAsString(request)))
+                .andExpect(status().isConflict());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM booking_staff_commands", Integer.class))
+                .isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT status FROM bookings WHERE id=42", String.class))
+                .isEqualTo("CHECKED_IN");
+    }
 }

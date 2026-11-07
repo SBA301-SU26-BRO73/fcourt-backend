@@ -1,10 +1,17 @@
 package com.fcourt.notification.mail;
 
 import com.fcourt.notification.mail.TemplateRenderer.Format;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
+import com.google.zxing.qrcode.QRCodeWriter;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.AddressException;
 import jakarta.mail.internet.InternetAddress;
 import java.nio.charset.StandardCharsets;
+import java.io.ByteArrayOutputStream;
+import java.util.Map;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -49,8 +56,15 @@ class SmtpEmailSender implements EmailSender {
             helper.setSubject(email.subject());
             helper.setText(renderer.render(email.template(), email.model(), Format.TEXT),
                     renderer.render(email.template(), email.model(), Format.HTML));
+            if (email.qrValue() != null) {
+                var matrix = new QRCodeWriter().encode(email.qrValue(), BarcodeFormat.QR_CODE,
+                        300, 300, Map.of(EncodeHintType.MARGIN, 2));
+                var image = new ByteArrayOutputStream();
+                MatrixToImageWriter.writeToStream(matrix, "PNG", image);
+                helper.addInline("check-in-qr", new ByteArrayResource(image.toByteArray()), "image/png");
+            }
             mailSender.send(message);
-        } catch (MessagingException | MailException error) {
+        } catch (Exception error) {
             // The cause stays attached for diagnosis; it never contains the message body.
             throw new EmailDeliveryException("Email delivery failed (" + error.getClass().getSimpleName() + ")",
                     error);

@@ -3,7 +3,7 @@
 Spring Boot 3.5 / Java 21 / JdbcTemplate / Flyway / Spring Kafka / JavaMail. Port **8091**, database
 **notification_db**.
 
-Scope: **SCRUM-42**. Consumes Kafka events and sends Vietnamese emails (plain text and HTML): court owner
+Scope: **SCRUM-42 / SCRUM-90**. Consumes Kafka events and sends Vietnamese emails (plain text and HTML): court owner
 approved, password reset, booking confirmed and booking cancelled. There is no REST API besides
 `/actuator/health`.
 
@@ -31,6 +31,7 @@ export NOTIFICATION_SMTP_AUTH=false NOTIFICATION_SMTP_STARTTLS=false
 | `NOTIFICATION_TOPICS` | `fcourt.auth.events,fcourt.payment.events,fcourt.booking.events` |
 | `NOTIFICATION_RETRY_ATTEMPTS` / `NOTIFICATION_RETRY_INTERVAL_MS` | `3` / `2000` |
 | `NOTIFICATION_ENABLED` | `true` (`false` stops the listeners) |
+| `NOTIFICATION_REMINDER_DELAY_MS` | `900000` (scan pending bookings every 15 minutes) |
 
 Tests: `./mvnw clean verify` (Docker required: Testcontainers Postgres and Kafka). Unit tests alone:
 `./mvnw test '-Dtest=!*IntegrationTest'`.
@@ -50,12 +51,12 @@ The readiness check does not include the SMTP server, so a mail outage does not 
 
 Every other type (`PaymentSubmittedEvent`, `RefundCompletedEvent`, ...) is ignored.
 
-### Producer contract that does not exist yet
+### Producer contract
 
 auth-service publishes the recipient (`OwnerApprovedEvent` gained `email` and `fullName` in SCRUM-40, and
-`PasswordResetRequestedEvent` has them). **payment-service and booking-service do not publish any
-recipient today**: their events carry ids, amounts and (payment) the checkout, but no customer email, and
-guest bookings only have a phone number. This service therefore expects each of the three booking events to
+`PasswordResetRequestedEvent` has them). Payment events for authenticated customer checkout now include
+the recipient snapshot when checkout has a Bearer token; phone-only guest checkout has no email. Booking-service cancellation events still
+do not include recipient. This service expects each booking event to
 carry a top level object next to `payment` or `booking`:
 
 ```json
@@ -66,11 +67,22 @@ carry a top level object next to `payment` or `booking`:
                         "customerName":"An Nguyen","slots":[{"startTime":"18:00:00","endTime":"18:30:00"}]}}}
 ```
 
-Until the producers add `recipient`, these events are **recorded as `SKIPPED_NO_RECIPIENT` and no email is
-sent** (a warning is logged with the event id). Guest customers (phone only) never get an email. Other
+Events without `recipient` are **recorded as `SKIPPED_NO_RECIPIENT` and no email is sent** (a warning is
+logged with the event id). Checkout chỉ có số điện thoại không nhận được email. Other
 fields used when present: `payment.checkout.{bookingCode,branchName,courtName,date,slots[],customerName}`,
 `payment.{amount,checkInCode,rejectionReason}`, `booking.{bookingCode,reason,refundAmount,slots[]}`. A
 malformed value in a field that is used (date, time, expiry) is a poison record, see below.
+
+### Booking reminder (SCRUM-90)
+
+`PaymentConfirmedEvent` with a valid `recipient.email`, `checkout.date`, `checkout.slots[].startTime` and
+`payment.checkInCode` creates a reminder in `booking_reminders`. A scheduled scan sends one email with
+booking details, a map link and an inline check-in QR when the first slot is about two hours away
+(up to 135 minutes before play; a delayed scan catches up until the slot starts). A rejected or cancelled booking removes its pending reminder. A cancellation tombstone
+prevents an older confirmation replay from recreating it. SMTP failure rolls back `reminder_sent`, so the
+next scan retries. The confirmation producer must supply the `recipient` object above before reminders
+can run for authenticated checkout. Existing payments created before the recipient snapshot was added
+remain without email and cannot be backfilled from a booking ID alone.
 
 ## Reliability
 
@@ -105,6 +117,7 @@ malformed value in a field that is used (date, time, expiry) is a poison record,
 
 - `V1`: `processed_events`. The database must be empty on first start (the `docker/postgres` init script
   only creates it, because `notification-service/database` has no scripts).
+- `V2`: `booking_reminders` and `cancelled_booking_reminders` projection tables.
 
 ## Templates
 
