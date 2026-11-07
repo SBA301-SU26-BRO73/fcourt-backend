@@ -1,0 +1,20 @@
+syntax = "proto3";
+package fcourt.voucher.v1;
+option java_package = "com.fcourt.voucher.grpc";
+option java_multiple_files = true;
+
+service VoucherValidation {
+  rpc Validate(ValidateVoucherRequest) returns (ValidateVoucherResponse);
+}
+message ValidateVoucherRequest {
+  string code = 1;
+  int64 branch_id = 2;
+  string order_amount = 3;
+}
+message ValidateVoucherResponse {
+  bool valid = 1;
+  string reason = 2;
+  int64 voucher_id = 3;
+  string discount_amount = 4;
+  string final_amount = 5;
+}

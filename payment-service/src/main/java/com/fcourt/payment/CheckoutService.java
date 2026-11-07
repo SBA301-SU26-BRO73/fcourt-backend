@@ -34,7 +34,8 @@ class CheckoutService {
         if (!"PENDING_PAYMENT".equals(booking.status())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Booking is not awaiting payment");
         }
-        if (booking.totalPrice() == null || booking.totalPrice().signum() <= 0
+        if (booking.totalPrice() == null || booking.totalPrice().signum() < 0
+                || (booking.totalPrice().signum() == 0 && booking.voucherApplicationId() == null)
                 || booking.date() == null || blank(booking.branchName()) || blank(booking.courtName())
                 || booking.slots() == null || booking.slots().isEmpty()
                 || booking.slots().stream().anyMatch(slot -> slot == null || slot.startTime() == null
@@ -59,10 +60,12 @@ class CheckoutService {
         if (!booking.holdExpiresAt().isAfter(clock.instant())) {
             throw new ResponseStatusException(HttpStatus.GONE, "Hold expired");
         }
+        var profile = upstreams.customerProfile(authorization);
         return new CheckoutInfo(booking.id(), booking.bookingCode(), booking.branchId(),
                 booking.branchName(), booking.courtName(), booking.date(), List.copyOf(booking.slots()),
                 amount, bank.bankName(), bank.bankBin(), bank.bankAccountNumber(), bank.bankAccountName(),
-                "FC " + booking.bookingCode(), booking.holdExpiresAt(), booking.customerName());
+                "FC " + booking.bookingCode(), booking.holdExpiresAt(), booking.customerName(),
+                profile == null ? null : profile.email(), profile == null ? null : profile.id());
     }
 
     private boolean blank(String value) { return value == null || value.isBlank(); }

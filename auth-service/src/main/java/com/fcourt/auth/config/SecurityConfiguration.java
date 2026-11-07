@@ -82,7 +82,7 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(authorize -> authorize
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
-                        .requestMatchers("/api/auth/register/**", "/api/auth/login", "/api/auth/refresh",
+                        .requestMatchers("/api/auth/register/**", "/api/auth/login", "/api/auth/google", "/api/auth/refresh",
                                 "/api/auth/logout", "/.well-known/jwks.json").permitAll()
                         .requestMatchers("/api/auth/password/forgot", "/api/auth/password/reset").permitAll()
                         .requestMatchers("/api/auth/profile", "/api/auth/password").authenticated()
