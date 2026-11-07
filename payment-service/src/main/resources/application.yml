@@ -45,6 +45,7 @@ payment:
   events-enabled: ${PAYMENT_EVENTS_ENABLED:true}
   booking-url: ${BOOKING_URL:http://localhost:8088}
   facility-url: ${FACILITY_URL:http://localhost:8083}
+  auth-url: ${AUTH_URL:http://localhost:8081}
 management:
   endpoints:
     web:
