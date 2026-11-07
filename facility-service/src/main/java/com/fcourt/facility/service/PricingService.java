@@ -111,6 +111,12 @@ public class PricingService {
             if (source.isEmpty()) throw badRequest("There are no weekday pricing rules to copy");
             List<BigDecimal> prices = source.stream().map(rule -> checkedPrice(
                     rule.pricePerHour().multiply(factor).setScale(2, RoundingMode.HALF_UP))).toList();
+            List<Rule> weekendCopies = source.stream().map(rule -> new Rule(rule.id(), rule.name(),
+                    rule.start(), rule.end(), rule.pricePerHour(), rule.peak(),
+                    new TreeSet<>(PricingEngine.WEEKEND_DAYS))).toList();
+            for (int i = 0; i < weekendCopies.size(); i++) {
+                requireNoConflict(weekendCopies.subList(0, i), weekendCopies.get(i));
+            }
             live.stream().filter(rule -> rule.dayType() == PricingEngine.DayType.WEEKEND)
                     .forEach(rule -> rules.retire(rule.id()));
             List<RuleResponse> created = new ArrayList<>();
