@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -32,6 +33,7 @@ public class ReportQueryStore {
                              BigDecimal revenue, String status) { }
 
     /** Streams CONFIRMED bookings with booking_date in [from, to] (inclusive) of the given branches, oldest first. */
+    @Transactional(readOnly = true)
     public void revenueRows(Collection<Long> branchIds, LocalDate from, LocalDate to, Consumer<RevenueRow> sink) {
         jdbc.query(con -> {
             var statement = con.prepareStatement("""

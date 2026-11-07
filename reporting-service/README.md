@@ -83,14 +83,16 @@ read model → stats, duplicate delivery, older snapshot ignored, owner scoping 
 `GET /api/admin/dashboard/export/revenue?fromDate=2026-10-01&toDate=2026-10-31&format=xlsx|csv&branchId={id}`
 
 - Returns the file as an attachment (`Content-Disposition: attachment; filename="bao-cao-doanh-thu_20261001_20261031.xlsx"`,
-  `Cache-Control: no-store`). `format` defaults to `xlsx` (Apache POI, streaming `SXSSFWorkbook`); `csv` is UTF-8 with BOM
+  `Cache-Control: no-store`). The HTTP response streams rows as they are read; XLSX uses `SXSSFWorkbook`, CSV writes
+  incrementally as UTF-8 with BOM. The read query uses a read-only transaction and JDBC cursor fetches
   so Excel shows Vietnamese correctly.
 - Same owner scoping as the dashboard (facility-service decides the branches; foreign `branchId` -> 403, facility down -> 503).
 - Rows: CONFIRMED bookings with *play date* in `[fromDate, toDate]`, columns Mã đơn / Chi nhánh / Ngày chơi / Ngày ghi nhận
   doanh thu / Số slot / Số tiền (VND) / Trạng thái, then the net revenue line. Amounts are the recognized `revenue` the
   dashboard sums (CONFIRMED, by booking date), so totals match it.
 - 400: `fromDate`/`toDate` missing or malformed, `fromDate > toDate`, range over 366 days, `format` not xlsx/csv, `branchId <= 0`.
-- Court and customer name are not in the read model (events carry neither), so they are not exported yet.
+- The current export still omits court and customer names required by SCRUM-76; add them after the analytics read-model
+  court fields from SCRUM-43 are merged and customer name is projected from payment events.
 
 ## Super Admin overview (SCRUM-78) — SUPER_ADMIN only
 

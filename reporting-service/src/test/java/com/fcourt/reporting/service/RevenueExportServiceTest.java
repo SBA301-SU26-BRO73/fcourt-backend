@@ -18,6 +18,7 @@ import com.fcourt.reporting.persistence.ReportQueryStore;
 import com.fcourt.reporting.persistence.ReportQueryStore.RevenueRow;
 import com.fcourt.reporting.service.RevenueExportService.Format;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -63,11 +64,13 @@ class RevenueExportServiceTest {
         }).when(store).revenueRows(anyCollection(), any(), any(), any());
 
         var file = service.revenue(7, "tok", null, FROM, TO, Format.XLSX);
+        var output = new ByteArrayOutputStream();
+        file.writer().writeTo(output);
 
         verify(store).revenueRows(eq(List.of(3L, 9L)), eq(FROM), eq(TO), any());
         assertThat(file.filename()).isEqualTo("bao-cao-doanh-thu_20261001_20261031.xlsx");
         assertThat(file.mediaType()).contains("spreadsheetml");
-        try (var workbook = new XSSFWorkbook(new ByteArrayInputStream(file.content()))) {
+        try (var workbook = new XSSFWorkbook(new ByteArrayInputStream(output.toByteArray()))) {
             assertThat(workbook.getSheetAt(0).getRow(8).getCell(5).getNumericCellValue()).isEqualTo(300000.0);
         }
     }
@@ -97,8 +100,11 @@ class RevenueExportServiceTest {
         when(facility.ownedBranches(7, "tok")).thenReturn(List.of());
 
         var file = service.revenue(7, "tok", null, FROM, TO, Format.CSV);
+        var output = new ByteArrayOutputStream();
+        file.writer().writeTo(output);
 
-        assertThat(new String(file.content(), java.nio.charset.StandardCharsets.UTF_8)).contains("Doanh thu ròng (0 đơn)");
+        assertThat(new String(output.toByteArray(), java.nio.charset.StandardCharsets.UTF_8))
+                .contains("Doanh thu ròng (0 đơn)");
         verifyNoInteractions(store);
     }
 
@@ -116,7 +122,8 @@ class RevenueExportServiceTest {
     @Test
     void maximumRangeIsAccepted() {
         when(facility.ownedBranches(7, "tok")).thenReturn(List.of());
-        assertThat(service.revenue(7, "tok", null, FROM, FROM.plusDays(365), Format.CSV)).isNotNull();
+        var file = service.revenue(7, "tok", null, FROM, FROM.plusDays(365), Format.CSV);
+        assertThat(file).isNotNull();
     }
 
     @Test

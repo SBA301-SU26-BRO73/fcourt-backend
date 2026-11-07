@@ -1,9 +1,11 @@
 package com.fcourt.reporting.service;
 
 import com.fcourt.reporting.persistence.ReportQueryStore.RevenueRow;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.BufferedWriter;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -53,9 +55,9 @@ public final class RevenueReport {
         }
     }
 
-    /** Receives rows in order, then {@link #finish()} appends the net line and returns the file bytes. */
+    /** Receives rows in order, then {@link #finish(OutputStream)} writes the summary and artifact. */
     public interface Sink extends Consumer<RevenueRow>, AutoCloseable {
-        byte[] finish();
+        void finish(OutputStream output);
 
         @Override
         void close();
@@ -74,8 +76,8 @@ public final class RevenueReport {
         return new XlsxSink(header);
     }
 
-    public static Sink csv(Header header) {
-        return new CsvSink(header);
+    public static Sink csv(Header header, OutputStream output) {
+        return new CsvSink(header, output);
     }
 
     private static final class XlsxSink implements Sink {
@@ -153,7 +155,7 @@ public final class RevenueReport {
         }
 
         @Override
-        public byte[] finish() {
+        public void finish(OutputStream output) {
             Row total = sheet.createRow(rowIndex++);
             var label = total.createCell(0);
             label.setCellValue(NET_LABEL + " (" + count + " đơn)");
@@ -164,9 +166,9 @@ public final class RevenueReport {
             // Widths are fixed: auto-sizing a streaming sheet would need every row kept in memory.
             int[] widths = {14, 14, 14, 26, 10, 18, 16};
             for (int i = 0; i < widths.length; i++) sheet.setColumnWidth(i, widths[i] * 256);
-            try (var out = new ByteArrayOutputStream()) {
-                workbook.write(out);
-                return out.toByteArray();
+            try {
+                workbook.write(output);
+                output.flush();
             } catch (IOException error) {
                 throw new UncheckedIOException(error);
             }
@@ -186,27 +188,41 @@ public final class RevenueReport {
     private static final class CsvSink implements Sink {
         private static final String EOL = "\r\n";
         private final Header header;
-        private final StringBuilder out = new StringBuilder("﻿"); // BOM so Excel reads UTF-8 (Vietnamese)
+        private final BufferedWriter out;
         private BigDecimal net = BigDecimal.ZERO;
         private long count;
 
-        CsvSink(Header header) {
+        CsvSink(Header header, OutputStream output) {
             this.header = header;
+            out = new BufferedWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8));
+            writeBom();
             line(TITLE);
             line("Chủ sân (ID)", String.valueOf(header.ownerId()));
             line("Chi nhánh", header.branches());
             line("Kỳ báo cáo", header.period());
             line("Ngày xuất", header.generated());
-            out.append(EOL);
+            line("");
             line(COLUMNS);
         }
 
-        private void line(String... cells) {
-            for (int i = 0; i < cells.length; i++) {
-                if (i > 0) out.append(',');
-                out.append(escape(cells[i]));
+        private void writeBom() {
+            try {
+                out.write('\uFEFF'); // BOM so Excel reads UTF-8 (Vietnamese)
+            } catch (IOException error) {
+                throw new UncheckedIOException(error);
             }
-            out.append(EOL);
+        }
+
+        private void line(String... cells) {
+            try {
+                for (int i = 0; i < cells.length; i++) {
+                    if (i > 0) out.write(',');
+                    out.write(escape(cells[i]));
+                }
+                out.write(EOL);
+            } catch (IOException error) {
+                throw new UncheckedIOException(error);
+            }
         }
 
         static String escape(String cell) {
@@ -227,9 +243,14 @@ public final class RevenueReport {
         }
 
         @Override
-        public byte[] finish() {
+        public void finish(OutputStream output) {
             line(NET_LABEL + " (" + count + " đơn)", "", "", "", "", net.toPlainString(), "");
-            return out.toString().getBytes(StandardCharsets.UTF_8);
+            try {
+                out.flush();
+                output.flush();
+            } catch (IOException error) {
+                throw new UncheckedIOException(error);
+            }
         }
 
         @Override
