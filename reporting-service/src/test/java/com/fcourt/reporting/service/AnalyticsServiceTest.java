@@ -156,6 +156,21 @@ class AnalyticsServiceTest {
     }
 
     @Test
+    void revenueChartForOneCourtHasNoCapacityWhenItsBranchIsInactive() {
+        var inactive = new OwnedBranch(1L, OWNER, "INACTIVE", LocalTime.of(6, 0), LocalTime.of(22, 0), 2);
+        when(facility.ownedBranches(OWNER, "t")).thenReturn(List.of(inactive));
+        when(facility.courts(1L, "t")).thenReturn(List.of(new CourtInfo(10L, 1L, "Court A", "ACTIVE")));
+        when(store.dailyTotals(eq(List.of(1L)), eq(d(11, 1)), eq(d(11, 1)), any()))
+                .thenReturn(List.of(new DayAggregate(d(11, 1), new BigDecimal("50000"), 1, 2)));
+
+        var chart = service.revenueChart(OWNER, "t", null, 10L, d(11, 1), d(11, 1), Granularity.DAY);
+
+        assertThat(chart.capacitySlots()).isZero();
+        assertThat(chart.occupancyRate()).isZero();
+        assertThat(chart.points().getFirst().capacitySlots()).isZero();
+    }
+
+    @Test
     void revenueChartRejectsForeignCourtAndInvalidRanges() {
         when(facility.ownedBranches(OWNER, "t")).thenReturn(List.of(branch(1)));
         when(facility.courts(1L, "t")).thenReturn(List.of(new CourtInfo(10L, 1L, "A", "ACTIVE")));
