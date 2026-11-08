@@ -147,7 +147,43 @@ class BookingApiTest {
         assertThat(out.path("voucher").path("customerId").asLong()).isEqualTo(10);
         assertThat(out.path("voucher").path("paymentId").asLong()).isEqualTo(42);
         assertThat(out.path("voucher").path("finalAmount").decimalValue()).isEqualByComparingTo("80000");
+        assertThat(out.path("voucher").has("customerName")).isFalse();
+        assertThat(out.path("voucher").has("customerPhone")).isFalse();
+        assertThat(out.path("voucher").path("bookingCode").asText()).isEqualTo("BK00000001");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM booking_outbox",Long.class)).isEqualTo(1);
+    }
+
+    @Test void voucherAppliedEventCarriesCustomerDisplaySnapshotWhenBookingHasIt() throws Exception {
+        jdbc.update("UPDATE bookings SET voucher_application_id=?,voucher_id=7,original_amount=100000,discount_amount=20000,total_price=80000,payment_frozen=true,customer_name=?,guest_phone=? WHERE id=1",
+                UUID.randomUUID(),"  Nguyen Van A ","0912345678");
+        consume(event(UUID.randomUUID(),"PaymentConfirmedEvent","80000"));
+        var voucher=json.readTree(jdbc.queryForObject("SELECT payload::text FROM booking_outbox",String.class)).path("voucher");
+        assertThat(voucher.path("customerName").asText()).isEqualTo("Nguyen Van A");
+        assertThat(voucher.path("customerPhone").asText()).isEqualTo("0912345678");
+        assertThat(voucher.path("bookingCode").asText()).isEqualTo("BK00000001");
+    }
+
+    @Test void snapshotBackfillRequiresServiceTokenAndEmitsOnlyPaidVoucherBookingsWithBoundedCursor() throws Exception {
+        for(int id:new int[]{1,3}) jdbc.update("UPDATE bookings SET voucher_application_id=?,voucher_id=7,original_amount=100000,discount_amount=20000,total_price=80000,payment_frozen=true,payment_status='CONFIRMED',customer_name=?,guest_phone=? WHERE id=?",
+                UUID.randomUUID(),"Name "+id,"09123456"+id+"0",id);
+        jdbc.update("UPDATE bookings SET voucher_application_id=?,voucher_id=7,original_amount=100000,discount_amount=20000,total_price=80000,payment_frozen=true,customer_name='Unpaid' WHERE id=2",UUID.randomUUID());
+        mvc.perform(post("/api/internal/bookings/voucher-snapshot-backfill")).andExpect(status().isForbidden());
+        mvc.perform(post("/api/internal/bookings/voucher-snapshot-backfill").header("X-Service-Token","wrong")).andExpect(status().isForbidden());
+        for(String bad:List.of("limit=0","limit=101","afterId=-1")) mvc.perform(post("/api/internal/bookings/voucher-snapshot-backfill?"+bad).header("X-Service-Token","integration")).andExpect(status().isBadRequest());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM booking_outbox",Long.class)).isZero();
+        mvc.perform(post("/api/internal/bookings/voucher-snapshot-backfill?limit=1").header("X-Service-Token","integration"))
+                .andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-store")).andExpect(jsonPath("$.emitted").value(1))
+                .andExpect(jsonPath("$.lastBookingId").value(1)).andExpect(jsonPath("$.hasMore").value(true));
+        mvc.perform(post("/api/internal/bookings/voucher-snapshot-backfill?limit=1&afterId=1").header("X-Service-Token","integration"))
+                .andExpect(jsonPath("$.emitted").value(1)).andExpect(jsonPath("$.lastBookingId").value(3)).andExpect(jsonPath("$.hasMore").value(false));
+        var events=jdbc.queryForList("SELECT payload::text FROM booking_outbox ORDER BY id",String.class);
+        assertThat(events).hasSize(2);
+        var first=json.readTree(events.get(0));
+        assertThat(first.path("type").asText()).isEqualTo("VoucherSnapshotBackfillEvent");
+        assertThat(first.path("voucher").path("bookingId").asLong()).isEqualTo(1);
+        assertThat(first.path("voucher").path("customerId").asLong()).isEqualTo(10);
+        assertThat(first.path("voucher").path("customerName").asText()).isEqualTo("Name 1");
+        assertThat(first.path("voucher").path("bookingCode").asText()).isEqualTo("BK00000001");
     }
 
     @Test void latePaymentAfterCancellationKeepsBookingCancelledButRecordsVoucherUse() throws Exception {

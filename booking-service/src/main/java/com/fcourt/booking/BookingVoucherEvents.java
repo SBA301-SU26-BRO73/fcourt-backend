@@ -22,6 +22,10 @@ final class BookingVoucherEvents {
         voucher.put("originalAmount", booking.get("original_amount"));
         voucher.put("discountAmount", booking.get("discount_amount"));
         voucher.put("finalAmount", booking.get("total_price"));
+        // Additive display snapshot for the voucher usage history. Optional for consumers; never logged.
+        putIfPresent(voucher, "bookingCode", booking.get("booking_code"));
+        putIfPresent(voucher, "customerName", booking.get("customer_name"));
+        putIfPresent(voucher, "customerPhone", booking.get("guest_phone"));
         if (payment.hasNonNull("confirmedAt")) {
             voucher.put("usedAt", java.time.Instant.parse(payment.path("confirmedAt").asText()).toString());
         }
@@ -30,5 +34,9 @@ final class BookingVoucherEvents {
                     eventId, booking.get("id"), json.writeValueAsString(Map.of("eventId", eventId,
                             "type", "VoucherAppliedEvent", "voucher", voucher)));
         } catch (com.fasterxml.jackson.core.JsonProcessingException error) { throw new IllegalStateException(error); }
+    }
+
+    private static void putIfPresent(Map<String, Object> target, String key, Object value) {
+        if (value instanceof String text && !text.isBlank()) target.put(key, text.strip());
     }
 }

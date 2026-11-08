@@ -75,6 +75,10 @@ class FacilitySecurity {
                         .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
                         // Service-to-service read used by discovery-service; restrict at the network layer.
                         .requestMatchers(HttpMethod.GET, "/api/internal/**").permitAll()
+                        // Reservation protocol (SCRUM-241): authenticated by X-Internal-Service-Token in the controller.
+                        .requestMatchers(HttpMethod.POST, "/api/internal/court-reservations",
+                                "/api/internal/court-reservations/*/commit",
+                                "/api/internal/court-reservations/*/rollback").permitAll()
                         .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/staff/**").hasRole("STAFF")
                         .anyRequest().denyAll())

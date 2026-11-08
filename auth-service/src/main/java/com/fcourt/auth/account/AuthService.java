@@ -104,7 +104,8 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public UserResponse profile(long userId) {
-        return toResponse(activeAccount(userId));
+        var account = activeAccount(userId);
+        return withAvatar(toResponse(account), accounts.avatarUrl(userId));
     }
 
     @Transactional
@@ -120,8 +121,8 @@ public class AuthService {
         } catch (DuplicateKeyException race) {
             throw ApiException.conflict("Phone number is already registered");
         }
-        return toResponse(new AccountRecord(account.id(), account.email(), account.passwordHash(), fullName, phone,
-                account.role(), account.status(), account.createdAt()));
+        return withAvatar(toResponse(new AccountRecord(account.id(), account.email(), account.passwordHash(), fullName, phone,
+                account.role(), account.status(), account.createdAt())), accounts.avatarUrl(userId));
     }
 
     private AccountRecord activeAccount(long userId) {
@@ -200,6 +201,11 @@ public class AuthService {
             uploaded.add(url);
             accounts.insertDocument(userId, url, docType, clock.instant());
         }
+    }
+
+    private static UserResponse withAvatar(UserResponse user, String avatarUrl) {
+        return new UserResponse(user.id(), user.email(), user.fullName(), user.phone(), user.role(), user.status(),
+                user.createdAt(), avatarUrl);
     }
 
     static UserResponse toResponse(AccountRecord account) {

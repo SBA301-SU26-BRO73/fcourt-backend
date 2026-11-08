@@ -34,6 +34,10 @@ spring:
     listener:
       ack-mode: record
       missing-topics-fatal: true
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 26MB
   jackson:
     deserialization:
       fail-on-null-for-primitives: true
@@ -46,11 +50,33 @@ management:
   endpoint:
     health:
       show-details: never
+storage:
+  # Image host for the review photo feature. Only "cloudinary" is implemented; another host needs an adapter + its settings.
+  provider: ${STORAGE_PROVIDER:cloudinary}
+  # Optional: HTTPS base of every issued image URL; overrides what the adapter derives (CDN or custom domain).
+  public-base-url: ${STORAGE_PUBLIC_BASE_URL:}
+  cloudinary:
+    url: ${CLOUDINARY_URL:}
+    cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+    api-key: ${CLOUDINARY_API_KEY:}
+    api-secret: ${CLOUDINARY_API_SECRET:}
 discovery:
   auth:
     jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
     issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
     audience: ${AUTH_JWT_AUDIENCE:fcourt}
+    base-url: ${AUTH_URL:http://localhost:8081}
+  reviews:
+    images:
+      max-file-bytes: 5242880
+      rate-limit:
+        max-files: ${DISCOVERY_REVIEW_UPLOAD_MAX_FILES:20}
+        window-seconds: ${DISCOVERY_REVIEW_UPLOAD_WINDOW_SECONDS:600}
+      cleanup:
+        enabled: ${DISCOVERY_REVIEW_CLEANUP_ENABLED:true}
+        dry-run: ${DISCOVERY_REVIEW_CLEANUP_DRY_RUN:true}
+        min-age-hours: ${DISCOVERY_REVIEW_CLEANUP_MIN_AGE_HOURS:24}
+        cron: ${DISCOVERY_REVIEW_CLEANUP_CRON:0 30 3 * * *}
   internal:
     slot-token: ${DISCOVERY_INTERNAL_SLOT_TOKEN:}
   slots:
