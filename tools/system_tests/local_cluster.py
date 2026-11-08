@@ -159,7 +159,12 @@ def main():
             try:runner.full_court()
             except Failure:report["overall"]="FAIL"
         if report["overall"]!="PASS":
-            report["diagnostics"]={"packages":sql("booking_db","SELECT state,failure,attempt FROM full_court_packages;"),"reservations":sql("facility_db","SELECT state,cancel_cause FROM court_reservations;"),"facilityOutbox":sql("facility_db","SELECT count(*),count(published_at) FROM facility_outbox;"),
+            def tail(name):
+                try:
+                    lines=[l.rstrip()[:300] for l in (args.output/(name+".log")).read_text(encoding="utf8",errors="replace").splitlines() if any(k in l for k in ("ERROR","WARN","Exception","eservation"))]
+                    return chr(10).join(lines[-30:])
+                except OSError:return ""
+            report["diagnostics"]={"facilityLog":tail("facility"),"bookingLog":tail("booking"),"packages":sql("booking_db","SELECT state,failure,attempt FROM full_court_packages;"),"reservations":sql("facility_db","SELECT state,cancel_cause FROM court_reservations;"),"facilityOutbox":sql("facility_db","SELECT count(*),count(published_at) FROM facility_outbox;"),
                     "discoveryRows":sql("discovery_db","SELECT count(*) FROM branch_read_model; SELECT count(*) FROM court_read_model;")}
         report.update(realServices=list(SERVICES),infrastructure="real PostgreSQL 16 / Redis 7 / Kafka",externalStorage="test-classpath fixtures",admissionClock="test-classpath controlled; JWT clock real",gateway="loopback reverse proxy; not production Nginx",productionAcceptance=False)
         write_report(report,args.output/"report.json")
