@@ -40,8 +40,8 @@ public class ReadModelStore {
     public void apply(BookingFact fact) {
         jdbc.update("""
                 INSERT INTO booking_facts (booking_id, branch_id, status, amount, revenue, revenue_at, booking_date,
-                    slot_count, last_event_type, court_id, court_name)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    slot_count, last_event_type, court_id, court_name, customer_name)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (booking_id) DO UPDATE SET
                     status = CASE WHEN booking_facts.status = 'PENDING' THEN EXCLUDED.status
                         WHEN booking_facts.status = 'CONFIRMED' AND EXCLUDED.last_event_type = 'BookingCancelledEvent'
@@ -57,12 +57,13 @@ public class ReadModelStore {
                     slot_count = GREATEST(booking_facts.slot_count, EXCLUDED.slot_count),
                     court_id = COALESCE(booking_facts.court_id, EXCLUDED.court_id),
                     court_name = COALESCE(booking_facts.court_name, EXCLUDED.court_name),
+                    customer_name = COALESCE(booking_facts.customer_name, EXCLUDED.customer_name),
                     last_event_type = EXCLUDED.last_event_type,
                     updated_at = now()
                 """, fact.bookingId(), fact.branchId(), fact.status(), fact.amount(), fact.revenue(),
                 fact.revenueAt() == null ? null : Timestamp.from(fact.revenueAt()),
                 fact.bookingDate() == null ? null : Date.valueOf(fact.bookingDate()), fact.slotCount(), fact.type(),
-                fact.courtId(), fact.courtName());
+                fact.courtId(), fact.courtName(), fact.customerName());
         for (LocalTime start : fact.slotStarts()) {
             jdbc.update("""
                     INSERT INTO booking_slot_facts (booking_id, slot_start) VALUES (?, ?)

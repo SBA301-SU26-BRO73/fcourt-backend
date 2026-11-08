@@ -29,7 +29,7 @@ public class EventTranslator {
     public record BookingFact(String eventId, String type, long bookingId, long branchId, String status,
                               BigDecimal amount, LocalDate bookingDate, int slotCount,
                               BigDecimal revenue, Instant revenueAt,
-                              Long courtId, String courtName, List<LocalTime> slotStarts) { }
+                              Long courtId, String courtName, String customerName, List<LocalTime> slotStarts) { }
 
     public record Ignored(String eventId, String type) { }
 
@@ -58,7 +58,8 @@ public class EventTranslator {
         return new BookingFact(eventId, type, positiveId(payment, "bookingId"), positiveId(payment, "branchId"),
                 status, amount, date(checkout.path("date")), checkout.path("slots").size(),
                 confirmed ? amount : BigDecimal.ZERO, confirmed ? recordTime : null,
-                null, courtName(checkout.path("courtName")), slotStarts(checkout.path("slots")));
+                null, courtName(checkout.path("courtName")), personName(checkout.path("customerName")),
+                slotStarts(checkout.path("slots")));
     }
 
     public Object staff(String payload, Instant recordTime) {
@@ -79,11 +80,13 @@ public class EventTranslator {
             Instant occurredAt = instant(data.path("occurredAt"), recordTime);
             return new BookingFact(eventId, type, bookingId, branchId, "CONFIRMED", amount,
                     date(booking.path("date")), booking.path("invoice").path("items").size(), amount, occurredAt,
-                    optionalId(booking, "courtId"), null, slotStarts(booking.path("invoice").path("items")));
+                    optionalId(booking, "courtId"), null, personName(booking.path("customerName")),
+                    slotStarts(booking.path("invoice").path("items")));
         }
         // Check-in / completion confirm an existing booking; money was recognized by its payment event.
         return new BookingFact(eventId, type, bookingId, branchId, "CONFIRMED", BigDecimal.ZERO,
-                date(booking.path("date")), 0, BigDecimal.ZERO, null, null, null, List.of());
+                date(booking.path("date")), 0, BigDecimal.ZERO, null, null, null,
+                personName(booking.path("customerName")), List.of());
     }
 
     private JsonNode parse(String payload) {
@@ -123,6 +126,12 @@ public class EventTranslator {
 
     /** Optional: legacy events without a court name still count towards revenue, just not per court. */
     private static String courtName(JsonNode value) {
+        if (!value.isTextual() || value.asText().isBlank()) return null;
+        return value.asText().strip();
+    }
+
+    /** Optional: older payment/staff events may not include a customer name. */
+    private static String personName(JsonNode value) {
         if (!value.isTextual() || value.asText().isBlank()) return null;
         return value.asText().strip();
     }
