@@ -100,6 +100,29 @@ Slot price = `price ?? defaultPricePerHour × 30/60 × priceMultiplier` (2 decim
 `outOfService` = court not ACTIVE or branch INACTIVE. 404 for a missing/deleted court, 200 with
 `slots: []` when the court has no template for that weekday, `Cache-Control: no-store`.
 
+## Pricing rules (SCRUM-80 peak, SCRUM-82 weekday/weekend)
+
+Migration `V30__court_pricing_rules.sql` (`court_pricing_rules`). Day numbers `0 = Sunday .. 6 = Saturday`.
+
+- `GET|POST /api/admin/courts/{courtId}/pricing-rules` (POST 201)
+- `PUT|DELETE /api/admin/courts/{courtId}/pricing-rules/{ruleId}` (DELETE = soft delete, 204)
+- `POST /api/admin/courts/{courtId}/pricing-rules/copy-weekday-to-weekend` `{priceMultiplier?}` -> replaces every
+  weekend rule (Sat/Sun only) with a copy of each weekday rule (Mon-Fri only), price x multiplier, atomically
+- `GET /api/internal/courts/{courtId}/price-quote?date=&startTime=&endTime=` -> `{courtId,date,total,slots:[{startTime,endTime,price,source,ruleId}]}`;
+  `source` is `WEEKEND|PEAK|OFF_PEAK|DEFAULT`; 409 when the court is out of service or a slot has no template
+
+Rule: `ruleName*, startTime*, endTime*, pricePerHour* (> 0), peakHour (default false), daysOfWeek (default 0..6)`;
+response adds `id, courtId, dayType (WEEKDAY|WEEKEND|ALL)`. Times must be on the 30-minute grid and `endTime > startTime`
+(400). A rule overlapping another rule of the same scope on a shared day is 409; weekend rules (days subset of {0,6})
+form their own scope and may overlap weekday rules because they win.
+
+Price of a 30-minute slot, first match wins (`PricingEngine`): weekend rule > peak rule > off-peak rule > the slot's
+template price (the "default"). Maintenance/inactive court or branch is `outOfService` (not priced). A holiday tier is
+not implemented: there is no holiday calendar in the system yet. `slot-schedule` and `price-quote` both use this engine,
+so a booking crossing a rule boundary is the sum of its slots, each at its own price. The `facility.branch-updated.v1`
+snapshot `minPrice/maxPrice` use the effective prices; `PricingRuleUpdatedEvent` is not a separate event for the same
+reason as `CourtCreatedEvent` above.
+
 ## Branch events (`facility.branch-updated.v1`)
 
 Implements the consumer contract in discovery-service's README ("Facility event contract").
