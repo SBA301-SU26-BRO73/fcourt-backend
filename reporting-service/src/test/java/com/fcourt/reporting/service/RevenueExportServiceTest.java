@@ -96,7 +96,7 @@ class RevenueExportServiceTest {
     }
 
     @Test
-    void ownerWithoutBranchesGetsAnEmptyReportWithoutQuerying() {
+    void ownerWithoutBranchesGetsAnEmptyReportWithoutQuerying() throws java.io.IOException {
         when(facility.ownedBranches(7, "tok")).thenReturn(List.of());
 
         var file = service.revenue(7, "tok", null, FROM, TO, Format.CSV);
