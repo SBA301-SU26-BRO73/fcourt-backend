@@ -54,5 +54,6 @@ public class AvailabilityGateway {
         return selected;
     }
 
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
     public record Slot(long slotId, LocalTime startTime, LocalTime endTime, BigDecimal price, String status) { }
 }

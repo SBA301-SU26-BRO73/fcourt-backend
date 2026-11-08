@@ -100,7 +100,9 @@ Coverage includes real Flyway/PostgreSQL queries, anonymous HTTP and validation,
 
 ## Configuration
 
-`SERVER_PORT` (8085), `DISCOVERY_DB_URL` (localhost:5432/discovery_db), `DISCOVERY_DB_USER`, `DISCOVERY_DB_PASSWORD`, `KAFKA_BOOTSTRAP_SERVERS` (localhost:9092), `BRANCH_UPDATED_TOPIC`. Consumer group is `discovery-service-v1`, with earliest offset for a new group. Health endpoint: `/actuator/health`. No cross-service foreign keys, auth dependency or shared entity module.
+`SERVER_PORT` (8085), `DISCOVERY_DB_URL` (localhost:5432/discovery_db), `DISCOVERY_DB_USER`, `DISCOVERY_DB_PASSWORD`, `KAFKA_BOOTSTRAP_SERVERS` (localhost:9092), `BRANCH_UPDATED_TOPIC`, and `DISCOVERY_INTERNAL_SLOT_TOKEN` (required for facility-service lock validation). Consumer group is `discovery-service-v1`, with earliest offset for a new group. Health endpoint: `/actuator/health`. No cross-service foreign keys or shared entity module.
+
+Set `DISCOVERY_INTERNAL_SLOT_TOKEN` in the environment before starting the `app` profile. The compose file passes it to discovery-service; set the same value for facility-service. Keep the token private and restrict the discovery container to trusted service networks.
 
 ## Realtime court slots (SCRUM-22)
 

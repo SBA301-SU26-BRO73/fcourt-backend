@@ -73,6 +73,7 @@ services:
       REDIS_PORT: 6379
       FACILITY_URL: ${FACILITY_URL:-http://host.docker.internal:8083}
       BOOKING_URL: ${BOOKING_URL:-http://host.docker.internal:8088}
+      DISCOVERY_INTERNAL_SLOT_TOKEN: ${DISCOVERY_INTERNAL_SLOT_TOKEN:-}
     depends_on:
       redis:
         condition: service_healthy
