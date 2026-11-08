@@ -25,6 +25,8 @@ $env:AUTH_JWK_SET_URI = 'http://localhost:8081/.well-known/jwks.json'
 | `FACILITY_OUTBOX_DELAY_MS` | `1000` |
 | `FACILITY_BOOTSTRAP_SNAPSHOTS` | `true` |
 | `SUBSCRIPTION_BASE_URL` | empty (use default limits below) |
+| `DISCOVERY_BASE_URL` | empty (court locks answer 503 until set; used to detect bookings/holds) |
+| `DISCOVERY_INTERNAL_SLOT_TOKEN` | empty (must match discovery-service; court locks answer 503 until configured) |
 | `SUBSCRIPTION_DEFAULT_MAX_BRANCHES` / `SUBSCRIPTION_DEFAULT_MAX_COURTS` | `3` / `15` |
 
 ### Schema
@@ -95,9 +97,32 @@ no partial block is ever created. Applying replaces (soft-deletes) every live te
 given days in the same transaction, so a day never mixes old and new layouts.
 Slot price = `price ?? defaultPricePerHour × 30/60 × priceMultiplier` (2 decimals, HALF_UP).
 
+**Court locks / out of service / private events (SCRUM-49, SCRUM-111)** — one model (`court_locks`, migration
+`V40`), one window `[startAt, endAt)` per court in venue-local time (`yyyy-MM-ddTHH:mm:ss`, minutes `00`/`30`,
+may cross midnight or span up to 31 days, must end in the future).
+
+- `POST /api/admin/courts/lock-slots` `{courtId*, startAt*, endAt*, type (OUT_OF_SERVICE default | PRIVATE_EVENT),
+  reason*, notes, publicReason, contactName, contactPhone}` → 201 `LockResponse`
+- `GET /api/admin/courts/lock-slots?branchId=&courtId=&from=&to=` → active locks, ordered by start
+- `DELETE /api/admin/courts/lock-slots/{id}` → 204 (unlock; the row is kept as cancelled for audit)
+- `POST /api/admin/courts/out-of-service` `{branchId*, allCourts | courtIds[], startAt*, endAt*, type, reason*, ...}` →
+  201 `{groupId, branchId, totalLocks, locks[]}`; one lock per court, all-or-nothing in one transaction
+- `DELETE /api/admin/courts/out-of-service/{groupId}` → 204 (unlock every court of that request)
+
+`reason` and `notes` are internal (admin API only). `publicReason` (≤500), `contactName` (≤100) and `contactPhone`
+(`+?` 9–15 digits) are the only fields exposed to customers (as `restriction` below). Errors: **400** invalid window
+or scope, **404** unknown/foreign court, branch or lock, **409** `code=LOCK_OVERLAP` (an active lock already covers
+part of the window, `lockIds` listed) or `code=BOOKING_CONFLICT` (`conflicts:[{courtId,date,slotId,startTime,
+endTime,status BOOKED|HOLD}]`, nothing is created), **503** bookings/holds cannot be verified. Before inserting,
+the service reads `GET {DISCOVERY_BASE_URL}/api/internal/courts/{id}/slot-conflicts?date=` for every court and date of the
+window, using `DISCOVERY_INTERNAL_SLOT_TOKEN` shared with discovery-service; if either setting is empty, locking
+answers 503 (fail closed). A booking or hold created between that
+check and the commit is not detected (point-in-time check, same limitation as SCRUM-22).
+
 **Discovery read API**: `GET /api/internal/courts/{courtId}/slot-schedule?date=YYYY-MM-DD`, shape of
 `discovery-service/SCRUM-22_AVAILABLE_SLOTS.md`. `slotId` = template id (stable),
-`outOfService` = court not ACTIVE or branch INACTIVE. 404 for a missing/deleted court, 200 with
+`outOfService` = court not ACTIVE, branch INACTIVE, or an active court lock covers any part of the slot (then each slot also
+carries the optional public `restriction:{type,publicReason,contactName,contactPhone}`, omitted when null). 404 for a missing/deleted court, 200 with
 `slots: []` when the court has no template for that weekday, `Cache-Control: no-store`.
 
 ## Pricing rules (SCRUM-80 peak, SCRUM-82 weekday/weekend)
