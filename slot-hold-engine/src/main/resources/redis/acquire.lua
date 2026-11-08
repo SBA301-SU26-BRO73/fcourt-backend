@@ -11,5 +11,7 @@ for i = 1, #KEYS - 1 do
 end
 redis.call('set', KEYS[#KEYS], ARGV[3], 'PXAT', expires)
 local request = cjson.decode(ARGV[3])
-redis.call('publish', 'fcourt:slot-changes', cjson.encode({courtId=request.courtId,date=request.date}))
+redis.call('publish', 'fcourt:slot-changes', cjson.encode({courtId=request.courtId,date=request.date,type='HOLD_CREATED'}))
+-- Expiry index (SCRUM-108): one member per hold, swept by sweep.lua to announce HOLD_EXPIRED.
+redis.call('zadd', 'fcourt:hold-expiry', expires, request.courtId .. '|' .. request.date .. '|' .. KEYS[#KEYS])
 return expires
