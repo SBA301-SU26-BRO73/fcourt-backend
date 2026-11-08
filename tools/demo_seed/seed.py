@@ -139,7 +139,7 @@ def build_rows(m, hashed_password, plan_limits=(15, 3)):
                     created_at=stamp, updated_at=stamp, deleted_at=None)
     for i, kind in enumerate(["FIXED", "PERCENTAGE"]):
         # Column names and enum values follow voucher-service migration V1 (discount_type is FIXED_AMOUNT or PERCENTAGE).
-        add("voucher_db", "vouchers", id=base+i, code=f"DEMO-{key}-{kind}", discount_type="FIXED_AMOUNT" if i == 0 else "PERCENTAGE",
+        add("voucher_db", "vouchers", id=base+i, code=f"DEMO-{key}-{kind}".upper(), discount_type="FIXED_AMOUNT" if i == 0 else "PERCENTAGE",
             discount_value=Decimal(10000 if i == 0 else 10), min_order_amount=Decimal(20000), max_discount_amount=Decimal(10000),
             usage_limit=100, used_count=0, start_date=stamp-timedelta(days=1), end_date=stamp+timedelta(days=30), status="ACTIVE",
             branch_id=base, created_at=stamp, updated_at=stamp, deleted_at=None)
