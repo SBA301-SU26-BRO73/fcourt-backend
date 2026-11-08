@@ -59,6 +59,72 @@ class HoldIntegrationTest {
                 .build();
     }
 
+    @Test
+    void holdAndReleasePublishOnlyPublicInvalidations() throws Exception {
+        var queue = new java.util.concurrent.LinkedBlockingQueue<String>();
+        var topic = redis.getTopic("fcourt:slot-changes", StringCodec.INSTANCE);
+        int listener = topic.addListener(String.class, (channel, message) -> queue.add(message));
+        try {
+            var request = new HoldRequest(21L, LocalDate.of(2030, 1, 2), List.of(1L), "0912345678");
+            assertThat(store.acquire(request, "private-token")).isNotNull();
+            var event = MAPPER.readTree(queue.poll(3, java.util.concurrent.TimeUnit.SECONDS));
+            assertThat(event.size()).isEqualTo(3);
+            assertThat(event.path("type").asText()).isEqualTo("HOLD_CREATED");
+            assertThat(event.path("courtId").asLong()).isEqualTo(21);
+            assertThat(event.path("date").asText()).isEqualTo("2030-01-02");
+            assertThat(store.acquire(request, "conflicting-token")).isNull();
+            assertThat(queue.poll(100, java.util.concurrent.TimeUnit.MILLISECONDS)).isNull();
+            store.release("private-token");
+            var released = MAPPER.readTree(queue.poll(3, java.util.concurrent.TimeUnit.SECONDS));
+            assertThat(released.path("type").asText()).isEqualTo("HOLD_RELEASED");
+            assertThat(released.path("courtId")).isEqualTo(event.path("courtId"));
+            assertThat(released.path("date")).isEqualTo(event.path("date"));
+            store.release("private-token");
+            assertThat(queue.poll(100, java.util.concurrent.TimeUnit.MILLISECONDS)).isNull();
+        } finally { topic.removeListener(listener); }
+    }
+
+    @Test
+    void ttlExpiryIsAnnouncedOnceWithPublicFieldsOnly() throws Exception {
+        var queue = new java.util.concurrent.LinkedBlockingQueue<String>();
+        var topic = redis.getTopic("fcourt:slot-changes", StringCodec.INSTANCE);
+        int listener = topic.addListener(String.class, (channel, message) -> queue.add(message));
+        try {
+            var request = new HoldRequest(21L, LocalDate.of(2030, 1, 2), List.of(1L), "0912345678");
+            assertThat(store.acquire(request, "expiring-token")).isNotNull();
+            assertThat(queue.poll(3, java.util.concurrent.TimeUnit.SECONDS)).contains("HOLD_CREATED");
+            // A live hold is not announced as expired.
+            assertThat(store.sweepExpired()).isZero();
+            assertThat(queue.poll(200, java.util.concurrent.TimeUnit.MILLISECONDS)).isNull();
+            // Make the hold due: expire its keys and move its index score into the past.
+            var index = redis.<String>getScoredSortedSet("fcourt:hold-expiry", StringCodec.INSTANCE);
+            assertThat(index.size()).isEqualTo(1);
+            String member = index.first();
+            assertThat(member).startsWith("21|2030-01-02|");
+            index.add(System.currentTimeMillis() - 1000, member);
+            redis.getBucket("fcourt:hold:21:2030-01-02:1").expire(Instant.now().minusSeconds(1));
+            assertThat(store.sweepExpired()).isEqualTo(1);
+            var event = MAPPER.readTree(queue.poll(3, java.util.concurrent.TimeUnit.SECONDS));
+            assertThat(event.size()).isEqualTo(3);
+            assertThat(event.path("courtId").asLong()).isEqualTo(21);
+            assertThat(event.path("date").asText()).isEqualTo("2030-01-02");
+            assertThat(event.path("type").asText()).isEqualTo("HOLD_EXPIRED");
+            assertThat(event.toString()).doesNotContain("expiring-token", "0912345678");
+            // Drained entries are never announced twice.
+            assertThat(store.sweepExpired()).isZero();
+            assertThat(queue.poll(200, java.util.concurrent.TimeUnit.MILLISECONDS)).isNull();
+        } finally { topic.removeListener(listener); }
+    }
+
+    @Test
+    void releasedHoldLeavesNoExpiryEntryAndNoExpiredEvent() throws Exception {
+        var request = new HoldRequest(21L, LocalDate.of(2030, 1, 2), List.of(1L), "0912345678");
+        assertThat(store.acquire(request, "short-lived")).isNotNull();
+        store.release("short-lived");
+        assertThat(redis.getScoredSortedSet("fcourt:hold-expiry", StringCodec.INSTANCE).size()).isZero();
+        assertThat(store.sweepExpired()).isZero();
+    }
+
     static RedissonClient client() {
         var config = new Config();
         config.useSingleServer().setAddress("redis://" + REDIS.getHost() + ":" + REDIS.getMappedPort(6379));
@@ -157,7 +223,7 @@ class HoldIntegrationTest {
             int winners = 0;
             for (var f : futures) if (f.get() != null) winners++;
             assertThat(winners).isEqualTo(1);
-            assertThat(redis.getKeys().count()).isEqualTo(3);
+            assertThat(redis.getKeys().count()).isEqualTo(4); // 2 slots, token, expiry index
         }
     }
 

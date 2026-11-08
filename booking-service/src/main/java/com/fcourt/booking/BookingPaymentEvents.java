@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 @ConditionalOnProperty(name="booking.events-enabled",havingValue="true",matchIfMissing=true)
 class BookingPaymentEvents {
+    @org.springframework.beans.factory.annotation.Autowired(required=false) SlotChanges changes;
     private final org.springframework.jdbc.core.JdbcTemplate jdbc;
     private final ObjectMapper json;
     BookingPaymentEvents(org.springframework.jdbc.core.JdbcTemplate jdbc,ObjectMapper json) { this.jdbc=jdbc;this.json=json; }
@@ -55,6 +56,7 @@ class BookingPaymentEvents {
             """,next,p.path("id").asLong(),paymentStatus,code,confirm?p.path("qrImageUrl").asText():null,
             p.path("receiptImageUrl").isTextual()?p.path("receiptImageUrl").asText():null,id);
         if(next.equals("CANCELLED"))jdbc.update("UPDATE booking_slots SET active=false WHERE booking_id=?",id);
+        if(changes!=null) changes.afterCommit(id);
         if(paymentConfirmed && b.get("voucher_application_id") != null) BookingVoucherEvents.confirmed(jdbc,json,b,p);
     }
 }
