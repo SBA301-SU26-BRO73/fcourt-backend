@@ -7,9 +7,11 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 
 import com.fcourt.reporting.service.DashboardService;
 import com.fcourt.reporting.service.RevenueExportService;
@@ -65,15 +67,19 @@ class ReportingAuthorizationTest {
     void ownerDownloadsWithAttachmentHeaders() throws Exception {
         when(export.revenue(eq(7L), any(), eq(null), eq(LocalDate.of(2026, 10, 1)), eq(LocalDate.of(2026, 10, 31)),
                 eq(Format.XLSX))).thenReturn(new ExportFile("bao-cao-doanh-thu_20261001_20261031.xlsx",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", new byte[] {1, 2, 3}));
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                output -> output.write(new byte[] {1, 2, 3})));
 
-        var result = mvc.perform(get(EXPORT).with(as("ADMIN"))).andExpect(status().isOk())
+        var async = mvc.perform(get(EXPORT).with(as("ADMIN"))).andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
                 .andExpect(header().string(HttpHeaders.CONTENT_TYPE,
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"bao-cao-doanh-thu_20261001_20261031.xlsx\""))
+                .andExpect(request().asyncStarted())
                 .andReturn();
+        var result = mvc.perform(asyncDispatch(async))
+                .andExpect(status().isOk()).andReturn();
         assertThat(result.getResponse().getContentAsByteArray()).containsExactly(1, 2, 3);
     }
 

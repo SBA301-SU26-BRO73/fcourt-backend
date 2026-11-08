@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fcourt.reporting.persistence.ReportQueryStore.RevenueRow;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -26,16 +27,17 @@ class RevenueReportTest {
                 new BigDecimal(amount), status);
     }
 
-    static byte[] build(RevenueReport.Sink sink, RevenueRow... rows) {
+    static byte[] build(RevenueReport.Sink sink, ByteArrayOutputStream output, RevenueRow... rows) {
         try (sink) {
             for (RevenueRow row : rows) sink.accept(row);
-            return sink.finish();
+            sink.finish(output);
+            return output.toByteArray();
         }
     }
 
     @Test
     void xlsxReopensWithHeaderBlockRowsAndNetTotal() throws IOException {
-        byte[] bytes = build(RevenueReport.xlsx(HEADER), row(11, 3, "CONFIRMED", "250000.00"),
+        byte[] bytes = build(RevenueReport.xlsx(HEADER), new ByteArrayOutputStream(), row(11, 3, "CONFIRMED", "250000.00"),
                 row(12, 9, "CONFIRMED", "1234567.00"));
 
         try (var workbook = new XSSFWorkbook(new ByteArrayInputStream(bytes))) {
@@ -62,7 +64,7 @@ class RevenueReportTest {
 
     @Test
     void emptyPeriodStillProducesAValidWorkbookWithZeroNet() throws IOException {
-        byte[] bytes = build(RevenueReport.xlsx(HEADER));
+        byte[] bytes = build(RevenueReport.xlsx(HEADER), new ByteArrayOutputStream());
 
         try (var workbook = new XSSFWorkbook(new ByteArrayInputStream(bytes))) {
             var total = workbook.getSheetAt(0).getRow(7);
@@ -73,7 +75,8 @@ class RevenueReportTest {
 
     @Test
     void csvIsUtf8WithBomAndPlainIntegerMoney() {
-        byte[] bytes = build(RevenueReport.csv(HEADER), row(11, 3, "CONFIRMED", "250000.00"),
+        var output = new ByteArrayOutputStream();
+        byte[] bytes = build(RevenueReport.csv(HEADER, output), output, row(11, 3, "CONFIRMED", "250000.00"),
                 row(12, 9, "CANCELLED", "0.00"));
 
         assertThat(bytes[0]).isEqualTo((byte) 0xEF);

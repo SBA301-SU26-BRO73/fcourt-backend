@@ -121,6 +121,24 @@ class SuperAdminOverviewServiceTest {
     }
 
     @Test
+    void topOwnerBranchCountIncludesBranchesWithoutConfirmedRevenue() {
+        when(facility.allBranches("tok")).thenReturn(List.of(
+                branch(1, 10, "ACTIVE", 2), branch(2, 10, "INACTIVE", 1)));
+        when(platform.accounts(any(), any(), any())).thenReturn(
+                new AccountStats(new OwnerCounts(1, 0, 0, 0, 1), new CustomerCounts(0, 0), List.of()));
+        when(platform.saasRevenue(any(), any(), any())).thenReturn(new SaasRevenue(BigDecimal.ZERO, 0, List.of()));
+        when(store.totalRevenue()).thenReturn(new BigDecimal("100"));
+        when(store.revenueByMonth(any())).thenReturn(Map.of());
+        when(store.revenueByBranch()).thenReturn(Map.of(1L, new BigDecimal("100")));
+        when(platform.ownerNames(any(), any())).thenReturn(List.of(new OwnerName(10, "Owner", "o@x.vn")));
+
+        var topOwner = service.overview("tok", 1).topOwners().getFirst();
+
+        assertThat(topOwner.ownerId()).isEqualTo(10L);
+        assertThat(topOwner.branches()).isEqualTo(2);
+    }
+
+    @Test
     void monthsOutOfRangeAreBadRequests() {
         for (int months : new int[] {0, -1, 25}) {
             assertThatThrownBy(() -> service.overview("tok", months)).isInstanceOfSatisfying(

@@ -3,6 +3,8 @@ package com.fcourt.reporting.service;
 import com.fcourt.reporting.integration.FacilityClient;
 import com.fcourt.reporting.integration.FacilityClient.OwnedBranch;
 import com.fcourt.reporting.persistence.ReportQueryStore;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -51,7 +53,12 @@ public class RevenueExportService {
         }
     }
 
-    public record ExportFile(String filename, String mediaType, byte[] content) { }
+    @FunctionalInterface
+    public interface OutputWriter {
+        void writeTo(OutputStream output) throws IOException;
+    }
+
+    public record ExportFile(String filename, String mediaType, OutputWriter writer) { }
 
     private final FacilityClient facility;
     private final ReportQueryStore store;
@@ -72,13 +79,13 @@ public class RevenueExportService {
                 : List.of(facility.ownedBranch(branchId, adminId, bearer));
         List<Long> ids = branches.stream().map(OwnedBranch::id).sorted().toList();
         var header = new RevenueReport.Header(adminId, ids, from, to, zone, clock.instant());
-        try (var sink = format == Format.XLSX ? RevenueReport.xlsx(header) : RevenueReport.csv(header)) {
-            if (!ids.isEmpty()) {
-                store.revenueRows(ids, from, to, sink);
+        String name = "bao-cao-doanh-thu_" + STAMP.format(from) + "_" + STAMP.format(to) + "." + format.extension;
+        return new ExportFile(name, format.mediaType, output -> {
+            try (var sink = format == Format.XLSX ? RevenueReport.xlsx(header) : RevenueReport.csv(header, output)) {
+                if (!ids.isEmpty()) store.revenueRows(ids, from, to, sink);
+                sink.finish(output);
             }
-            String name = "bao-cao-doanh-thu_" + STAMP.format(from) + "_" + STAMP.format(to) + "." + format.extension;
-            return new ExportFile(name, format.mediaType, sink.finish());
-        }
+        });
     }
 
     static void validate(LocalDate from, LocalDate to) {

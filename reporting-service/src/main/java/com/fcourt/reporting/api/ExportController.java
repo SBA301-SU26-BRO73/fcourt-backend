@@ -5,13 +5,13 @@ import com.fcourt.reporting.service.RevenueExportService.ExportFile;
 import com.fcourt.reporting.service.RevenueExportService.Format;
 import jakarta.validation.constraints.Positive;
 import java.time.LocalDate;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,19 +28,19 @@ class ExportController {
 
     /** Owner-scoped revenue report download; {@code branchId} omitted = every own branch. */
     @GetMapping("/api/admin/dashboard/export/revenue")
-    ResponseEntity<ByteArrayResource> revenue(@AuthenticationPrincipal Jwt jwt,
+    ResponseEntity<StreamingResponseBody> revenue(@AuthenticationPrincipal Jwt jwt,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(defaultValue = "xlsx") String format,
             @RequestParam(required = false) @Positive Long branchId) {
         ExportFile file = export.revenue(Long.parseLong(jwt.getSubject()), jwt.getTokenValue(), branchId,
                 fromDate, toDate, Format.parse(format));
+        StreamingResponseBody body = file.writer()::writeTo;
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
                 .contentType(MediaType.parseMediaType(file.mediaType()))
-                .contentLength(file.content().length)
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         ContentDisposition.attachment().filename(file.filename()).build().toString())
                 .header(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, HttpHeaders.CONTENT_DISPOSITION)
-                .body(new ByteArrayResource(file.content()));
+                .body(body);
     }
 }

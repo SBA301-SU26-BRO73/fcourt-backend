@@ -105,10 +105,10 @@ public class SuperAdminOverviewService {
         Map<Long, BigDecimal> revenue = new HashMap<>();
         Map<Long, Integer> branchCount = new HashMap<>();
         for (OwnedBranch branch : branches) {
+            branchCount.merge(branch.adminId(), 1, Integer::sum);
             BigDecimal value = byBranch.get(branch.id());
             if (value == null) continue;
             revenue.merge(branch.adminId(), value, BigDecimal::add);
-            branchCount.merge(branch.adminId(), 1, Integer::sum);
         }
         List<Map.Entry<Long, BigDecimal>> top = revenue.entrySet().stream()
                 .sorted(Map.Entry.<Long, BigDecimal>comparingByValue().reversed().thenComparing(Map.Entry.comparingByKey()))
