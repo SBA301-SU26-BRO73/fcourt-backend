@@ -206,7 +206,7 @@ class LockServiceTest {
 
     BranchResponse branch() {
         return new BranchResponse(3, ADMIN, "B", "a", null, null, "c", null, null, null, LocalTime.of(6, 0),
-                LocalTime.of(23, 0), 30, "bank", "970436", "123456", "owner", "ACTIVE", 3, Instant.now(), Instant.now());
+                LocalTime.of(23, 0), 30, "bank", "970436", "123456", "owner", "ACTIVE", 3, Instant.now(), Instant.now(), List.of());
     }
 
     @Test

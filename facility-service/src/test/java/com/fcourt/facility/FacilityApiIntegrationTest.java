@@ -405,6 +405,22 @@ class FacilityApiIntegrationTest {
     }
 
     @Test
+    void imageUploadAnswers503WhenCloudinaryIsNotConfiguredButServiceStillWorks() throws Exception {
+        long owner = 9390;
+        long branchId = id(postJson("/api/admin/branches", branchBody("No cloud", "06:00", "22:00"), owner)
+                .andExpect(status().isCreated()));
+        byte[] png = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0};
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .multipart("/api/admin/branches/{id}/images", branchId)
+                        .file(new org.springframework.mock.web.MockMultipartFile("files", "a.png", "image/png", png))
+                        .with(as(owner, "ADMIN")))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.detail").value("Image storage is not configured on this server"));
+        mvc.perform(get("/api/admin/branches/{id}", branchId).with(as(owner, "ADMIN")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.images", hasSize(0)));
+    }
+
+    @Test
     void courtLocksCloseSlotsRefuseBookingConflictsAndUnlock() throws Exception {
         long owner = 9301;
         long branchId = id(postJson("/api/admin/branches", branchBody("Locks", "06:00", "22:00"), owner)
