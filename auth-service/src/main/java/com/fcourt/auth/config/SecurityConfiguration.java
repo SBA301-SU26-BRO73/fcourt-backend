@@ -85,7 +85,7 @@ public class SecurityConfiguration {
                         .requestMatchers("/api/auth/register/**", "/api/auth/login", "/api/auth/google", "/api/auth/refresh",
                                 "/api/auth/logout", "/.well-known/jwks.json").permitAll()
                         .requestMatchers("/api/auth/password/forgot", "/api/auth/password/reset").permitAll()
-                        .requestMatchers("/api/auth/profile", "/api/auth/password").authenticated()
+                        .requestMatchers("/api/auth/profile", "/api/auth/profile/avatar", "/api/auth/password").authenticated()
                         .requestMatchers("/api/super-admin/**").hasRole(UserRole.SUPER_ADMIN.name())
                         .requestMatchers("/api/auth/me").authenticated()
                         .requestMatchers("/api/internal/staff-accounts", "/api/internal/staff-accounts/**").hasRole(UserRole.ADMIN.name())

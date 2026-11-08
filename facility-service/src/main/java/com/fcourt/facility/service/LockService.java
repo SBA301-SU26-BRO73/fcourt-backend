@@ -174,12 +174,17 @@ public class LockService {
 
     /** Refuses the lock when a booking or a live hold sits inside the window (checked before the DB transaction). */
     private void requireNoBookings(List<Long> courtIds, LockDetails request) {
+        requireNoBookings(courtIds, request.startAt(), request.endAt());
+    }
+
+    /** Window form, shared with {@link ReservationService} (SCRUM-241). */
+    void requireNoBookings(List<Long> courtIds, LocalDateTime startAt, LocalDateTime endAt) {
         List<SlotConflict> conflicts = new ArrayList<>();
         for (long courtId : courtIds) {
-            for (var date : SlotWindows.dates(request.startAt(), request.endAt())) {
+            for (var date : SlotWindows.dates(startAt, endAt)) {
                 for (var slot : availability.conflicts(courtId, date)) {
                     if (BLOCKING_STATUSES.contains(slot.status())
-                            && SlotWindows.overlaps(date, slot.startTime(), slot.endTime(), request.startAt(), request.endAt())) {
+                            && SlotWindows.overlaps(date, slot.startTime(), slot.endTime(), startAt, endAt)) {
                         conflicts.add(new SlotConflict(courtId, date, slot.slotId(), slot.startTime(),
                                 slot.endTime(), slot.status()));
                     }
@@ -198,8 +203,13 @@ public class LockService {
     }
 
     private void requireNoLockOverlap(List<Long> courtIds, LockDetails request) {
+        requireNoLockOverlap(courtIds, request.startAt(), request.endAt());
+    }
+
+    /** Window form, shared with {@link ReservationService} (SCRUM-241). */
+    void requireNoLockOverlap(List<Long> courtIds, LocalDateTime startAt, LocalDateTime endAt) {
         List<LockResponse> overlapping = courtIds.stream()
-                .flatMap(courtId -> locks.overlapping(courtId, request.startAt(), request.endAt()).stream()).toList();
+                .flatMap(courtId -> locks.overlapping(courtId, startAt, endAt).stream()).toList();
         if (!overlapping.isEmpty()) {
             ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
                     "The window overlaps an existing lock on court(s) " + overlapping.stream()

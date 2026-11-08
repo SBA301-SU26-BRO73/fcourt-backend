@@ -19,16 +19,24 @@ public class ReviewService {
     private final ReviewBookingClient booking;
     private final ReviewBranchAuthority authority;
     private final TransactionTemplate tx;
-    public ReviewService(ReviewRepository repository, ReviewBookingClient booking, ReviewBranchAuthority authority, TransactionTemplate tx) {
+    private final ReviewerProfileClient reviewers;
+    private final ReviewImagePolicy images;
+    public ReviewService(ReviewRepository repository, ReviewBookingClient booking, ReviewBranchAuthority authority, TransactionTemplate tx,
+            ReviewerProfileClient reviewers, ReviewImagePolicy images) {
         this.repository = repository; this.booking = booking; this.authority = authority; this.tx = tx;
+        this.reviewers = reviewers; this.images = images;
     }
 
     public Review create(CreateReviewRequest request, Jwt jwt) {
         long user = ReviewIdentity.require(jwt, "CUSTOMER");
+        // Only URLs issued by our own uploader (caller's folder) are accepted; checked before any remote call.
+        if (!images.allowsAll(request.imageUrls(), user))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ảnh đánh giá phải được tải lên qua hệ thống");
         var order = booking.completed(request.bookingId(), jwt);
+        var reviewer = reviewers.snapshot(jwt);
         try {
             return tx.execute(ignored -> {
-                var review = repository.insert(order.branchId(), order.courtId(), user, request);
+                var review = repository.insert(order.branchId(), order.courtId(), user, reviewer, request);
                 repository.updateRating(order.branchId(), request.rating());
                 return review;
             });

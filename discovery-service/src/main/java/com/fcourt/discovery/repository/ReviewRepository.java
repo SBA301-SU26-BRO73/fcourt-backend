@@ -2,6 +2,7 @@ package com.fcourt.discovery.repository;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fcourt.discovery.component.ReviewerProfileClient;
 import com.fcourt.discovery.dto.request.CreateReviewRequest;
 import com.fcourt.discovery.dto.response.ReviewPage;
 import com.fcourt.discovery.model.Review;
@@ -21,13 +22,13 @@ public class ReviewRepository {
         this.jdbc = jdbc; this.named = new NamedParameterJdbcTemplate(jdbc); this.json = json;
     }
 
-    public Review insert(long branchId, long courtId, long userId, CreateReviewRequest request) {
+    public Review insert(long branchId, long courtId, long userId, ReviewerProfileClient.Snapshot reviewer, CreateReviewRequest request) {
         try {
             return jdbc.queryForObject("""
-                    INSERT INTO reviews(branch_id,court_id,booking_id,user_id,rating,comment,image_urls)
-                    VALUES (?,?,?,?,?,?,?::jsonb) RETURNING *
+                    INSERT INTO reviews(branch_id,court_id,booking_id,user_id,rating,comment,image_urls,reviewer_display_name,reviewer_avatar_url)
+                    VALUES (?,?,?,?,?,?,?::jsonb,?,?) RETURNING *
                     """, this::row, branchId, courtId, request.bookingId(), userId, request.rating(), request.comment(),
-                    json.writeValueAsString(request.imageUrls()));
+                    json.writeValueAsString(request.imageUrls()), reviewer.displayName(), reviewer.avatarUrl());
         } catch (com.fasterxml.jackson.core.JsonProcessingException error) { throw new IllegalStateException(error); }
     }
 
@@ -76,7 +77,8 @@ public class ReviewRepository {
         try {
             var replied = row.getTimestamp("replied_at");
             return new Review(row.getLong("id"), row.getLong("branch_id"), row.getLong("court_id"), row.getLong("booking_id"),
-                    row.getLong("user_id"), row.getInt("rating"), row.getString("comment"),
+                    row.getLong("user_id"), Objects.requireNonNullElse(row.getString("reviewer_display_name"), Review.ANONYMOUS_NAME),
+                    row.getString("reviewer_avatar_url"), row.getInt("rating"), row.getString("comment"),
                     json.readValue(row.getString("image_urls"), new TypeReference<List<String>>() {}), row.getString("admin_reply"),
                     row.getTimestamp("created_at").toInstant(), replied == null ? null : replied.toInstant());
         } catch (com.fasterxml.jackson.core.JsonProcessingException error) { throw new IllegalStateException("Invalid stored review images", error); }

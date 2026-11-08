@@ -61,6 +61,8 @@ class BookingSecurity {
                                                 "/api/internal/bookings/*/voucher-snapshot").permitAll()
                                         .requestMatchers(org.springframework.http.HttpMethod.POST,
                                                 "/api/internal/bookings/*/payment-freeze").permitAll()
+                                        .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                                "/api/internal/bookings/voucher-snapshot-backfill").permitAll()
                                         .requestMatchers(
                                                 org.springframework.http.HttpMethod.GET,
                                                 "/api/internal/courts/*/slot-occupancy")
