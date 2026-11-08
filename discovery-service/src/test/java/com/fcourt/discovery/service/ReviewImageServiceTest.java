@@ -20,10 +20,23 @@ class ReviewImageServiceTest {
         folders.add(folder);
         return "https://res.cloudinary.com/demo/image/upload/v1/" + folder + "/" + folders.size() + ".png";
     };
-    final ReviewImageService service = new ReviewImageService(new ReviewImageValidator(1024), storage, new ReviewImagePolicy("demo"));
+    final ReviewImageService service = new ReviewImageService(new ReviewImageValidator(1024), storage, new ReviewImagePolicy("demo"), limiter(20));
 
     static Jwt jwt(String subject, String role) {
         return Jwt.withTokenValue("t").header("alg", "RS256").subject(subject).claim("roles", List.of(role)).build();
+    }
+
+    static com.fcourt.discovery.component.ReviewUploadLimiter limiter(int max) {
+        return new com.fcourt.discovery.component.ReviewUploadLimiter(max, 600, java.time.Clock.systemUTC());
+    }
+
+    @Test
+    void rateLimitStopsFurtherUploadsWithoutCallingStorage() {
+        var limited = new ReviewImageService(new ReviewImageValidator(1024), storage, new ReviewImagePolicy("demo"), limiter(3));
+        limited.upload(jwt("10", "CUSTOMER"), List.of(png(), png()));
+        assertThatThrownBy(() -> limited.upload(jwt("10", "CUSTOMER"), List.of(png(), png()))).satisfies(e -> assertStatus(e, 429));
+        assertThat(folders).hasSize(2);
+        assertThat(limited.upload(jwt("11", "CUSTOMER"), List.of(png()))).hasSize(1);
     }
 
     static MockMultipartFile png() { return new MockMultipartFile("files", "../x.png", "text/plain", PNG); }
@@ -57,13 +70,13 @@ class ReviewImageServiceTest {
 
     @Test
     void answers503WhenCloudinaryIsNotConfigured() {
-        var unconfigured = new ReviewImageService(new ReviewImageValidator(1024), storage, new ReviewImagePolicy(""));
+        var unconfigured = new ReviewImageService(new ReviewImageValidator(1024), storage, new ReviewImagePolicy(""), limiter(20));
         assertThatThrownBy(() -> unconfigured.upload(jwt("10", "CUSTOMER"), List.of(png()))).satisfies(e -> assertStatus(e, 503));
     }
 
     @Test
     void refusesToHandOutUrlsOutsideTheAllowlist() {
-        var rogue = new ReviewImageService(new ReviewImageValidator(1024), (folder, upload) -> "https://evil.test/a.png", new ReviewImagePolicy("demo"));
+        var rogue = new ReviewImageService(new ReviewImageValidator(1024), (folder, upload) -> "https://evil.test/a.png", new ReviewImagePolicy("demo"), limiter(20));
         assertThatThrownBy(() -> rogue.upload(jwt("10", "CUSTOMER"), List.of(png()))).satisfies(e -> assertStatus(e, 502));
     }
 }

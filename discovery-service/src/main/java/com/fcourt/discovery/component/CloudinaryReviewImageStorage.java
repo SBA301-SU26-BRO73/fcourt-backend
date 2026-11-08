@@ -94,6 +94,60 @@ public class CloudinaryReviewImageStorage implements ReviewImageStorage {
         }
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record Resource(String public_id, String secure_url, String created_at) { }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record Listing(java.util.List<Resource> resources, String next_cursor) { }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record DestroyResult(String result) { }
+
+    @Override
+    public boolean supportsCleanup() { return true; }
+
+    /** Admin API listing (basic auth with the API key/secret). */
+    @Override
+    public AssetPage list(String prefix, String cursor) {
+        try {
+            Listing listing = client.get().uri(uri -> {
+                var builder = uri.path("/resources/image/upload").queryParam("prefix", prefix).queryParam("max_results", 100);
+                if (cursor != null) builder.queryParam("next_cursor", cursor);
+                return builder.build();
+            }).headers(headers -> headers.setBasicAuth(credentials.apiKey(), credentials.apiSecret()))
+                    .retrieve().body(Listing.class);
+            if (listing == null || listing.resources() == null) throw unavailable("Cloudinary listing returned nothing", null);
+            var assets = new java.util.ArrayList<StoredAsset>();
+            for (Resource resource : listing.resources()) {
+                if (resource.public_id() == null || resource.secure_url() == null || resource.created_at() == null) continue;
+                assets.add(new StoredAsset(resource.public_id(), resource.secure_url(), java.time.Instant.parse(resource.created_at())));
+            }
+            return new AssetPage(java.util.List.copyOf(assets), listing.next_cursor() == null || listing.next_cursor().isBlank() ? null : listing.next_cursor());
+        } catch (RestClientException | java.time.format.DateTimeParseException error) {
+            throw unavailable("Cloudinary listing failed: " + error.getClass().getSimpleName(), error);
+        }
+    }
+
+    @Override
+    public void delete(String publicId) {
+        String timestamp = Long.toString(clock.instant().getEpochSecond());
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("public_id", publicId);
+        form.add("api_key", credentials.apiKey());
+        form.add("timestamp", timestamp);
+        form.add("signature", sign(Map.of("public_id", publicId, "timestamp", timestamp), credentials.apiSecret()));
+        try {
+            DestroyResult result = client.post().uri("/image/destroy").contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(form).retrieve().body(DestroyResult.class);
+            // "not found" means it is already gone, which is the state the caller wants.
+            if (result == null || !("ok".equals(result.result()) || "not found".equals(result.result()))) {
+                throw unavailable("Cloudinary delete returned " + (result == null ? "nothing" : result.result()), null);
+            }
+        } catch (RestClientException error) {
+            throw unavailable("Cloudinary delete failed: " + error.getClass().getSimpleName(), error);
+        }
+    }
+
     private static ResponseStatusException unavailable(String logMessage, Throwable cause) {
         log.error(logMessage);
         return new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Không thể tải ảnh lên, vui lòng thử lại", cause);

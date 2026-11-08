@@ -47,6 +47,24 @@ class ReviewImagePolicyTest {
     }
 
     @Test
+    void rejectsHostAndSyntaxTricks() {
+        for (String url : List.of(
+                "https://res.cloudinary.com./demo/image/upload/fcourt/reviews/10/a.jpg",
+                "https://res.cloudinary.com@evil.test/demo/image/upload/fcourt/reviews/10/a.jpg",
+                "https://evil.test\\@res.cloudinary.com/demo/image/upload/fcourt/reviews/10/a.jpg",
+                "https://res.cloudinary.com/demo/image/upload/fcourt/reviews/10/a.jpg\n",
+                " https://res.cloudinary.com/demo/image/upload/fcourt/reviews/10/a.jpg",
+                "https://res.cloudinary.com//demo/image/upload/fcourt/reviews/10/a.jpg",
+                "https://res.cloudinary.com/demo/image/upload/v1/v2/fcourt/reviews/10/a.jpg",
+                "https://res.cloudinary.com/demo/image/upload/fcourt/reviews/010/a.jpg",
+                "//res.cloudinary.com/demo/image/upload/fcourt/reviews/10/a.jpg",
+                "HTTPS:res.cloudinary.com/demo/image/upload/fcourt/reviews/10/a.jpg")) {
+            assertThat(policy.allows(url, 10)).as(url).isFalse();
+        }
+        assertThat(policy.allows("HTTPS://RES.CLOUDINARY.COM/demo/image/upload/fcourt/reviews/10/a.jpg", 10)).as("scheme and host are case-insensitive").isTrue();
+    }
+
+    @Test
     void allowsAllRequiresEveryUrl() {
         assertThat(policy.allowsAll(List.of(OK, OK), 10)).isTrue();
         assertThat(policy.allowsAll(List.of(OK, "https://example.test/a.jpg"), 10)).isFalse();

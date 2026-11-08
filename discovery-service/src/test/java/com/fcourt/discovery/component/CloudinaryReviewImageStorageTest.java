@@ -68,6 +68,59 @@ class CloudinaryReviewImageStorageTest {
     }
 
     @Test
+    void listUsesBasicAuthPrefixAndCursorAndParsesAssets() throws Exception {
+        var request = new AtomicReference<String>();
+        server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1_1/demo/resources/image/upload", exchange -> {
+            request.set(exchange.getRequestURI().getRawQuery() + "|" + exchange.getRequestHeaders().getFirst("Authorization"));
+            byte[] bytes = ("{\"resources\":[{\"public_id\":\"fcourt/reviews/1/a\",\"secure_url\":\"https://res.cloudinary.com/demo/image/upload/v1/fcourt/reviews/1/a.jpg\","
+                    + "\"created_at\":\"2026-11-07T01:02:03Z\",\"bytes\":1},{\"public_id\":\"broken\"}],\"next_cursor\":\"abc\"}").getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, bytes.length);
+            exchange.getResponseBody().write(bytes);
+            exchange.close();
+        });
+        server.start();
+        var storage = new CloudinaryReviewImageStorage(new CloudinaryReviewImageStorage.Credentials("demo", "k", "s"),
+                "http://127.0.0.1:" + server.getAddress().getPort(), Clock.systemUTC());
+        var page = storage.list("fcourt/reviews/", "cur");
+        assertThat(page.assets()).hasSize(1);
+        assertThat(page.assets().get(0).publicId()).isEqualTo("fcourt/reviews/1/a");
+        assertThat(page.assets().get(0).createdAt()).isEqualTo(Instant.parse("2026-11-07T01:02:03Z"));
+        assertThat(page.nextCursor()).isEqualTo("abc");
+        assertThat(request.get()).contains("prefix=fcourt/reviews/", "next_cursor=cur", "max_results=100")
+                .endsWith("Basic " + java.util.Base64.getEncoder().encodeToString("k:s".getBytes(StandardCharsets.UTF_8)));
+        assertThat(storage.supportsCleanup()).isTrue();
+    }
+
+    @Test
+    void deleteSendsSignedPublicIdAndTreatsNotFoundAsDone() throws Exception {
+        var captured = new AtomicReference<String>();
+        server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1_1/demo/image/destroy", exchange -> {
+            captured.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            byte[] bytes = "{\"result\":\"not found\"}".getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, bytes.length);
+            exchange.getResponseBody().write(bytes);
+            exchange.close();
+        });
+        server.start();
+        var storage = new CloudinaryReviewImageStorage(new CloudinaryReviewImageStorage.Credentials("demo", "k", "s"),
+                "http://127.0.0.1:" + server.getAddress().getPort(), Clock.fixed(Instant.ofEpochSecond(1700000000L), ZoneOffset.UTC));
+        storage.delete("fcourt/reviews/1/a");
+        assertThat(captured.get()).contains("public_id=fcourt%2Freviews%2F1%2Fa").contains(CloudinaryReviewImageStorage.sign(
+                Map.of("public_id", "fcourt/reviews/1/a", "timestamp", "1700000000"), "s")).doesNotContain("api_secret");
+    }
+
+    @Test
+    void listAndDeleteFailuresBecomeBadGateway() throws Exception {
+        var storage = storage("{}", 500, new AtomicReference<>());
+        assertThatThrownBy(() -> storage.list("p", null)).isInstanceOfSatisfying(ResponseStatusException.class, e -> assertThat(e.getStatusCode().value()).isEqualTo(502));
+        assertThatThrownBy(() -> storage.delete("x")).isInstanceOfSatisfying(ResponseStatusException.class, e -> assertThat(e.getStatusCode().value()).isEqualTo(502));
+    }
+
+    @Test
     void responseWithoutUrlIsNotSilentSuccess() throws Exception {
         var storage = storage("{}", 200, new AtomicReference<>());
         assertThatThrownBy(() -> storage.store("f", new ReviewImageStorage.Upload("image/png", new byte[] {1})))

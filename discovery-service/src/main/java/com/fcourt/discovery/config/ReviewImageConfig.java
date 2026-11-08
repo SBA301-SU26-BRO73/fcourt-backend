@@ -14,6 +14,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 /** Without Cloudinary credentials the service still starts; uploads answer 503 and review photos are rejected. */
 @Configuration
+@org.springframework.scheduling.annotation.EnableScheduling
 class ReviewImageConfig {
     private static final Logger log = LoggerFactory.getLogger(ReviewImageConfig.class);
 

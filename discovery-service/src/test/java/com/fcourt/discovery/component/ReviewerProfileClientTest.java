@@ -53,6 +53,24 @@ class ReviewerProfileClientTest {
     }
 
     @Test
+    void malformedAuthResponsesNeverBreakReviewCreation() throws Exception {
+        for (String body : new String[] {"{\"fullName\":5}", "not json at all", "[]", ""}) {
+            assertThat(client(200, body, new AtomicReference<>()).snapshot(jwt())).as(body).isEqualTo(ReviewerProfileClient.Snapshot.ANONYMOUS);
+            stop();
+        }
+        for (int status : new int[] {401, 403, 404, 500}) {
+            assertThat(client(status, "{}", new AtomicReference<>()).snapshot(jwt())).isEqualTo(ReviewerProfileClient.Snapshot.ANONYMOUS);
+            stop();
+        }
+    }
+
+    @Test
+    void unreachableAuthServiceFallsBackToAnonymous() {
+        var unreachable = new ReviewerProfileClient(RestClient.builder(), "http://127.0.0.1:1");
+        assertThat(unreachable.snapshot(jwt())).isEqualTo(ReviewerProfileClient.Snapshot.ANONYMOUS);
+    }
+
+    @Test
     void authFailureDoesNotBlockTheReview() throws Exception {
         assertThat(client(503, "{}", new AtomicReference<>()).snapshot(jwt())).isEqualTo(ReviewerProfileClient.Snapshot.ANONYMOUS);
     }
