@@ -419,7 +419,7 @@ class FacilityApiIntegrationTest {
         }
         LocalDate monday = LocalDate.now().with(TemporalAdjusters.next(java.time.DayOfWeek.MONDAY));
         String schedule = "/api/internal/courts/{id}/slot-schedule";
-        Mockito.when(availability.slots(Mockito.anyLong(), Mockito.any())).thenReturn(List.of());
+        Mockito.when(availability.conflicts(Mockito.anyLong(), Mockito.any())).thenReturn(List.of());
 
         // SCRUM-49: lock 08:30-09:30 as a private event with public contact data and internal notes.
         String lockBody = """
@@ -470,8 +470,9 @@ class FacilityApiIntegrationTest {
                 .andExpect(jsonPath("$.slots[1].outOfService").value(false));
 
         // Booking/hold conflict: refused with the colliding slots, nothing stored.
-        Mockito.when(availability.slots(courtA, monday)).thenReturn(List.of(
-                new SlotAvailabilityClient.Slot(1L, java.time.LocalTime.of(9, 0), java.time.LocalTime.of(9, 30), "BOOKED")));
+        Mockito.when(availability.conflicts(courtA, monday)).thenReturn(List.of(
+                new SlotAvailabilityClient.SlotConflict(1L, java.time.LocalTime.of(9, 0),
+                        java.time.LocalTime.of(9, 30), "BOOKED")));
         postJson("/api/admin/courts/lock-slots", lockBody, owner)
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("BOOKING_CONFLICT"))
@@ -480,11 +481,11 @@ class FacilityApiIntegrationTest {
         mvc.perform(get("/api/admin/courts/lock-slots").param("branchId", Long.toString(branchId))
                         .with(as(owner, "ADMIN")))
                 .andExpect(jsonPath("$", hasSize(0)));
-        Mockito.when(availability.slots(courtA, monday)).thenThrow(
+        Mockito.when(availability.conflicts(courtA, monday)).thenThrow(
                 new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "down"));
         postJson("/api/admin/courts/lock-slots", lockBody, owner).andExpect(status().isServiceUnavailable());
         Mockito.reset(availability);
-        Mockito.when(availability.slots(Mockito.anyLong(), Mockito.any())).thenReturn(List.of());
+        Mockito.when(availability.conflicts(Mockito.anyLong(), Mockito.any())).thenReturn(List.of());
 
         // SCRUM-111: one command locks every court of the branch; one command unlocks the group.
         String branchLock = """

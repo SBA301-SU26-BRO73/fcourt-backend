@@ -163,6 +163,18 @@ class CourtSlotServiceTest {
     }
 
     @Test
+    void internalLockCheckFindsBookedAndHeldSlotsEvenWhenPublicStateIsOutOfService() {
+        schedule(DATE, true, slot(1, "14:00", true), slot(2, "14:30", true), slot(3, "15:00", true));
+        when(source.occupancy(1, DATE)).thenReturn(new Occupancy(1L, DATE, List.of(1L)));
+        when(holds.heldSlots(1, DATE, List.of(1L, 2L, 3L))).thenReturn(Set.of(2L));
+
+        assertThat(service.find(1, DATE)).extracting(r -> r.status())
+                .containsExactly(Status.OUT_OF_SERVICE, Status.OUT_OF_SERVICE, Status.OUT_OF_SERVICE);
+        assertThat(service.blockingSlots(1, DATE)).extracting(slot -> slot.status())
+                .containsExactly("BOOKED", "HOLD");
+    }
+
+    @Test
     void refreshesHoldOnEveryRequestWithoutCaching() {
         schedule(DATE, false, slot(1, "11:00", false));
         when(holds.heldSlots(anyLong(), any(), anyList())).thenReturn(Set.of(1L), Set.of());

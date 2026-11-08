@@ -159,7 +159,7 @@ public class LockService {
         List<SlotConflict> conflicts = new ArrayList<>();
         for (long courtId : courtIds) {
             for (var date : SlotWindows.dates(request.startAt(), request.endAt())) {
-                for (var slot : availability.slots(courtId, date)) {
+                for (var slot : availability.conflicts(courtId, date)) {
                     if (BLOCKING_STATUSES.contains(slot.status())
                             && SlotWindows.overlaps(date, slot.startTime(), slot.endTime(), request.startAt(), request.endAt())) {
                         conflicts.add(new SlotConflict(courtId, date, slot.slotId(), slot.startTime(),
