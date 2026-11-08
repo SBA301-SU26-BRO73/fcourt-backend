@@ -7,6 +7,9 @@ on:
     paths: ['tools/system_tests/**', '.github/workflows/gateway-system-tests.yml']
 permissions:
   contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -32,9 +35,9 @@ jobs:
           python-version: '3.12'
       - name: Build isolated service jars and test launchers
         run: |
-          for service in auth-service facility-service discovery-service slot-hold-engine booking-service payment-service staff-operations-service reporting-service; do
-            mvn -B -ntp -DskipTests -f "$service/pom.xml" package || exit 1
-          done
+          # The services are independent Maven projects: build up to 4 at a time instead of one after another.
+          printf '%s\n' auth-service facility-service discovery-service slot-hold-engine booking-service payment-service staff-operations-service reporting-service \
+            | xargs -P 4 -I{} mvn -B -ntp -q -DskipTests -f {}/pom.xml package
           mvn -B -ntp -f staff-operations-service/pom.xml dependency:build-classpath -DincludeScope=test -Dmdep.outputFile=target/test-classpath.txt
       - run: python tools/system_tests/local_cluster.py --execute
       - uses: actions/upload-artifact@v4
