@@ -3,11 +3,13 @@ package com.fcourt.facility.service;
 import com.fcourt.facility.api.CourtRequest;
 import com.fcourt.facility.api.CourtResponse;
 import com.fcourt.facility.events.BranchEventWriter;
+import com.fcourt.facility.events.LockScheduleEvents;
 import com.fcourt.facility.integration.SubscriptionLimitClient;
 import com.fcourt.facility.persistence.BranchStore;
 import com.fcourt.facility.persistence.CourtStore;
 import com.fcourt.facility.persistence.CourtStore.OwnedCourt;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,7 @@ public class CourtService {
     private final BranchEventWriter events;
     private final SubscriptionLimitClient subscriptions;
     private final TransactionTemplate tx;
+    private LockScheduleEvents scheduleEvents = LockScheduleEvents.NONE;
 
     public CourtService(BranchStore branches, CourtStore courts, BranchEventWriter events,
                         SubscriptionLimitClient subscriptions, TransactionTemplate tx) {
@@ -30,6 +33,12 @@ public class CourtService {
         this.events = events;
         this.subscriptions = subscriptions;
         this.tx = tx;
+    }
+
+    /** Optional realtime publisher (facility.realtime.enabled); sent only after commit. */
+    @Autowired(required = false)
+    void setScheduleEvents(LockScheduleEvents scheduleEvents) {
+        this.scheduleEvents = scheduleEvents;
     }
 
     public List<CourtResponse> list(long adminId, long branchId) {
@@ -83,6 +92,7 @@ public class CourtService {
             courts.updateStatus(courtId, status);
             events.branchChanged(branchId);
         });
+        scheduleEvents.courtStatusChanged(courtId);
         return get(adminId, courtId);
     }
 
@@ -94,6 +104,7 @@ public class CourtService {
             courts.softDelete(courtId);
             events.branchChanged(branchId);
         });
+        scheduleEvents.courtStatusChanged(courtId);
     }
 
     public List<CourtResponse.ScheduleView> staffCourts(long branchId) {

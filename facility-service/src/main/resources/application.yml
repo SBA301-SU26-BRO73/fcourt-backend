@@ -36,8 +36,19 @@ spring:
         request.timeout.ms: 5000
   config:
     import: optional:file:.env[.properties]
+  data:
+    redis:
+      # Only used when facility.realtime.enabled=true; same Redis as slot-hold-engine.
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6387}
+      password: ${REDIS_PASSWORD:}
+      connect-timeout: 1s
+      timeout: 1s
 
 facility:
+  realtime:
+    # SCRUM-108: publish LOCK_CREATED/LOCK_REMOVED schedule invalidations after lock commands commit.
+    enabled: ${FACILITY_REALTIME_ENABLED:false}
   auth:
     jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
     issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
@@ -73,6 +84,10 @@ facility:
     bootstrap-snapshots: ${FACILITY_BOOTSTRAP_SNAPSHOTS:true}
 
 management:
+  health:
+    redis:
+      # Redis is advisory (realtime hints only): its outage must not mark the service DOWN.
+      enabled: false
   endpoints:
     web:
       exposure:

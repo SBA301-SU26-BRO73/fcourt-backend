@@ -16,9 +16,11 @@ import org.springframework.stereotype.Component;
 @Component
 class RedisHoldStore {
     static final int TTL_SECONDS = 300;
+    private static final int SWEEP_BATCH = 500;
     private final RedissonClient redis;
     private final String acquireScript;
     private final String releaseScript;
+    private final String sweepScript;
     private final ObjectMapper mapper;
 
     RedisHoldStore(RedissonClient redis, ObjectMapper mapper) throws IOException {
@@ -26,6 +28,7 @@ class RedisHoldStore {
         this.mapper = mapper;
         this.acquireScript = new ClassPathResource("redis/acquire.lua").getContentAsString(StandardCharsets.UTF_8);
         this.releaseScript = new ClassPathResource("redis/release.lua").getContentAsString(StandardCharsets.UTF_8);
+        this.sweepScript = new ClassPathResource("redis/sweep.lua").getContentAsString(StandardCharsets.UTF_8);
     }
 
     Instant acquire(HoldRequest request, String token) {
@@ -53,6 +56,20 @@ class RedisHoldStore {
         redis.getScript(StringCodec.INSTANCE).eval(RScript.Mode.READ_WRITE, releaseScript,
                 RScript.ReturnType.INTEGER, keysOf(request, token), token,
                 "fcourt:online-seal:" + OnlineHolds.hash(token));
+    }
+
+    /** Announces holds whose TTL passed (HOLD_EXPIRED) and returns how many index entries were drained. */
+    long sweepExpired() {
+        long total = 0;
+        // Each script call handles a bounded batch; keep draining so a burst is not announced minutes late.
+        for (int batch = 0; batch < 20; batch++) {
+            Long drained = redis.getScript(StringCodec.INSTANCE).eval(RScript.Mode.READ_WRITE, sweepScript,
+                    RScript.ReturnType.INTEGER, List.<Object>of("fcourt:hold-expiry"), Integer.toString(SWEEP_BATCH));
+            long count = drained == null ? 0 : drained;
+            total += count;
+            if (count < SWEEP_BATCH) break;
+        }
+        return total;
     }
 
     private static List<Object> keysOf(HoldRequest request, String token) {

@@ -9,6 +9,7 @@ import com.fcourt.facility.api.LockDtos.LockResponse;
 import com.fcourt.facility.api.LockDtos.LockSlotsRequest;
 import com.fcourt.facility.api.LockDtos.LockType;
 import com.fcourt.facility.api.LockDtos.SlotConflict;
+import com.fcourt.facility.events.LockScheduleEvents;
 import com.fcourt.facility.integration.SlotAvailabilityClient;
 import com.fcourt.facility.persistence.BranchStore;
 import com.fcourt.facility.persistence.CourtStore;
@@ -22,6 +23,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.stereotype.Service;
@@ -51,6 +53,7 @@ public class LockService {
     private final SlotAvailabilityClient availability;
     private final TransactionTemplate tx;
     private final Clock clock;
+    private LockScheduleEvents events = LockScheduleEvents.NONE;
 
     public LockService(BranchStore branches, CourtStore courts, LockStore locks, CourtService courtService,
                        SlotAvailabilityClient availability, TransactionTemplate tx, Clock clock) {
@@ -63,18 +66,26 @@ public class LockService {
         this.clock = clock;
     }
 
+    /** Optional realtime publisher (facility.realtime.enabled); notifications are sent only after commit. */
+    @Autowired(required = false)
+    void setEvents(LockScheduleEvents events) {
+        this.events = events;
+    }
+
     /** POST /api/admin/courts/lock-slots: lock one court for a window. */
     public LockResponse lockCourt(long adminId, LockSlotsRequest request) {
         validate(request, LocalDateTime.now(clock));
         CourtResponse court = courtService.owned(adminId, request.courtId()).court();
         requireNoBookings(List.of(court.id()), request);
         UUID group = UUID.randomUUID();
-        return tx.execute(status -> {
+        LockResponse created = tx.execute(status -> {
             lockRow(court.branchId(), adminId);
             courtService.owned(adminId, court.id());
             requireNoLockOverlap(List.of(court.id()), request);
             return locks.insert(newLock(group, court.branchId(), court.id(), request, adminId));
         });
+        events.created(List.of(created));
+        return created;
     }
 
     /** POST /api/admin/courts/out-of-service: lock every court (or a chosen list) of a branch, atomically. */
@@ -93,6 +104,7 @@ public class LockService {
             for (long courtId : live) rows.add(locks.insert(newLock(group, branch.id(), courtId, request, adminId)));
             return rows;
         });
+        events.created(created);
         return new LockGroupResponse(group, branch.id(), created.size(), created);
     }
 
@@ -108,19 +120,25 @@ public class LockService {
     /** DELETE /api/admin/courts/lock-slots/{id}: unlock one court window. */
     public void unlock(long adminId, long lockId) {
         long[] owner = locks.findOwner(lockId).filter(row -> row[2] == adminId).orElseThrow(LockService::lockNotFound);
-        tx.executeWithoutResult(status -> {
+        LockResponse removed = tx.execute(status -> {
             lockRow(owner[1], adminId);
+            LockResponse before = locks.findActive(lockId).orElse(null);
             if (locks.cancel(lockId, adminId) == 0) throw lockNotFound();
+            return before;
         });
+        if (removed != null) events.removed(List.of(removed));
     }
 
     /** DELETE /api/admin/courts/out-of-service/{groupId}: unlock every active court of one branch-wide request. */
     public void unlockGroup(long adminId, UUID groupId) {
         long[] owner = locks.findGroupOwner(groupId).filter(row -> row[1] == adminId).orElseThrow(LockService::lockNotFound);
-        tx.executeWithoutResult(status -> {
+        List<LockResponse> removed = tx.execute(status -> {
             lockRow(owner[0], adminId);
+            List<LockResponse> before = locks.findActiveGroup(groupId);
             if (locks.cancelGroup(groupId, adminId) == 0) throw lockNotFound();
+            return before;
         });
+        if (removed != null) events.removed(removed);
     }
 
     // ---- validation -----------------------------------------------------------------------------

@@ -18,6 +18,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 @ConditionalOnProperty(name="booking.realtime.enabled", havingValue="true")
 class SlotChanges implements MessageListener {
     static final String CHANNEL = "fcourt:slot-changes";
+    /** Allow-listed event types; anything else is forwarded as the generic SLOT_CHANGED invalidation. */
+    static final java.util.Set<String> TYPES=java.util.Set.of("SLOT_CHANGED","HOLD_CREATED","HOLD_RELEASED","HOLD_EXPIRED","LOCK_CREATED","LOCK_REMOVED");
+    static final java.util.Set<String> LOCK_TYPES=java.util.Set.of("OUT_OF_SERVICE","PRIVATE_EVENT");
     private final ObjectMapper json;
     private final SimpMessagingTemplate broker;
     private final StringRedisTemplate redis;
@@ -32,7 +35,15 @@ class SlotChanges implements MessageListener {
             long court=event.path("courtId").asLong();
             String date=event.path("date").asText();
             if(court<=0 || !LocalDate.parse(date).toString().equals(date)) return;
-            broker.convertAndSend("/topic/court-slots/"+court, Map.of("courtId",court,"date",date));
+            var payload=new java.util.LinkedHashMap<String,Object>();
+            payload.put("courtId",court);
+            payload.put("date",date);
+            String type=event.path("type").asText("");
+            if(!TYPES.contains(type)) type="SLOT_CHANGED";
+            payload.put("type",type);
+            String lockType=event.path("lockType").asText("");
+            if(type.startsWith("LOCK_") && LOCK_TYPES.contains(lockType)) payload.put("lockType",lockType);
+            broker.convertAndSend("/topic/court-slots/"+court, payload);
         } catch(Exception ignored) {
             // Redis Pub/Sub is advisory. Clients resync on connect and periodically.
         }
