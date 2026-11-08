@@ -24,12 +24,19 @@ class VoucherUsageEvents {
     @KafkaListener(topics={"fcourt.booking.events","fcourt.payment.events"})
     @Transactional
     public void accept(String payload) throws Exception {
-        var event = json.readTree(payload);
+        JsonNode event;
+        // Jackson parse errors quote the payload, which now may carry customer PII: never let that reach the logs.
+        try { event = json.readTree(payload); }
+        catch (com.fasterxml.jackson.core.JsonProcessingException error) { throw new IllegalArgumentException("Malformed voucher event payload"); }
         String type = event.path("type").asText();
-        if (!java.util.Set.of("VoucherAppliedEvent", "BookingCancelledEvent", "PaymentRejectedEvent").contains(type)) return;
+        if (!java.util.Set.of("VoucherAppliedEvent", "VoucherSnapshotBackfillEvent", "BookingCancelledEvent", "PaymentRejectedEvent").contains(type)) return;
         UUID eventId = UUID.fromString(event.path("eventId").asText());
         var jdbc = applications.jdbc();
         if (jdbc.update("INSERT INTO voucher_inbox(event_id) VALUES (?) ON CONFLICT DO NOTHING", eventId) == 0) return;
+        if (type.equals("VoucherSnapshotBackfillEvent")) {
+            backfill(eventId, event.path("voucher"));
+            return;
+        }
         JsonNode data = event.path(type.equals("VoucherAppliedEvent") ? "voucher" : event.has("booking") ? "booking" : "payment");
         long bookingId = positive(data, data.has("bookingId") ? "bookingId" : "id");
         var found = applications.booking(bookingId, false);
@@ -62,12 +69,39 @@ class VoucherUsageEvents {
             return;
         }
         if (!"RESERVED".equals(application.status())) throw invalid();
-        history.record(application, paymentId, usedAt);
+        history.record(application, paymentId, usedAt, snapshot(data));
         if (jdbc.update("UPDATE vouchers SET used_count=used_count+1,updated_at=now() WHERE id=? AND used_count<usage_limit", application.voucherId()) != 1)
             throw new IllegalStateException("Reserved voucher quota is inconsistent");
         jdbc.update("UPDATE voucher_redemptions SET status='APPLIED',payment_id=?,updated_at=now() WHERE booking_id=?", paymentId, bookingId);
     }
 
+    /**
+     * Fills missing snapshot columns of an already recorded usage. Non-financial: a malformed or unmatched event is
+     * skipped (never retried forever), and only NULL columns are filled, so replays and stale events are harmless.
+     */
+    private void backfill(UUID eventId, JsonNode data) {
+        try {
+            var application = UUID.fromString(data.path("applicationId").asText());
+            var snapshot = snapshot(data);
+            if (snapshot.customerName() == null && snapshot.customerPhone() == null && snapshot.bookingCode() == null) return;
+            int changed = history.fillSnapshot(application, positive(data, "voucherId"), positive(data, "bookingId"),
+                    positive(data, "customerId"), positive(data, "branchId"), snapshot);
+            org.slf4j.LoggerFactory.getLogger(getClass()).info("Voucher snapshot backfill event {} updated {} usage rows", eventId, changed);
+        } catch (IllegalArgumentException skipped) {
+            org.slf4j.LoggerFactory.getLogger(getClass()).warn("Voucher snapshot backfill event {} ignored as malformed", eventId);
+        }
+    }
+
+    /** Optional display snapshot from newer producers. Malformed values are dropped, never fail the financial event. */
+    private VoucherUsageRepository.Snapshot snapshot(JsonNode data) {
+        return new VoucherUsageRepository.Snapshot(text(data, "customerName", 150), text(data, "customerPhone", 20), text(data, "bookingCode", 10));
+    }
+    private String text(JsonNode node, String field, int max) {
+        var value = node.path(field);
+        if (!value.isTextual()) return null;
+        String clean = value.textValue().replaceAll("\\p{Cntrl}", " ").strip();
+        return clean.isEmpty() || clean.length() > max ? null : clean;
+    }
     private long positive(JsonNode node, String field) {
         var value = node.path(field);
         if (!value.isIntegralNumber() || !value.canConvertToLong() || value.longValue() <= 0) throw invalid();

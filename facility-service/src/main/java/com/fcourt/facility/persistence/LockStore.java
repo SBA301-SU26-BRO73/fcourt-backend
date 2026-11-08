@@ -22,7 +22,11 @@ public class LockStore {
                           LocalDateTime endAt, String reason, String notes, String publicReason,
                           String contactName, String contactPhone, long createdBy) { }
 
-    private static final String ACTIVE = "cancelled_at IS NULL";
+    /** Not cancelled and, for an uncommitted reservation lock (SCRUM-241), not past its lease. */
+    private static final String ACTIVE =
+            "cancelled_at IS NULL AND (expires_at IS NULL OR expires_at > clock_timestamp())";
+    /** Reservation locks are released through their reservation only, never by the admin unlock API. */
+    private static final String ADMIN_OWNED = " AND reservation_id IS NULL";
     private final JdbcTemplate jdbc;
 
     public LockStore(JdbcTemplate jdbc) {
@@ -68,7 +72,7 @@ public class LockStore {
     public Optional<long[]> findOwner(long lockId) {
         return jdbc.query("""
                 SELECT l.court_id, l.branch_id, b.admin_id FROM court_locks l JOIN branches b ON b.id = l.branch_id
-                WHERE l.id = ? AND l.cancelled_at IS NULL AND b.deleted_at IS NULL
+                WHERE l.id = ? AND l.cancelled_at IS NULL AND l.reservation_id IS NULL AND b.deleted_at IS NULL
                 """, (rs, n) -> new long[] {rs.getLong(1), rs.getLong(2), rs.getLong(3)}, lockId)
                 .stream().findFirst();
     }
@@ -77,18 +81,18 @@ public class LockStore {
     public Optional<long[]> findGroupOwner(UUID groupId) {
         return jdbc.query("""
                 SELECT l.branch_id, b.admin_id FROM court_locks l JOIN branches b ON b.id = l.branch_id
-                WHERE l.group_id = ? AND l.cancelled_at IS NULL AND b.deleted_at IS NULL LIMIT 1
+                WHERE l.group_id = ? AND l.cancelled_at IS NULL AND l.reservation_id IS NULL AND b.deleted_at IS NULL LIMIT 1
                 """, (rs, n) -> new long[] {rs.getLong(1), rs.getLong(2)}, groupId).stream().findFirst();
     }
 
     public int cancel(long id, long adminId) {
         return jdbc.update("UPDATE court_locks SET cancelled_at = now(), cancelled_by = ? WHERE id = ? AND "
-                + ACTIVE, adminId, id);
+                + ACTIVE + ADMIN_OWNED, adminId, id);
     }
 
     public int cancelGroup(UUID groupId, long adminId) {
         return jdbc.update("UPDATE court_locks SET cancelled_at = now(), cancelled_by = ? WHERE group_id = ? AND "
-                + ACTIVE, adminId, groupId);
+                + ACTIVE + ADMIN_OWNED, adminId, groupId);
     }
 
     /** Active locks of a court touching one venue-local day, for the slot-schedule read model. */

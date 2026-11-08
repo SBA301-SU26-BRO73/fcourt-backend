@@ -27,6 +27,8 @@ $env:AUTH_JWK_SET_URI = 'http://localhost:8081/.well-known/jwks.json'
 | `SUBSCRIPTION_BASE_URL` | empty (use default limits below) |
 | `DISCOVERY_BASE_URL` | empty (court locks answer 503 until set; used to detect bookings/holds) |
 | `DISCOVERY_INTERNAL_SLOT_TOKEN` | empty (must match discovery-service; court locks answer 503 until configured) |
+| `FACILITY_RESERVATION_TOKEN` | empty (min 32 chars, shared with booking-service; full-court reservation endpoints answer 503 until set) |
+| `FACILITY_RESERVATION_SWEEP_MS` | `15000` (expiry sweeper for uncommitted reservations) |
 | `SUBSCRIPTION_DEFAULT_MAX_BRANCHES` / `SUBSCRIPTION_DEFAULT_MAX_COURTS` | `3` / `15` |
 
 ### Schema
@@ -188,3 +190,21 @@ produced: nothing consumes them; this full snapshot plus the slot-schedule read 
 request validation; `FacilityApiIntegrationTest` runs the full app against PostgreSQL 16
 (Testcontainers) and embedded Kafka — owner scoping, 400/403/404/409 cases, plan limits,
 template apply/replace, slot-schedule contract and the published snapshots/versions.
+
+## Full-court reservation protocol (SCRUM-241 / SCRUM-114)
+
+Internal, service-to-service (`X-Internal-Service-Token` = `FACILITY_RESERVATION_TOKEN`; 503 when unset, 403 when wrong).
+booking-service picks a `reservationId` (UUID) and drives:
+
+| Call | Result |
+|---|---|
+| `POST /api/internal/court-reservations` `{reservationId, branchId, adminId, courtIds[], startAt, endAt, ttlSeconds?, publicReason?}` | `201` new / `200` idempotent replay; `409` `LOCK_OVERLAP`, `BOOKING_CONFLICT`, `IDEMPOTENCY_MISMATCH` (same id, other payload), `RESERVATION_CLOSED`, `RESERVATION_EXPIRED` |
+| `POST /api/internal/court-reservations/{id}/commit` | `200` COMMITTED (idempotent); `409` once cancelled or when the lease passed |
+| `POST /api/internal/court-reservations/{id}/rollback` | `200` CANCELLED (idempotent; an unknown id leaves a tombstone so a late reserve fails) |
+| `GET /api/internal/court-reservations/{id}` | status after a network timeout |
+
+Reserve inserts one `PRIVATE_EVENT` lock per court (`court_locks.reservation_id`) in a single transaction under the
+branch row lock, so discovery, hold, counter and online booking read the slots as `outOfService` immediately. An
+uncommitted reservation expires after `ttlSeconds` (default 120, 30-600): readers ignore an expired lease at once and
+the sweeper cancels the rows. Commit clears the lease. Reservation locks cannot be removed with the admin unlock API.
+Each state change publishes a `ReservationService.CourtLocksChanged` Spring event after the transaction (hook for realtime).

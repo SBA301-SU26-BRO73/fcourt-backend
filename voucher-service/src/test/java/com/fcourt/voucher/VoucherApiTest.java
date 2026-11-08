@@ -143,6 +143,57 @@ class VoucherApiTest {
                 .andExpect(jsonPath("$.items").isEmpty()).andExpect(jsonPath("$.total").value(3)).andExpect(jsonPath("$.totalDiscountAmount").value(60.06));
     }
 
+    void snapshot(long bookingId,String name,String phone,String code) {
+        jdbc.update("UPDATE voucher_usages SET customer_name=?,customer_phone=?,customer_phone_digits=?,booking_code=? WHERE booking_id=?",
+                name,phone,VoucherPhone.storable(phone),code,bookingId);
+    }
+
+    @Test void usageHistoryReturnsSnapshotAndNullsForLegacyRows() throws Exception {
+        long id=create("SNAP");var time=Instant.parse("2030-01-09T12:00:00Z");
+        usage(id,1,10,7,"10.00",time);usage(id,2,20,7,"20.00",time.minusSeconds(5));
+        snapshot(1,"Nguyen Van A","0912345678","FC00000001");
+        mvc.perform(get("/api/admin/vouchers/"+id+"/usages").with(admin())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].customerName").value("Nguyen Van A"))
+                .andExpect(jsonPath("$.items[0].customerPhone").value("0912345678"))
+                .andExpect(jsonPath("$.items[0].bookingCode").value("FC00000001"))
+                .andExpect(jsonPath("$.items[1].customerName").doesNotExist())
+                .andExpect(jsonPath("$.items[1].bookingCode").doesNotExist());
+    }
+
+    @Test void phoneSearchMatchesNormalizedPrefixAndFiltersTotalsAndPages() throws Exception {
+        long id=create("PHONE");var time=Instant.parse("2030-01-09T12:00:00Z");
+        usage(id,1,10,7,"10.00",time);usage(id,2,20,7,"20.00",time);usage(id,3,30,7,"30.00",time);usage(id,4,40,7,"40.00",time);
+        snapshot(1,"A","0912345678","FC1");snapshot(2,"B","+84 912 345 999","FC2");snapshot(3,"C","0987654321","FC3");
+        String path="/api/admin/vouchers/"+id+"/usages";
+        mvc.perform(get(path+"?phone=0912").with(admin())).andExpect(status().isOk()).andExpect(jsonPath("$.total").value(2))
+                .andExpect(jsonPath("$.totalDiscountAmount").value(30.00)).andExpect(jsonPath("$.items[0].bookingId").value(2));
+        mvc.perform(get(path).param("phone","+84912345678").with(admin())).andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.items[0].bookingId").value(1));
+        mvc.perform(get(path+"?phone=0912&size=1&page=1").with(admin())).andExpect(jsonPath("$.total").value(2))
+                .andExpect(jsonPath("$.items[0].bookingId").value(1));
+        mvc.perform(get(path+"?phone=0555").with(admin())).andExpect(jsonPath("$.total").value(0)).andExpect(jsonPath("$.items").isEmpty());
+        mvc.perform(get(path+"?phone=").with(admin())).andExpect(jsonPath("$.total").value(4));
+    }
+
+    @Test void phoneSearchRejectsInvalidInputWithoutCallingUpstreamAndNeverTreatsWildcardsAsPatterns() throws Exception {
+        long id=create("PHONEBAD");usage(id,1,10,7,"10.00",Instant.parse("2030-01-09T12:00:00Z"));snapshot(1,"A","0912345678","FC1");
+        String path="/api/admin/vouchers/"+id+"/usages";CALLS.set(0);
+        for(String bad:List.of("ab","12","%","1".repeat(40),"0".repeat(16))){
+            mvc.perform(get(path).param("phone",bad).with(admin())).andExpect(status().isBadRequest());
+        }
+        assertThat(CALLS.get()).isZero();
+        mvc.perform(get(path).param("phone","0912%").with(admin())).andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1));
+    }
+
+    @Test void phoneSearchStaysInsideBranchOwnershipAndAuthentication() throws Exception {
+        long id=create("PHONESCOPE");usage(id,1,10,7,"10.00",Instant.parse("2030-01-09T12:00:00Z"));snapshot(1,"A","0912345678","FC1");
+        String path="/api/admin/vouchers/"+id+"/usages?phone=0912";
+        mvc.perform(get(path)).andExpect(status().isUnauthorized());
+        mvc.perform(get(path).with(jwt().jwt(token->token.subject("100").claim("roles",List.of("CUSTOMER"))))).andExpect(status().isForbidden());
+        BRANCHES.set("[{\"id\":8,\"adminId\":200}]");
+        mvc.perform(get(path).with(jwt().jwt(token->token.subject("200").claim("roles",List.of("ADMIN"))))).andExpect(status().isNotFound());
+    }
+
     @Test void usageHistoryEnforcesRolesAndNeverLeaksForeignBranchTotals() throws Exception {
         long id=create("SCOPED");usage(id,1,10,7,"100",Instant.parse("2030-01-09T12:00:00Z"));CALLS.set(0);
         String path="/api/admin/vouchers/"+id+"/usages";
