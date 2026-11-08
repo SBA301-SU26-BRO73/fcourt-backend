@@ -1,6 +1,8 @@
 package com.fcourt.facility.integration;
 
 import java.time.Duration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -23,6 +25,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class SlotAvailabilityClient {
     public record SlotConflict(Long slotId, LocalTime startTime, LocalTime endTime, String status) { }
 
+    private static final Logger log = LoggerFactory.getLogger(SlotAvailabilityClient.class);
     private final RestClient client;
     private final String internalToken;
 
@@ -40,7 +43,10 @@ public class SlotAvailabilityClient {
     }
 
     public List<SlotConflict> conflicts(long courtId, LocalDate date) {
-        if (client == null || internalToken == null || internalToken.isBlank()) throw unavailable();
+        if (client == null || internalToken == null || internalToken.isBlank()) {
+            log.warn("Discovery base URL or internal token is not configured; refusing the lock");
+            throw unavailable();
+        }
         try {
             SlotConflict[] conflicts = client.get()
                     .uri("/api/internal/courts/{id}/slot-conflicts?date={date}", courtId, date)
@@ -56,6 +62,7 @@ public class SlotAvailabilityClient {
             }
             return List.of(conflicts);
         } catch (RestClientException error) {
+            log.warn("Discovery occupancy check failed for court {} on {}: {}", courtId, date, error.toString());
             throw unavailable();
         }
     }

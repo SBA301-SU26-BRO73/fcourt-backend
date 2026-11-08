@@ -60,6 +60,10 @@ facility:
     # Needed to verify bookings/holds before locking; empty = locking answers 503 (fail closed).
     base-url: ${DISCOVERY_BASE_URL:}
     internal-token: ${DISCOVERY_INTERNAL_SLOT_TOKEN:}
+  reservations:
+    # Shared secret of booking-service for /api/internal/court-reservations (min 32 chars). Empty = 503 (fail closed).
+    internal-token: ${FACILITY_RESERVATION_TOKEN:}
+    sweep-delay-ms: ${FACILITY_RESERVATION_SWEEP_MS:15000}
   events:
     enabled: ${FACILITY_EVENTS_ENABLED:true}
     topic: ${BRANCH_UPDATED_TOPIC:facility.branch-updated.v1}
