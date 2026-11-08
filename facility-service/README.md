@@ -25,6 +25,8 @@ $env:AUTH_JWK_SET_URI = 'http://localhost:8081/.well-known/jwks.json'
 | `FACILITY_OUTBOX_DELAY_MS` | `1000` |
 | `FACILITY_BOOTSTRAP_SNAPSHOTS` | `true` |
 | `SUBSCRIPTION_BASE_URL` | empty (use default limits below) |
+| `DISCOVERY_BASE_URL` | empty (court locks answer 503 until set; used to detect bookings/holds) |
+| `DISCOVERY_INTERNAL_SLOT_TOKEN` | empty (must match discovery-service; court locks answer 503 until configured) |
 | `SUBSCRIPTION_DEFAULT_MAX_BRANCHES` / `SUBSCRIPTION_DEFAULT_MAX_COURTS` | `3` / `15` |
 
 ### Schema
@@ -95,10 +97,56 @@ no partial block is ever created. Applying replaces (soft-deletes) every live te
 given days in the same transaction, so a day never mixes old and new layouts.
 Slot price = `price ?? defaultPricePerHour × 30/60 × priceMultiplier` (2 decimals, HALF_UP).
 
+**Court locks / out of service / private events (SCRUM-49, SCRUM-111)** — one model (`court_locks`, migration
+`V40`), one window `[startAt, endAt)` per court in venue-local time (`yyyy-MM-ddTHH:mm:ss`, minutes `00`/`30`,
+may cross midnight or span up to 31 days, must end in the future).
+
+- `POST /api/admin/courts/lock-slots` `{courtId*, startAt*, endAt*, type (OUT_OF_SERVICE default | PRIVATE_EVENT),
+  reason*, notes, publicReason, contactName, contactPhone}` → 201 `LockResponse`
+- `GET /api/admin/courts/lock-slots?branchId=&courtId=&from=&to=` → active locks, ordered by start
+- `DELETE /api/admin/courts/lock-slots/{id}` → 204 (unlock; the row is kept as cancelled for audit)
+- `POST /api/admin/courts/out-of-service` `{branchId*, allCourts | courtIds[], startAt*, endAt*, type, reason*, ...}` →
+  201 `{groupId, branchId, totalLocks, locks[]}`; one lock per court, all-or-nothing in one transaction
+- `DELETE /api/admin/courts/out-of-service/{groupId}` → 204 (unlock every court of that request)
+
+`reason` and `notes` are internal (admin API only). `publicReason` (≤500), `contactName` (≤100) and `contactPhone`
+(`+?` 9–15 digits) are the only fields exposed to customers (as `restriction` below). Errors: **400** invalid window
+or scope, **404** unknown/foreign court, branch or lock, **409** `code=LOCK_OVERLAP` (an active lock already covers
+part of the window, `lockIds` listed) or `code=BOOKING_CONFLICT` (`conflicts:[{courtId,date,slotId,startTime,
+endTime,status BOOKED|HOLD}]`, nothing is created), **503** bookings/holds cannot be verified. Before inserting,
+the service reads `GET {DISCOVERY_BASE_URL}/api/internal/courts/{id}/slot-conflicts?date=` for every court and date of the
+window, using `DISCOVERY_INTERNAL_SLOT_TOKEN` shared with discovery-service; if either setting is empty, locking
+answers 503 (fail closed). A booking or hold created between that
+check and the commit is not detected (point-in-time check, same limitation as SCRUM-22).
+
 **Discovery read API**: `GET /api/internal/courts/{courtId}/slot-schedule?date=YYYY-MM-DD`, shape of
 `discovery-service/SCRUM-22_AVAILABLE_SLOTS.md`. `slotId` = template id (stable),
-`outOfService` = court not ACTIVE or branch INACTIVE. 404 for a missing/deleted court, 200 with
+`outOfService` = court not ACTIVE, branch INACTIVE, or an active court lock covers any part of the slot (then each slot also
+carries the optional public `restriction:{type,publicReason,contactName,contactPhone}`, omitted when null). 404 for a missing/deleted court, 200 with
 `slots: []` when the court has no template for that weekday, `Cache-Control: no-store`.
+
+## Pricing rules (SCRUM-80 peak, SCRUM-82 weekday/weekend)
+
+Migration `V30__court_pricing_rules.sql` (`court_pricing_rules`). Day numbers `0 = Sunday .. 6 = Saturday`.
+
+- `GET|POST /api/admin/courts/{courtId}/pricing-rules` (POST 201)
+- `PUT|DELETE /api/admin/courts/{courtId}/pricing-rules/{ruleId}` (DELETE = soft delete, 204)
+- `POST /api/admin/courts/{courtId}/pricing-rules/copy-weekday-to-weekend` `{priceMultiplier?}` -> replaces every
+  weekend rule (Sat/Sun only) with a copy of each weekday rule (Mon-Fri only), price x multiplier, atomically
+- `GET /api/internal/courts/{courtId}/price-quote?date=&startTime=&endTime=` -> `{courtId,date,total,slots:[{startTime,endTime,price,source,ruleId}]}`;
+  `source` is `WEEKEND|PEAK|OFF_PEAK|DEFAULT`; 409 when the court is out of service or a slot has no template
+
+Rule: `ruleName*, startTime*, endTime*, pricePerHour* (> 0), peakHour (default false), daysOfWeek (default 0..6)`;
+response adds `id, courtId, dayType (WEEKDAY|WEEKEND|ALL)`. Times must be on the 30-minute grid and `endTime > startTime`
+(400). A rule overlapping another rule of the same scope on a shared day is 409; weekend rules (days subset of {0,6})
+form their own scope and may overlap weekday rules because they win.
+
+Price of a 30-minute slot, first match wins (`PricingEngine`): weekend rule > peak rule > off-peak rule > the slot's
+template price (the "default"). Maintenance/inactive court or branch is `outOfService` (not priced). A holiday tier is
+not implemented: there is no holiday calendar in the system yet. `slot-schedule` and `price-quote` both use this engine,
+so a booking crossing a rule boundary is the sum of its slots, each at its own price. The `facility.branch-updated.v1`
+snapshot `minPrice/maxPrice` use the effective prices; `PricingRuleUpdatedEvent` is not a separate event for the same
+reason as `CourtCreatedEvent` above.
 
 ## Branch events (`facility.branch-updated.v1`)
 

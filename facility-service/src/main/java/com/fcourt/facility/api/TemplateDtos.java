@@ -3,6 +3,8 @@ package com.fcourt.facility.api;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.Valid;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fcourt.facility.api.LockDtos.Restriction;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
@@ -91,5 +93,6 @@ public final class TemplateDtos {
     public record ScheduleSlot(long slotId,
                                @JsonFormat(pattern = "HH:mm:ss") LocalTime startTime,
                                @JsonFormat(pattern = "HH:mm:ss") LocalTime endTime,
-                               BigDecimal price, boolean outOfService) { }
+                               BigDecimal price, boolean outOfService,
+                               @JsonInclude(JsonInclude.Include.NON_NULL) Restriction restriction) { }
 }
