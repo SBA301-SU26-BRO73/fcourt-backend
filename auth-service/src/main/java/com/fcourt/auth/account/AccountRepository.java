@@ -74,6 +74,12 @@ class AccountRepository {
                 .stream().filter(java.util.Objects::nonNull).findFirst().map(OffsetDateTime::toInstant);
     }
 
+    /** Avatar set at Google sign-in (users.avatar_url, V12); null when the account has none. */
+    String avatarUrl(long id) {
+        return jdbc.query("SELECT avatar_url FROM users WHERE id = ?", (row, index) -> row.getString("avatar_url"), id)
+                .stream().filter(java.util.Objects::nonNull).findFirst().orElse(null);
+    }
+
     void updateProfile(long id, String fullName, String phone, Instant at) {
         jdbc.update("UPDATE users SET full_name = ?, phone = ?, updated_at = ? WHERE id = ?",
                 fullName, phone, Timestamp.from(at), id);

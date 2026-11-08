@@ -217,7 +217,8 @@ class AuthControllerTest {
         mvc.perform(get("/api/auth/profile"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(7))
-                .andExpect(jsonPath("$.passwordHash").doesNotExist());
+                .andExpect(jsonPath("$.passwordHash").doesNotExist())
+                .andExpect(jsonPath("$.avatarUrl").doesNotExist());
     }
 
     @Test

@@ -85,7 +85,12 @@ public final class AccountDtos {
     }
 
     public record UserResponse(long id, String email, String fullName, String phone, String role, String status,
-                               OffsetDateTime createdAt) {
+                               OffsetDateTime createdAt, String avatarUrl) {
+        /** Without an avatar: login/registration responses do not carry one, only the profile read does. */
+        public UserResponse(long id, String email, String fullName, String phone, String role, String status,
+                            OffsetDateTime createdAt) {
+            this(id, email, fullName, phone, role, status, createdAt, null);
+        }
     }
 
     /** {@code expiresIn} is the access token lifetime in seconds. */
