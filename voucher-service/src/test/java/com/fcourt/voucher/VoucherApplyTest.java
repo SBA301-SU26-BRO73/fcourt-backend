@@ -273,6 +273,47 @@ class VoucherApplyTest {
         assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_usages",Long.class)).isEqualTo(1);
     }
 
+    ObjectNode backfill(VoucherRedemption application){
+        var event=JSON.createObjectNode().put("eventId",UUID.randomUUID().toString()).put("type","VoucherSnapshotBackfillEvent");
+        event.putObject("voucher").put("applicationId",application.applicationId().toString()).put("voucherId",application.voucherId())
+                .put("bookingId",application.bookingId()).put("customerId",application.customerId()).put("branchId",application.branchId())
+                .put("bookingCode","FC00000001").put("customerName","Nguyen Van A").put("customerPhone","0912345678");
+        return event;
+    }
+
+    @Test void backfillFillsOnlyMissingSnapshotColumnsAndIsIdempotent() throws Exception {
+        voucher("SAVE",10);var application=apply(1,10);
+        events.accept(applied(application,UUID.randomUUID()).toString());
+        assertThat(jdbc.queryForObject("SELECT customer_name FROM voucher_usages",String.class)).isNull();
+        events.accept(backfill(application).toString());events.accept(backfill(application).toString());
+        var usage=jdbc.queryForMap("SELECT * FROM voucher_usages");
+        assertThat(usage.get("customer_name")).isEqualTo("Nguyen Van A");assertThat(usage.get("customer_phone_digits")).isEqualTo("0912345678");
+        assertThat(usage.get("booking_code")).isEqualTo("FC00000001");
+        var other=backfill(application);((ObjectNode)other.path("voucher")).put("customerName","Someone Else").put("customerPhone","0999999999");
+        events.accept(other.toString());
+        assertThat(jdbc.queryForObject("SELECT customer_name FROM voucher_usages",String.class)).isEqualTo("Nguyen Van A");
+        assertThat(jdbc.queryForObject("SELECT customer_phone_digits FROM voucher_usages",String.class)).isEqualTo("0912345678");
+        assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isEqualTo(1);
+    }
+
+    @Test void backfillIgnoresMismatchedIdentityMalformedEventsAndMissingUsage() throws Exception {
+        voucher("SAVE",10);var application=apply(1,10);
+        events.accept(backfill(application).toString()); // usage not recorded yet: nothing to fill, no failure
+        events.accept(applied(application,UUID.randomUUID()).toString());
+        var wrongUser=backfill(application);((ObjectNode)wrongUser.path("voucher")).put("customerId",99);events.accept(wrongUser.toString());
+        var wrongBooking=backfill(application);((ObjectNode)wrongBooking.path("voucher")).put("bookingId",2);events.accept(wrongBooking.toString());
+        var malformed=backfill(application);((ObjectNode)malformed.path("voucher")).put("applicationId","not-a-uuid");events.accept(malformed.toString());
+        var negative=backfill(application);((ObjectNode)negative.path("voucher")).put("voucherId",-1);events.accept(negative.toString());
+        var empty=backfill(application);((ObjectNode)empty.path("voucher")).remove(java.util.List.of("bookingCode","customerName","customerPhone"));events.accept(empty.toString());
+        assertThat(jdbc.queryForMap("SELECT customer_name,customer_phone,booking_code FROM voucher_usages").values()).containsOnlyNulls();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_inbox",Long.class)).isEqualTo(7);
+    }
+
+    @Test void malformedPayloadErrorNeverEchoesCustomerData() {
+        assertThatThrownBy(()->events.accept("{\"customerName\":\"Secret Person\",\"customerPhone\":\"0912345678\""))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageNotContaining("Secret").hasMessageNotContaining("0912345678");
+    }
+
     @Test void invalidTimestampOrFailedCounterRollsBackHistoryInboxAndApplication() throws Exception {
         voucher("SAVE",10);var application=apply(1,10);
         var event=applied(application,UUID.randomUUID());((ObjectNode)event.path("voucher")).put("usedAt","not-a-date");
@@ -286,5 +327,30 @@ class VoucherApplyTest {
         assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_inbox",Long.class)).isZero();
         assertThat(applications.booking(1,false).orElseThrow().status()).isEqualTo("RESERVED");
         assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isEqualTo(10);
+    }
+
+    @Test void paidUsageStoresCustomerSnapshotAndNormalizedPhone() throws Exception {
+        voucher("SAVE",10);var application=apply(1,10);
+        var event=applied(application,UUID.randomUUID());
+        ((ObjectNode)event.path("voucher")).put("customerName","  Nguyen Van A\n").put("customerPhone","+84 912 345 678").put("bookingCode","FC00000001");
+        events.accept(event.toString());
+        var usage=jdbc.queryForMap("SELECT * FROM voucher_usages");
+        assertThat(usage.get("customer_name")).isEqualTo("Nguyen Van A");
+        assertThat(usage.get("customer_phone")).isEqualTo("+84 912 345 678");
+        assertThat(usage.get("customer_phone_digits")).isEqualTo("0912345678");
+        assertThat(usage.get("booking_code")).isEqualTo("FC00000001");
+    }
+
+    @Test void legacyEventsWithoutSnapshotAndMalformedSnapshotStillRecordUsage() throws Exception {
+        voucher("SAVE",10);
+        var legacy=apply(1,10);events.accept(applied(legacy,UUID.randomUUID()).toString());
+        var other=apply(2,20);
+        var malformed=applied(other,UUID.randomUUID());
+        ((ObjectNode)malformed.path("voucher")).put("customerName",123).put("customerPhone","x".repeat(40)).put("bookingCode","TOO-LONG-CODE");
+        events.accept(malformed.toString());
+        var rows=jdbc.queryForList("SELECT customer_name,customer_phone,customer_phone_digits,booking_code FROM voucher_usages");
+        assertThat(rows).hasSize(2);
+        assertThat(rows).allSatisfy(row->assertThat(row.values()).containsOnlyNulls());
+        assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isEqualTo(2);
     }
 }

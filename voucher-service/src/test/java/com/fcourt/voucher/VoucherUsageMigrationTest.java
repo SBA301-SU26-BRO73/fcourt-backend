@@ -34,6 +34,8 @@ class VoucherUsageMigrationTest {
         assertThat((java.math.BigDecimal)usage.get("discount_amount")).isEqualByComparingTo("10.25");
         assertThat(((java.sql.Timestamp)usage.get("used_at")).toInstant()).isEqualTo(recorded);
         assertThat(usage.get("used_at_source")).isEqualTo("RECORDED_AT");
+        assertThat(usage.get("customer_name")).isNull();assertThat(usage.get("customer_phone")).isNull();
+        assertThat(usage.get("customer_phone_digits")).isNull();assertThat(usage.get("booking_code")).isNull();
         assertThat(after.migrate().migrationsExecuted).isZero();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_usages",Long.class)).isEqualTo(1);
     }
