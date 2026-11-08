@@ -14,6 +14,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 class BookingCancellation {
+    @org.springframework.beans.factory.annotation.Autowired(required=false) SlotChanges changes;
     private final JdbcTemplate jdbc;
     private final BookingQueries queries;
     private final ObjectMapper json;
@@ -75,5 +76,6 @@ class BookingCancellation {
             jdbc.update("INSERT INTO booking_outbox(event_id,booking_id,payload) VALUES (?,?,?::jsonb)",eventId,id,
                 json.writeValueAsString(Map.of("eventId",eventId,"type","BookingCancelledEvent","booking",booking)));
         } catch(com.fasterxml.jackson.core.JsonProcessingException e){throw new IllegalStateException(e);}
+        if(changes!=null) changes.afterCommit(id);
     }
 }

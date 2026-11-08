@@ -38,3 +38,5 @@ management:
     web:
       exposure:
         include: health
+# Opt in only after configuring the same Redis instance as slot-hold-engine.
+# Public schedule hints; financial commands remain authenticated HTTP operations.
