@@ -4,6 +4,9 @@ import com.fcourt.facility.persistence.BranchStore;
 import com.fcourt.facility.persistence.CourtStore;
 import com.fcourt.facility.persistence.LockStore;
 import com.fcourt.facility.persistence.TemplateStore;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -41,6 +44,13 @@ class Owners {
         long caller = BranchController.owner(jwt);
         if (!isSuperAdmin()) return caller;
         return courts.find(courtId).map(court -> court.adminId()).orElse(caller);
+    }
+
+    /** courtId -> owner to check; unknown courts map to the caller so they surface as 404 downstream. */
+    Map<Long, Long> forCourts(Jwt jwt, List<Long> courtIds) {
+        Map<Long, Long> result = new HashMap<>();
+        for (long courtId : courtIds) result.put(courtId, forCourt(jwt, courtId));
+        return result;
     }
 
     long forTemplate(Jwt jwt, long templateId) {

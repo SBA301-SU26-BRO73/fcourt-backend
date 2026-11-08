@@ -379,6 +379,67 @@ class FacilityApiIntegrationTest {
         mvc.perform(delete("/api/admin/branches/{id}", branchId).with(as(superAdmin, "SUPER_ADMIN")))
                 .andExpect(status().isNoContent());
     }
+    @Test
+    void bulkApplyAppliesToManyCourtsAtomically() throws Exception {
+        long owner = 9306;
+        long branchA = id(postJson("/api/admin/branches", branchBody("Bulk A", "06:00", "22:00"), owner)
+                .andExpect(status().isCreated()));
+        long branchB = id(postJson("/api/admin/branches", branchBody("Bulk B", "08:00", "20:00"), owner)
+                .andExpect(status().isCreated()));
+        long a1 = id(postJson("/api/admin/branches/" + branchA + "/courts", courtBody("A1", "100000"), owner));
+        long a2 = id(postJson("/api/admin/branches/" + branchA + "/courts", courtBody("A2", "80000"), owner));
+        long b1 = id(postJson("/api/admin/branches/" + branchB + "/courts", courtBody("B1", "60000"), owner));
+        String bulk = "/api/admin/courts/bulk-apply-template";
+
+        // Preview: per-court slots; B1 cannot take 06:00-08:00 (outside its branch hours) and is flagged, not failed.
+        String early = "{\"startTime\":\"06:00\",\"endTime\":\"08:00\",\"daysOfWeek\":[1,2]}";
+        postJson(bulk + "/preview", "{\"courtIds\":[" + a1 + "," + a2 + "," + b1 + "],\"template\":" + early + "}", owner)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.hasConflicts").value(true))
+                .andExpect(jsonPath("$.courts", hasSize(3)))
+                .andExpect(jsonPath("$.courts[0].totalSlots").value(8))
+                .andExpect(jsonPath("$.courts[0].slots[0].price").value(50000.0))
+                .andExpect(jsonPath("$.courts[1].slots[0].price").value(40000.0))
+                .andExpect(jsonPath("$.courts[2].conflict", containsString("branch hours")))
+                .andExpect(jsonPath("$.totalSlots").value(16));
+
+        // Atomic: B1 conflicts, so A1/A2 stay untouched (rollback) and the 409 lists the conflicting court.
+        postJson(bulk, "{\"courtIds\":[" + a1 + "," + a2 + "," + b1 + "],\"template\":" + early + "}", owner)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.conflicts", hasSize(1)))
+                .andExpect(jsonPath("$.conflicts[0].courtId").value(b1));
+        mvc.perform(get("/api/admin/courts/{id}/time-slot-templates", a1).with(as(owner, "ADMIN")))
+                .andExpect(jsonPath("$", hasSize(0)));
+
+        // Success across two branches; reading back matches the chosen configuration.
+        String morning = "{\"startTime\":\"09:00\",\"endTime\":\"11:00\",\"daysOfWeek\":[1,2]}";
+        postJson(bulk, "{\"courtIds\":[" + a1 + "," + a2 + "," + b1 + "],\"template\":" + morning + "}", owner)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalSlots").value(24))
+                .andExpect(jsonPath("$.courts", hasSize(3)))
+                .andExpect(jsonPath("$.courts[0].slotsPerDay").value(4));
+        mvc.perform(get("/api/admin/courts/{id}/time-slot-templates", b1).with(as(owner, "ADMIN")))
+                .andExpect(jsonPath("$", hasSize(8)))
+                .andExpect(jsonPath("$[0].price").value(30000.0));
+        mvc.perform(get("/api/admin/courts/{id}/time-slot-templates", a2).param("dayOfWeek", "2")
+                        .with(as(owner, "ADMIN")))
+                .andExpect(jsonPath("$", hasSize(4)))
+                .andExpect(jsonPath("$[0].price").value(40000.0));
+
+        // Request-level validation and ownership.
+        postJson(bulk, "{\"courtIds\":[],\"template\":{}}", owner).andExpect(status().isBadRequest());
+        postJson(bulk, "{\"courtIds\":[" + a1 + "," + a1 + "],\"template\":{}}", owner).andExpect(status().isBadRequest());
+        postJson(bulk, "{\"courtIds\":[" + a1 + "]}", owner).andExpect(status().isBadRequest());
+        postJson(bulk, "{\"courtIds\":[" + a1 + "],\"template\":{\"startTime\":\"08:00\",\"endTime\":\"09:15\"}}", owner)
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail", containsString("not divisible")));
+        postJson(bulk, "{\"courtIds\":[" + a1 + "," + a2 + "],\"template\":{}}", 9999).andExpect(status().isNotFound());
+        postJson(bulk, "{\"courtIds\":[" + a1 + ",999999],\"template\":{}}", owner).andExpect(status().isNotFound());
+        mvc.perform(post(bulk).contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/admin/courts/{id}/time-slot-templates", a1).param("dayOfWeek", "3")
+                        .with(as(owner, "ADMIN")))
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
+
 
     /** Reads the topic until the snapshot with the expected version of the branch arrives. */
     private JsonNode awaitLatestSnapshot(long branchId, long expectedVersion) throws Exception {
@@ -422,7 +483,7 @@ class FacilityApiIntegrationTest {
 
     @Test
     void courtLocksCloseSlotsRefuseBookingConflictsAndUnlock() throws Exception {
-        long owner = 9301;
+        long owner = 9307;
         long branchId = id(postJson("/api/admin/branches", branchBody("Locks", "06:00", "22:00"), owner)
                 .andExpect(status().isCreated()));
         String courts = "/api/admin/branches/" + branchId + "/courts";

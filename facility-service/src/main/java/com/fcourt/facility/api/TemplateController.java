@@ -3,6 +3,9 @@ package com.fcourt.facility.api;
 import static com.fcourt.facility.api.BranchController.owner;
 
 import com.fcourt.facility.api.TemplateDtos.ApplyResponse;
+import com.fcourt.facility.api.TemplateDtos.BulkApplyRequest;
+import com.fcourt.facility.api.TemplateDtos.BulkApplyResponse;
+import com.fcourt.facility.api.TemplateDtos.BulkPreviewResponse;
 import com.fcourt.facility.api.TemplateDtos.ApplyTemplateRequest;
 import com.fcourt.facility.api.TemplateDtos.PreviewResponse;
 import com.fcourt.facility.api.TemplateDtos.SingleTemplateRequest;
@@ -48,6 +51,16 @@ class TemplateController {
     ApplyResponse apply(@AuthenticationPrincipal Jwt jwt, @PathVariable long courtId,
                         @Valid @RequestBody ApplyTemplateRequest request) {
         return templates.apply(owners.forCourt(jwt, courtId), courtId, request);
+    }
+
+    @PostMapping("/api/admin/courts/bulk-apply-template/preview")
+    BulkPreviewResponse bulkPreview(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody BulkApplyRequest request) {
+        return templates.bulkPreview(owners.forCourts(jwt, request.courtIds()), request);
+    }
+
+    @PostMapping("/api/admin/courts/bulk-apply-template")
+    BulkApplyResponse bulkApply(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody BulkApplyRequest request) {
+        return templates.bulkApply(owners.forCourts(jwt, request.courtIds()), request);
     }
 
     @GetMapping("/api/admin/courts/{courtId}/time-slot-templates")
