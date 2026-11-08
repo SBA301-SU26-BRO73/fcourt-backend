@@ -79,6 +79,20 @@ class CourtReservationIntegrationTest {
                 .authorities(new SimpleGrantedAuthority("ROLE_" + role));
     }
 
+    static String branchBody(String name, String open, String close) {
+        return """
+                {"name":"%s","address":"123 Nguyen Trai","ward":"Ben Thanh","district":"Quan 1","city":"Ho Chi Minh",
+                 "latitude":10.762622,"longitude":106.660172,"phone":"0901234567","openTime":"%s","closeTime":"%s",
+                 "bankName":"Vietcombank","bankBin":"970436","bankAccountNumber":"0123456789","bankAccountName":"NGUYEN VAN A"}
+                """.formatted(name, open, close);
+    }
+
+    static String courtBody(String name, String price) {
+        return """
+                {"name":"%s","courtTypeId":6,"description":"Indoor","imageUrl":"https://example.com/c.jpg","defaultPricePerHour":%s}
+                """.formatted(name, price);
+    }
+
     record Venue(long owner, long branch, long courtA, long courtB, LocalDate monday) { }
 
     long id(ResultActions result) throws Exception {
@@ -92,11 +106,11 @@ class CourtReservationIntegrationTest {
     /** Branch with two courts, 08:00-10:00 slots on Mondays. */
     Venue venue(long owner, String name) throws Exception {
         Mockito.when(availability.conflicts(Mockito.anyLong(), Mockito.any())).thenReturn(List.of());
-        long branch = id(admin("/api/admin/branches", FacilityApiIntegrationTest.branchBody(name, "06:00", "22:00"), owner)
+        long branch = id(admin("/api/admin/branches", branchBody(name, "06:00", "22:00"), owner)
                 .andExpect(status().isCreated()));
         String courts = "/api/admin/branches/" + branch + "/courts";
-        long a = id(admin(courts, FacilityApiIntegrationTest.courtBody("A", "100000"), owner).andExpect(status().isCreated()));
-        long b = id(admin(courts, FacilityApiIntegrationTest.courtBody("B", "100000"), owner).andExpect(status().isCreated()));
+        long a = id(admin(courts, courtBody("A", "100000"), owner).andExpect(status().isCreated()));
+        long b = id(admin(courts, courtBody("B", "100000"), owner).andExpect(status().isCreated()));
         for (long court : List.of(a, b)) {
             admin("/api/admin/courts/" + court + "/apply-template",
                     "{\"startTime\":\"08:00\",\"endTime\":\"10:00\",\"price\":90000,\"daysOfWeek\":[1]}", owner)
