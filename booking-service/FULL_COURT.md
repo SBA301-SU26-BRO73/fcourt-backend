@@ -34,8 +34,24 @@ slots and share of the package total/discount; package -> BOOKED) -> facility `c
   stay null; the package totals live in `full_court_packages`.
 * Config: `FACILITY_URL`, `FACILITY_RESERVATION_TOKEN` (same value as facility-service, >= 32 chars; unset -> 503),
   `booking.full-court.reconcile-enabled`, `booking.full-court.reconcile-delay-ms`.
-* Out of scope (not in SCRUM-114 acceptance): deposit, e-contract/invoice, cancelling a whole package (cancelling one member
-  booking does not release the facility lock yet), Flutter UI.
+* Lifecycle endpoints (ADMIN who owns the branch, checked against facility's current branch list):
+  `GET /api/admin/bookings/full-court?state=&page=&size=` (use `state=LOCK_LOST` as the repair queue),
+  `GET .../{id}`, `POST .../{id}/cancel {"reason"}` and `POST .../{id}/relock`.
+* Cancel: one transaction cancels every member booking with the customer cancellation rules (cutoff hours, refund percent,
+  same `BookingCancelledEvent` outbox row so payment/notification/reporting behave as for any cancelled booking) or none
+  (400 when any member is past the cutoff or not cancellable); then facility `rollback` releases the lock. 200 when
+  released, 202 (`lockState` RELEASING) when the release is pending, retried by calling cancel again or by the reconciler.
+  Cancelling is idempotent and a CANCELLED package key replays as CANCELLED, never as a new attempt.
+* LOCK_LOST: the log line `ALERT_FULL_COURT_LOCK_LOST packageId=... reservationId=...` is the alertable key (error level).
+  `POST .../{id}/relock` re-reserves the same window under a new reservation id with `relock=true` (facility skips the
+  booking/hold occupancy pre-check because the occupying bookings are this package's own; overlap with any other lock is still
+  refused) and commits it. No new bookings are created. Safe to repeat.
+* Deposit: `booking.full-court.deposit-percent` (default 0 = off, 0-100, max 2 decimals). `depositAmount` is
+  floor(frozen total x percent) at creation, stored on the package and returned with `depositPercent` and `balanceAmount`.
+  No deposit payment, receipt or contract is created.
+* Fixed package price (an admin-supplied price replacing the computed total) is intentionally not implemented: it needs a
+  reviewed pricing policy and changes the quote contract of #105.
+* Out of scope (no provider or approved policy exists): e-contract/invoice documents and collecting the deposit; Flutter UI.
 
 ---
 ## Original preview contract and gate evidence (history)

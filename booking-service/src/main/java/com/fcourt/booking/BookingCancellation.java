@@ -55,6 +55,14 @@ class BookingCancellation {
         if(b.get("status").equals("CANCELLED"))return queries.detail(id,jwt,null);
         var policy=policy(b);
         if(!policy.allowed())throw new ResponseStatusException(HttpStatus.BAD_REQUEST,policy.reason());
+        applyCancellation(b,reason,policy);
+        return queries.detail(id,jwt,null);
+    }
+    /** Policy of one booking row, for package cancellation (SCRUM-242) which applies the same rules per member. */
+    Policy policyFor(Map<String,Object> b) {return policy(b);}
+    /** Cancels one booking row: status, released slots and the BookingCancelledEvent outbox row (payment refunds follow it). */
+    void applyCancellation(Map<String,Object> b,String reason,Policy policy) {
+        long id=((Number)b.get("id")).longValue();
         var slots=jdbc.queryForList("SELECT court_id AS \"courtId\",booking_date AS date,slot_start AS \"startTime\",slot_end AS \"endTime\" FROM booking_slots WHERE booking_id=? ORDER BY slot_start",id);
         jdbc.update("UPDATE bookings SET status='CANCELLED',cancellation_reason=?,cancelled_at=?,refund_amount=?,updated_at=now() WHERE id=?",reason.strip(),java.sql.Timestamp.from(clock.instant()),policy.refundAmount(),id);
         jdbc.update("UPDATE booking_slots SET active=false WHERE booking_id=?",id);
@@ -67,6 +75,5 @@ class BookingCancellation {
             jdbc.update("INSERT INTO booking_outbox(event_id,booking_id,payload) VALUES (?,?,?::jsonb)",eventId,id,
                 json.writeValueAsString(Map.of("eventId",eventId,"type","BookingCancelledEvent","booking",booking)));
         } catch(com.fasterxml.jackson.core.JsonProcessingException e){throw new IllegalStateException(e);}
-        return queries.detail(id,jwt,null);
     }
 }

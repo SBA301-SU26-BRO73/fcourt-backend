@@ -14,6 +14,7 @@ import java.time.LocalTime;
 import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -48,7 +49,7 @@ class FullCourtReservation {
     private static final BigDecimal MAX = new BigDecimal("99999999.99");
     static final int RESERVING_STALE_SECONDS = 60;
     static final int BOOKED_STALE_SECONDS = 10;
-    private static final int TTL_SECONDS = 120;
+    static final int TTL_SECONDS = 120;
     private static final int ATTEMPTS = 3;
 
     record Request(@Positive long branchId, @NotEmpty @Size(max = 50) List<@NotNull @Positive Long> courtIds,
@@ -62,11 +63,16 @@ class FullCourtReservation {
 
     record BookingRef(long bookingId, long courtId, String bookingCode, BigDecimal totalAmount) {}
 
-    /** {@code lockState}: COMMITTED, PENDING_COMMIT (booked, facility commit still being confirmed) or LOST. */
+    /**
+     * {@code lockState}: COMMITTED, PENDING_COMMIT (booked, facility commit still being confirmed), LOST (lease lost, use
+     * relock), RELEASING (cancelled, lock release pending) or RELEASED. Deposit is computed from the frozen total only;
+     * no deposit payment or contract is created.
+     */
     record Package(UUID packageId, String state, String lockState, long branchId, List<Long> courtIds, LocalDate date,
             LocalTime startTime, LocalTime endTime, BigDecimal courtHours, BigDecimal subtotal,
             BigDecimal discountPercent, BigDecimal discountAmount, BigDecimal total, String currency,
-            String contactName, String contactPhone, List<BookingRef> bookings) {}
+            BigDecimal depositPercent, BigDecimal depositAmount, BigDecimal balanceAmount,
+            String contactName, String contactPhone, String cancellationReason, List<BookingRef> bookings) {}
 
     record Result(int status, Package body) {}
 
@@ -79,10 +85,16 @@ class FullCourtReservation {
     private final FullCourtQuote quotes;
     private final FullCourtFacility facility;
     private final ObjectMapper json;
+    private final BigDecimal depositPercent;
     private final SecureRandom random = new SecureRandom();
 
     FullCourtReservation(JdbcTemplate jdbc, TransactionTemplate tx, FullCourtQuote quotes, FullCourtFacility facility,
-            ObjectMapper json) {
+            ObjectMapper json, @Value("${booking.full-court.deposit-percent:0}") BigDecimal depositPercent) {
+        if (depositPercent == null || depositPercent.signum() < 0 || depositPercent.compareTo(BigDecimal.valueOf(100)) > 0
+                || depositPercent.scale() > 2) {
+            throw new IllegalArgumentException("Invalid full-court deposit percent");
+        }
+        this.depositPercent = depositPercent;
         this.jdbc = jdbc;
         this.tx = tx;
         this.quotes = quotes;
@@ -101,7 +113,7 @@ class FullCourtReservation {
                 throw conflict("Idempotency key was already used for a different full-court request");
             }
             switch (existing.state()) {
-                case "COMMITTED", "LOCK_LOST" -> {
+                case "COMMITTED", "LOCK_LOST", "CANCELLING", "CANCELLED" -> {
                     return new Result(200, view(existing.id()));
                 }
                 case "BOOKED" -> {
@@ -145,7 +157,7 @@ class FullCourtReservation {
     }
 
     /** Idempotent commit of a BOOKED package; 201/200 when confirmed, 202 while it is still pending or lost. */
-    private Result finish(UUID packageId, boolean created) {
+    Result finish(UUID packageId, boolean created) {
         UUID reservationId = jdbc.queryForObject("SELECT reservation_id FROM full_court_packages WHERE id = ?", UUID.class, packageId);
         String outcome = commitOnce(packageId, reservationId);
         Package view = view(packageId);
@@ -156,17 +168,31 @@ class FullCourtReservation {
     }
 
     /** Returns the resulting state: COMMITTED, LOCK_LOST or BOOKED (commit not confirmed, will be retried). */
-    private String commitOnce(UUID packageId, UUID reservationId) {
+    String commitOnce(UUID packageId, UUID reservationId) {
         for (int attempt = 1; attempt <= ATTEMPTS; attempt++) {
             try {
                 facility.commit(reservationId);
-                jdbc.update("UPDATE full_court_packages SET state = 'COMMITTED', updated_at = now() WHERE id = ? AND state = 'BOOKED'", packageId);
+                int committed = jdbc.update("UPDATE full_court_packages SET state = 'COMMITTED', updated_at = now() WHERE id = ? AND state = 'BOOKED' AND reservation_id = ?", packageId, reservationId);
+                if (committed == 0) {
+                    // The package moved on (cancelled, or relocked under a newer reservation) while this commit was in flight:
+                    // never leave the stale committed lock behind.
+                    var state = jdbc.queryForList("SELECT state, reservation_id FROM full_court_packages WHERE id = ?", packageId);
+                    boolean orphan = state.isEmpty() || !reservationId.equals(state.getFirst().get("reservation_id"))
+                            || "CANCELLING".equals(state.getFirst().get("state")) || "CANCELLED".equals(state.getFirst().get("state"));
+                    if (orphan) {
+                        try {
+                            facility.rollback(reservationId);
+                        } catch (FullCourtFacility.Refused | FullCourtFacility.Unavailable ignored) {
+                            log.warn("Stale facility reservation {} could not be released yet", reservationId);
+                        }
+                    }
+                }
                 return "COMMITTED";
             } catch (FullCourtFacility.Refused refused) {
                 // Expired, cancelled or unknown at facility: it will never commit. booking_slots still blocks the slots.
-                jdbc.update("UPDATE full_court_packages SET state = 'LOCK_LOST', failure = ?, updated_at = now() WHERE id = ? AND state = 'BOOKED'",
-                        trim("facility " + refused.status + " " + refused.code), packageId);
-                log.error("Full-court package {} lost its facility lock ({} {}); manual review needed", packageId,
+                jdbc.update("UPDATE full_court_packages SET state = 'LOCK_LOST', failure = ?, updated_at = now() WHERE id = ? AND state = 'BOOKED' AND reservation_id = ?",
+                        trim("facility " + refused.status + " " + refused.code), packageId, reservationId);
+                log.error("ALERT_FULL_COURT_LOCK_LOST packageId={} reservationId={} cause={} {}; bookings stand, run relock", packageId, reservationId,
                         refused.status, refused.code);
                 return "LOCK_LOST";
             } catch (FullCourtFacility.Unavailable unavailable) {
@@ -217,28 +243,29 @@ class FullCourtReservation {
             UUID reservationId, Existing existing) {
         var quote = priced.quote();
         String slots = slotsJson(request, priced);
+        BigDecimal deposit = quote.total().multiply(depositPercent).divide(BigDecimal.valueOf(100), 2, RoundingMode.DOWN);
         UUID id = tx.execute(status -> {
             jdbc.queryForList("SELECT pg_advisory_xact_lock(hashtextextended(?,0))", "fullcourt:" + actor + ":" + key);
             if (existing != null) {
                 var restarted = jdbc.queryForList("""
                         UPDATE full_court_packages SET state = 'RESERVING', attempt = attempt + 1, reservation_id = ?, failure = NULL,
-                            court_hours = ?, subtotal = ?, discount_percent = ?, discount_amount = ?, total_amount = ?,
+                            court_hours = ?, subtotal = ?, discount_percent = ?, discount_amount = ?, total_amount = ?, deposit_percent = ?, deposit_amount = ?,
                             priced_slots = ?::jsonb, updated_at = now()
                         WHERE id = ? AND state = 'FAILED' RETURNING id
                         """, reservationId, quote.courtHours(), quote.subtotal(), quote.discountPercent(),
-                        quote.discountAmount(), quote.total(), slots, existing.id());
+                        quote.discountAmount(), quote.total(), depositPercent, deposit, slots, existing.id());
                 return restarted.isEmpty() ? null : existing.id();
             }
             UUID created = UUID.randomUUID();
             var inserted = jdbc.queryForList("""
                     INSERT INTO full_court_packages(id, actor_id, command_key, fingerprint, branch_id, booking_date, start_time,
-                        end_time, contact_name, contact_phone, court_hours, subtotal, discount_percent, discount_amount,
+                        end_time, contact_name, contact_phone, court_hours, subtotal, discount_percent, discount_amount, deposit_percent, deposit_amount,
                         total_amount, currency, priced_slots, reservation_id, state)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?::jsonb,?,'RESERVING')
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?::jsonb,?,'RESERVING')
                     ON CONFLICT (actor_id, command_key) DO NOTHING RETURNING id
                     """, created, actor, key, fingerprint, request.branchId(), request.date(), request.startTime(),
                     request.endTime(), request.contactName().trim(), request.contactPhone(), quote.courtHours(),
-                    quote.subtotal(), quote.discountPercent(), quote.discountAmount(), quote.total(), quote.currency(),
+                    quote.subtotal(), quote.discountPercent(), quote.discountAmount(), depositPercent, deposit, quote.total(), quote.currency(),
                     slots, reservationId);
             return inserted.isEmpty() ? null : created;
         });
@@ -311,6 +338,8 @@ class FullCourtReservation {
             String lock = switch (state) {
                 case "COMMITTED" -> "COMMITTED";
                 case "LOCK_LOST" -> "LOST";
+                case "CANCELLING" -> "RELEASING";
+                case "CANCELLED" -> "RELEASED";
                 default -> "PENDING_COMMIT";
             };
             return new Package(packageId, state, lock, rs.getLong("branch_id"),
@@ -318,7 +347,9 @@ class FullCourtReservation {
                     rs.getObject("start_time", LocalTime.class), rs.getObject("end_time", LocalTime.class),
                     rs.getBigDecimal("court_hours"), rs.getBigDecimal("subtotal"), rs.getBigDecimal("discount_percent"),
                     rs.getBigDecimal("discount_amount"), rs.getBigDecimal("total_amount"), rs.getString("currency"),
-                    rs.getString("contact_name"), rs.getString("contact_phone"), bookings);
+                    rs.getBigDecimal("deposit_percent"), rs.getBigDecimal("deposit_amount"),
+                    rs.getBigDecimal("total_amount").subtract(rs.getBigDecimal("deposit_amount")),
+                    rs.getString("contact_name"), rs.getString("contact_phone"), rs.getString("cancel_reason"), bookings);
         }, packageId);
         return Objects.requireNonNull(row);
     }

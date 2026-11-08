@@ -45,7 +45,12 @@ class FullCourtFacility {
     }
 
     record Reserve(UUID reservationId, long branchId, long adminId, List<Long> courtIds, String startAt, String endAt,
-            Integer ttlSeconds, String publicReason) {}
+            Integer ttlSeconds, String publicReason, boolean relock) {
+        Reserve(UUID reservationId, long branchId, long adminId, List<Long> courtIds, String startAt, String endAt,
+                Integer ttlSeconds, String publicReason) {
+            this(reservationId, branchId, adminId, courtIds, startAt, endAt, ttlSeconds, publicReason, false);
+        }
+    }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record Reservation(UUID reservationId, String state, List<Long> courtIds) {}
