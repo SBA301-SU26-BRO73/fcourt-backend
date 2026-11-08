@@ -2,6 +2,7 @@ package com.fcourt.facility.persistence;
 
 import com.fcourt.facility.api.CourtRequest;
 import com.fcourt.facility.api.CourtResponse;
+import com.fcourt.facility.api.PublicCourtResponse;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
@@ -23,6 +24,17 @@ public class CourtStore {
     public List<CourtResponse> listByBranch(long branchId) {
         return jdbc.query("SELECT * FROM courts WHERE branch_id = ? AND deleted_at IS NULL ORDER BY id",
                 this::row, branchId);
+    }
+
+    /** Customer-safe projection of active, live courts for a branch. */
+    public List<PublicCourtResponse> listActivePublicByBranch(long branchId) {
+        return jdbc.query("""
+                SELECT id, name, court_type_id, default_price_per_hour
+                FROM courts
+                WHERE branch_id = ? AND status = 'ACTIVE' AND deleted_at IS NULL
+                ORDER BY name, id
+                """, (rs, n) -> new PublicCourtResponse(rs.getLong("id"), rs.getString("name"),
+                rs.getLong("court_type_id"), rs.getBigDecimal("default_price_per_hour")), branchId);
     }
 
     public Optional<OwnedCourt> find(long courtId) {

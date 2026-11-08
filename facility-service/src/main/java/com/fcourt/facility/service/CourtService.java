@@ -2,6 +2,7 @@ package com.fcourt.facility.service;
 
 import com.fcourt.facility.api.CourtRequest;
 import com.fcourt.facility.api.CourtResponse;
+import com.fcourt.facility.api.PublicCourtResponse;
 import com.fcourt.facility.events.BranchEventWriter;
 import com.fcourt.facility.events.LockScheduleEvents;
 import com.fcourt.facility.integration.SubscriptionLimitClient;
@@ -111,6 +112,12 @@ public class CourtService {
         var branch=branches.find(branchId).orElseThrow(BranchService::notFound);
         if (!"ACTIVE".equals(branch.status())) throw new ResponseStatusException(HttpStatus.CONFLICT,"Branch is inactive");
         return courts.listByBranch(branchId).stream().map(c -> new CourtResponse.ScheduleView(c.id(),c.branchId(),c.name(),c.status())).toList();
+    }
+
+    public List<PublicCourtResponse> publicCourts(long branchId) {
+        var branch = branches.find(branchId).orElseThrow(BranchService::notFound);
+        if (!"ACTIVE".equals(branch.status())) throw BranchService.notFound();
+        return courts.listActivePublicByBranch(branchId);
     }
 
     public CourtResponse.StaffView staffCourt(long courtId) {
