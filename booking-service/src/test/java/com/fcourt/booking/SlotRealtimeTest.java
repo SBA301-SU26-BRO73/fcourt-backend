@@ -27,7 +27,21 @@ class SlotRealtimeTest {
     }
     @Test void onlyPublicFieldsLeaveBroker() {
         message("{\"courtId\":12,\"date\":\"2026-11-07\",\"holdToken\":\"secret\",\"phone\":\"private\"}");
-        verify(broker).convertAndSend("/topic/court-slots/12",Map.of("courtId",12L,"date","2026-11-07"));
+        verify(broker).convertAndSend("/topic/court-slots/12",Map.of("courtId",12L,"date","2026-11-07","type","SLOT_CHANGED"));
+    }
+    @Test void typedEventsAreForwardedOnlyFromTheAllowList() {
+        message("{\"courtId\":3,\"date\":\"2026-11-07\",\"type\":\"HOLD_EXPIRED\",\"holdToken\":\"secret\"}");
+        verify(broker).convertAndSend("/topic/court-slots/3",Map.of("courtId",3L,"date","2026-11-07","type","HOLD_EXPIRED"));
+        message("{\"courtId\":4,\"date\":\"2026-11-07\",\"type\":\"DROP TABLE\"}");
+        verify(broker).convertAndSend("/topic/court-slots/4",Map.of("courtId",4L,"date","2026-11-07","type","SLOT_CHANGED"));
+    }
+    @Test void lockEventsCarryOnlyTheAllowListedLockType() {
+        message("{\"courtId\":5,\"date\":\"2026-11-07\",\"type\":\"LOCK_CREATED\",\"lockType\":\"PRIVATE_EVENT\",\"reason\":\"VIP wedding\",\"contactPhone\":\"0900000000\"}");
+        verify(broker).convertAndSend("/topic/court-slots/5",Map.of("courtId",5L,"date","2026-11-07","type","LOCK_CREATED","lockType","PRIVATE_EVENT"));
+        message("{\"courtId\":6,\"date\":\"2026-11-07\",\"type\":\"LOCK_REMOVED\",\"lockType\":\"<script>\"}");
+        verify(broker).convertAndSend("/topic/court-slots/6",Map.of("courtId",6L,"date","2026-11-07","type","LOCK_REMOVED"));
+        message("{\"courtId\":7,\"date\":\"2026-11-07\",\"type\":\"HOLD_CREATED\",\"lockType\":\"OUT_OF_SERVICE\"}");
+        verify(broker).convertAndSend("/topic/court-slots/7",Map.of("courtId",7L,"date","2026-11-07","type","HOLD_CREATED"));
     }
     @Test void malformedAndOversizedNotificationsAreIgnored() {
         for(String payload:new String[]{"{}","not json","{\"courtId\":-1,\"date\":\"2026-11-07\"}","{\"courtId\":1,\"date\":\"2026-02-30\"}"," ".repeat(1025)})message(payload);
