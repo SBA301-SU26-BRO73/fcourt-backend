@@ -34,6 +34,10 @@ spring:
     listener:
       ack-mode: record
       missing-topics-fatal: true
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 26MB
   jackson:
     deserialization:
       fail-on-null-for-primitives: true
@@ -51,6 +55,15 @@ discovery:
     jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
     issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
     audience: ${AUTH_JWT_AUDIENCE:fcourt}
+    base-url: ${AUTH_URL:http://localhost:8081}
+  reviews:
+    images:
+      max-file-bytes: 5242880
+      cloudinary:
+        url: ${CLOUDINARY_URL:}
+        cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+        api-key: ${CLOUDINARY_API_KEY:}
+        api-secret: ${CLOUDINARY_API_SECRET:}
   internal:
     slot-token: ${DISCOVERY_INTERNAL_SLOT_TOKEN:}
   slots:

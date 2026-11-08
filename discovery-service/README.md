@@ -124,6 +124,16 @@ Coverage includes real Flyway/PostgreSQL queries, anonymous HTTP and validation,
 
 Set `DISCOVERY_INTERNAL_SLOT_TOKEN` in the environment before starting the `app` profile. The compose file passes it to discovery-service; set the same value for facility-service. Keep the token private and restrict the discovery container to trusted service networks.
 
+## Review photos and reviewer identity (SCRUM-105 follow-up)
+
+- `POST /api/reviews/images` (CUSTOMER, multipart field `files`, 1-5 files, JPEG/PNG/WebP detected from magic bytes, 5 MB each) uploads to Cloudinary folder `fcourt/reviews/{userId}` (derived from the JWT) and returns `201 {"urls":["https://res.cloudinary.com/..."]}`.
+- `POST /api/reviews` accepts `imageUrls` only when each URL is an HTTPS `res.cloudinary.com/{our cloud}/image/upload/[v123/]fcourt/reviews/{caller id}/...` file (no query, port, userinfo, encoding or dot segments), otherwise `400` before any remote call. Rows written before this change are never re-validated and still read normally.
+- Cloudinary config: `CLOUDINARY_URL` or `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` (same variables as facility-service). Without them the service starts, uploads answer `503` and reviews with photos are rejected.
+- Reviewer identity: at creation the service calls `GET {AUTH_URL}/api/auth/profile` (default `http://localhost:8081`) with the caller's own bearer token and stores a snapshot in `reviews.reviewer_display_name` (masked, e.g. `Nguyễn Văn An` -> `An N.`) and `reviews.reviewer_avatar_url` (HTTPS only). The raw full name is never stored. If auth-service is unreachable the review is still saved with no name/avatar; old rows return `reviewerName` `Khách hàng` and a null `reviewerAvatarUrl`.
+- Public review JSON no longer contains `userId` (nor `bookingId`); it exposes `reviewerName` and `reviewerAvatarUrl`.
+- Avatars come from `users.avatar_url` in auth-service, which is only filled by Google sign-in today. There is no endpoint to set an avatar yet, so password-registered customers show a null avatar.
+- Known limits: no per-user upload rate limit, and photos uploaded but never attached to a review are not garbage-collected.
+
 ## Realtime court slots (SCRUM-22)
 
 See [SCRUM-22_AVAILABLE_SLOTS.md](SCRUM-22_AVAILABLE_SLOTS.md) for the public API,

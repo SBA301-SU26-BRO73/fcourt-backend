@@ -35,7 +35,7 @@ public class DiscoverySecurity {
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/public/**", "/actuator/health", "/actuator/info").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/reviews", "/api/admin/reviews/*/reply").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/reviews", "/api/reviews/images", "/api/admin/reviews/*/reply").authenticated()
                         .anyRequest().denyAll())
                 .oauth2ResourceServer(resource -> resource
                         .bearerTokenResolver(request -> request.getRequestURI().startsWith(request.getContextPath() + "/api/public/") ? null : bearer.resolve(request))
