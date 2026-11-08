@@ -29,6 +29,7 @@ class Flow:
         self.now = now or datetime.now(timezone.utc)
         self.before_check_in = before_check_in
         self.tokens = {}
+        self.ctx = {}
         self.report = {"task": "SCRUM-91", "scope": config["scope"], "runId": client.run_id,
                        "overall": "NOT_RUN", "steps": [], "ids": {}, "liveAcceptance": False}
 
@@ -111,6 +112,7 @@ class Flow:
         court_body = dict(c["court"], defaultPricePerHour=c["slotPrice"]*2)
         court = self.step("create-court", lambda: request("createCourt", court_body, self.tokens["owner"], {"branchId": branch_id}, expected=(201,)))
         court_id = identifier(court); self.report["ids"]["courtId"] = court_id
+        self.ctx = {"branch_id": branch_id, "day": day, "start": start}
         for index in range(2):
             begins = start+timedelta(minutes=30*index)
             template = {"dayOfWeek": int(day.strftime("%w")), "startTime": begins.strftime("%H:%M"),
@@ -175,6 +177,69 @@ class Flow:
                       lambda: request("reportingStats",token=self.tokens["owner"],bindings={"branchId":branch_id}),
                       lambda result: result.get("totalBookings")==2 and result.get("totalRevenue")==c["slotPrice"]
                       and result.get("bookingStatusCounts",{}).get("CONFIRMED")==1 and result.get("bookingStatusCounts",{}).get("CANCELLED")==1))
+
+    def full_court(self):
+        """SCRUM-114/242: reserve and book a package through the real services, prove other channels are refused, cancel it."""
+        c, request = self.config, self.client.request
+        branch_id, day, start = self.ctx["branch_id"], self.ctx["day"], self.ctx["start"]
+        owner, customer = self.tokens["owner"], self.tokens["customer"]
+        phone = self.secret(c["credentials"]["customerPhoneEnv"])
+        end = start+timedelta(hours=1)
+        courts, slot_ids = [], {}
+        for index in range(2):
+            body = dict(c["court"], name=f"E2E package court {index}", defaultPricePerHour=c["slotPrice"]*2)
+            court = identifier(self.step(f"package-create-court-{index}", lambda body=body, index=index: request(
+                "createCourt", body, owner, {"branchId": branch_id, "package": index}, expected=(201,))))
+            courts.append(court)
+            for half in range(2):
+                begins = start+timedelta(minutes=30*half)
+                template = {"dayOfWeek": int(day.strftime("%w")), "startTime": begins.strftime("%H:%M"),
+                            "endTime": (begins+timedelta(minutes=30)).strftime("%H:%M"), "price": c["slotPrice"]}
+                self.step(f"package-slot-{index}-{half}", lambda template=template, court=court, half=half: request(
+                    "createSlot", template, owner, {"courtId": court, "operation": "package" + str(half)}, expected=(200, 201)))
+        for court in courts:
+            rows = self.step(f"package-discovery-{court}", lambda court=court: self.poll("package court slots",
+                lambda: request("slots", bindings={"courtId": court, "date": day.isoformat()}),
+                lambda found: sum(1 for s in found if s.get("status") == "AVAILABLE") >= 2))
+            slot_ids[court] = [s["slotId"] for s in rows if s.get("status") == "AVAILABLE"]
+        window = {"branchId": branch_id, "courtIds": courts, "date": day.isoformat(),
+                  "startTime": start.strftime("%H:%M"), "endTime": end.strftime("%H:%M")}
+        quote = self.step("package-quote", lambda: request("fullCourtQuote", window, owner))
+        expected_total = c["slotPrice"]*4
+        require(quote.get("subtotal") == expected_total and quote.get("total") == expected_total and quote.get("reserved") is False,
+                "Quote is not the server-priced preview")
+        reserved = self.step("package-reserve", lambda: request("fullCourt", dict(window, contactName="E2E event", contactPhone="0930000009"),
+                                                                 owner, expected=(201,)))
+        package_id = reserved.get("packageId")
+        require(isinstance(package_id, str) and reserved.get("state") == "COMMITTED" and reserved.get("lockState") == "COMMITTED"
+                and reserved.get("total") == expected_total and len(reserved.get("bookings", [])) == 2
+                and sorted(b.get("courtId") for b in reserved["bookings"]) == sorted(courts), "Package was not booked and locked")
+        self.report["ids"]["packageId"] = package_id
+        replay = self.step("package-replay", lambda: request("fullCourt", dict(window, contactName="E2E event", contactPhone="0930000009"),
+                                                             owner, expected=(200, 201)))
+        require(replay.get("packageId") == package_id, "Replay created another package")
+        for court in courts:
+            rows = self.step(f"package-slots-closed-{court}", lambda court=court: request(
+                "slots", bindings={"courtId": court, "date": day.isoformat()}))
+            require(all(s.get("status") != "AVAILABLE" for s in rows), "Package slots are still offered to other customers")
+        for court in courts:
+            self.step(f"package-online-hold-refused-{court}", lambda court=court: request(
+                "hold", {"courtId": court, "date": day.isoformat(), "slotIds": [slot_ids[court][0]], "guestPhone": phone},
+                customer, {"package": court}, expected=(409,)))
+        self.step("package-overlap-refused", lambda: request("fullCourt", dict(window, courtIds=courts[:1], contactName="Other", contactPhone="0930000010"),
+                                                             owner, {"overlap": 1}, expected=(409,)))
+        cancelled = self.step("package-cancel", lambda: request("fullCourtCancel", {"reason": "E2E cancellation"}, owner,
+                                                               {"packageId": package_id}))
+        require(cancelled.get("state") == "CANCELLED" and cancelled.get("lockState") == "RELEASED", "Package was not cancelled and released")
+        for court in courts:
+            self.step(f"package-slots-free-{court}", lambda court=court: self.poll("package slots released",
+                lambda: request("slots", bindings={"courtId": court, "date": day.isoformat()}),
+                lambda rows: sum(1 for s in rows if s.get("status") == "AVAILABLE") >= 2))
+        for court in courts:
+            self.step(f"package-online-hold-after-cancel-{court}", lambda court=court: request(
+                "hold", {"courtId": court, "date": day.isoformat(), "slotIds": [slot_ids[court][0]], "guestPhone": phone},
+                customer, {"package": "after" + str(court)}, expected=(201,)))
+
 
 
 def write_report(report, path):
