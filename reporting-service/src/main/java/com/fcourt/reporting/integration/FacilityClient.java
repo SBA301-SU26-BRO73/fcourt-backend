@@ -23,6 +23,9 @@ public class FacilityClient {
     public record OwnedBranch(Long id, Long adminId, String status, LocalTime openTime, LocalTime closeTime,
                               Integer courtCount) { }
 
+    /** Court of an owned branch; {@code name} is unique inside its branch (case-insensitive). */
+    public record CourtInfo(Long id, Long branchId, String name, String status) { }
+
     private final RestClient facility;
 
     public FacilityClient(@Value("${reporting.facility-url}") String facilityUrl) {
@@ -78,6 +81,24 @@ public class FacilityClient {
         } catch (HttpClientErrorException error) {
             int code = error.getStatusCode().value();
             if (code == 401 || code == 403) throw denied();
+            throw unavailable();
+        } catch (RestClientException error) {
+            throw unavailable();
+        }
+    }
+
+    /** Courts of one branch the caller owns (facility enforces ownership with the forwarded token). */
+    public List<CourtInfo> courts(long branchId, String bearer) {
+        try {
+            List<CourtInfo> courts = facility.get().uri("/api/admin/branches/{id}/courts", branchId)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + bearer).retrieve()
+                    .body(new ParameterizedTypeReference<List<CourtInfo>>() { });
+            if (courts == null || courts.stream().anyMatch(court -> court == null || court.id() == null
+                    || court.name() == null || court.status() == null)) throw unavailable();
+            return courts;
+        } catch (HttpClientErrorException error) {
+            int code = error.getStatusCode().value();
+            if (code == 401 || code == 403 || code == 404) throw denied();
             throw unavailable();
         } catch (RestClientException error) {
             throw unavailable();
