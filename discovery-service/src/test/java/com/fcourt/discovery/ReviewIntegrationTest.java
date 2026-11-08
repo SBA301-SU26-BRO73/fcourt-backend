@@ -96,7 +96,7 @@ class ReviewIntegrationTest {
             });
             server.createContext("/v1_1/demo/image/upload",exchange->{
                 String form=new String(exchange.getRequestBody().readAllBytes(),StandardCharsets.ISO_8859_1);
-                var folder=java.util.regex.Pattern.compile("name=\"folder\"\r\n\r\n([^\r]*)\r\n").matcher(form);
+                var folder=java.util.regex.Pattern.compile("name=\"folder\"[\\s\\S]*?\r\n\r\n([^\r]*)\r\n").matcher(form);
                 String path=folder.find()?folder.group(1):"missing";
                 byte[] bytes=("{\"secure_url\":\"https://res.cloudinary.com/demo/image/upload/v1/"+path+"/"+UPLOADS.incrementAndGet()+".jpg\"}").getBytes(StandardCharsets.UTF_8);
                 exchange.getResponseHeaders().set("Content-Type","application/json");exchange.sendResponseHeaders(200,bytes.length);
