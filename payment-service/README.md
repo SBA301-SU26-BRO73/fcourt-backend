@@ -20,6 +20,14 @@ for the service when changing credentials. Configuration:
 | DATABASE_USER / DATABASE_PASSWORD | postgres / postgres (local only) |
 | BOOKING_URL | http://localhost:8088 |
 | FACILITY_URL | http://localhost:8083 |
+| AUTH_URL | http://localhost:8081 (đọc email của khách từ `/api/auth/profile` khi checkout bằng Bearer token) |
+
+Với checkout có Bearer token hợp lệ (kể cả khi dùng hold token), payment-service đọc email từ
+auth-service và lưu snapshot
+trong checkout. Event chỉ gắn email khi ID của profile khớp với `payments.customer_id`
+đã được claim lúc gửi hóa đơn. `PaymentConfirmedEvent` và các event trạng thái payment sau đó có thêm
+`recipient: {email, fullName}` để notification-service gửi email xác nhận và nhắc lịch.
+Checkout chỉ có hold token, không có Bearer token, sẽ không tạo recipient.
 
 Flyway initializes an empty payment database with a JDBC-compatible version of
 the existing `database/V1__init_schema.sql`. It retains `payments` and

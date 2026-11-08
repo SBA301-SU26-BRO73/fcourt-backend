@@ -2,12 +2,18 @@ package com.fcourt.facility.api;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.validation.Valid;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fcourt.facility.api.LockDtos.Restriction;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -55,11 +61,38 @@ public final class TemplateDtos {
 
     public record ApplyResponse(long courtId, List<Integer> daysOfWeek, int totalSlots, List<TemplateSlot> slots) { }
 
+    /** Bulk apply (SCRUM-51): one template configuration applied to many courts in a single transaction. */
+    public record BulkApplyRequest(
+            @NotEmpty @Size(max = MAX_BULK_COURTS) List<@NotNull @Positive Long> courtIds,
+            @NotNull @Valid ApplyTemplateRequest template) {
+        public static final int MAX_BULK_COURTS = 50;
+
+        @JsonIgnore
+        @AssertTrue(message = "courtIds must not contain duplicates")
+        public boolean isCourtIdsDistinct() {
+            return courtIds == null || courtIds.stream().distinct().count() == courtIds.size();
+        }
+    }
+
+    /** {@code conflict} is null when the court can take the template, otherwise the user-safe reason. */
+    public record BulkPreviewCourt(long courtId, String courtName, long branchId, List<Integer> daysOfWeek,
+                                   List<PreviewSlot> slots, int totalSlots, String conflict) { }
+
+    public record BulkPreviewResponse(List<BulkPreviewCourt> courts, int totalSlots, boolean hasConflicts) { }
+
+    public record BulkAppliedCourt(long courtId, String courtName, List<Integer> daysOfWeek, int slotsPerDay,
+                                   int totalSlots) { }
+
+    public record BulkApplyResponse(List<BulkAppliedCourt> courts, int totalSlots) { }
+
+    public record BulkConflict(long courtId, String message) { }
+
     /** Contract consumed by discovery-service (SCRUM-22_AVAILABLE_SLOTS.md). */
     public record SlotSchedule(long courtId, LocalDate date, boolean outOfService, List<ScheduleSlot> slots) { }
 
     public record ScheduleSlot(long slotId,
                                @JsonFormat(pattern = "HH:mm:ss") LocalTime startTime,
                                @JsonFormat(pattern = "HH:mm:ss") LocalTime endTime,
-                               BigDecimal price, boolean outOfService) { }
+                               BigDecimal price, boolean outOfService,
+                               @JsonInclude(JsonInclude.Include.NON_NULL) Restriction restriction) { }
 }

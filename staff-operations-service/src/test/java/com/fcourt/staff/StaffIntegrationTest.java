@@ -68,6 +68,7 @@ class StaffIntegrationTest {
     static final Map<String, Map<String, Object>> CHECKOUT_RESULTS = new ConcurrentHashMap<>();
     static final java.util.Queue<String> BOUNDARY_CALLS = new java.util.concurrent.ConcurrentLinkedQueue<>();
     static volatile String slotStatus = "AVAILABLE";
+    static volatile String ticketCode = "FC-89234";
     static volatile boolean foreignCourt;
     static volatile boolean wrongCashier;
     static volatile boolean finalClaimConflict;
@@ -123,6 +124,7 @@ class StaffIntegrationTest {
         CHECKOUT_RESULTS.clear();
         BOUNDARY_CALLS.clear();
         slotStatus = "AVAILABLE";
+        ticketCode = "FC-89234";
         foreignCourt = false;
         wrongCashier = false;
         finalClaimConflict = false;
@@ -768,6 +770,38 @@ class StaffIntegrationTest {
         return call(HttpMethod.POST, "/api/staff/check-in/manual", Map.of("checkInCode", code), token("100", "STAFF"), key);
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"00000000000000000000000000000001", "12345678901234567890123456789012"})
+    void manualPreservesNumericTicketAndLeadingZeros(String code) {
+        create(UUID.randomUUID(), body(7));
+        ticketCode = code;
+        UUID key = UUID.randomUUID();
+        var result = manual(key, "  " + code + "  ");
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(manual(key, code).getBody()).isEqualTo(result.getBody());
+        assertThat(CHECK_IN_REQUESTS.values()).singleElement().asString().contains(code, "MANUAL");
+        assertThat(manual(UUID.randomUUID(), code).getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(call(HttpMethod.POST, "/api/staff/check-in/verify", Map.of("checkInCode", code),
+                token("100", "STAFF"), UUID.randomUUID()).getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_check_in_audit", Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_outbox", Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT result::text FROM staff_booking_commands", String.class)).doesNotContain(code);
+    }
+
+    @Test
+    void manualRequiresStaffAndIdempotencyKeyBeforeAdmission() {
+        create(UUID.randomUUID(), body(7));
+        var body = Map.of("checkInCode", "00000000000000000000000000000001");
+        assertThat(call(HttpMethod.POST, "/api/staff/check-in/manual", body, token("100", "STAFF"), null)
+                .getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(call(HttpMethod.POST, "/api/staff/check-in/manual", body, token("1", "ADMIN"), UUID.randomUUID())
+                .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(call(HttpMethod.POST, "/api/staff/check-in/manual", body, token("200", "CUSTOMER"), UUID.randomUUID())
+                .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(CHECK_IN_REQUESTS).isEmpty();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_check_in_audit", Integer.class)).isZero();
+    }
+
     ResponseEntity<JsonNode> create(UUID key, Object body) {
         return call(HttpMethod.POST, "/api/admin/staff", body, token("1", "ADMIN"), key);
     }
@@ -887,7 +921,7 @@ class StaffIntegrationTest {
                         send(exchange, 409, Map.of()); return;
                     }
                     if (CHECK_IN_RESULTS.containsKey(key)) { send(exchange, 200, CHECK_IN_RESULTS.get(key)); return; }
-                    if (!body.path("checkInCode").asText().equals("FC-89234")) { send(exchange, 404, Map.of()); return; }
+                    if (!body.path("checkInCode").asText().equals(ticketCode)) { send(exchange, 404, Map.of()); return; }
                     if (!CHECKED_IN.compareAndSet(false, true)) { send(exchange, 409, Map.of()); return; }
                     var response = Map.<String, Object>of("bookingId", 42, "branchId", wrongBranch ? 8 : 7,
                             "date", LocalDate.parse(body.path("date").asText()).plusDays(bookingDateShift).toString(),
