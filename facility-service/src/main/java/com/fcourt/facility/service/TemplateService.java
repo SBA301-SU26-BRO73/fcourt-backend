@@ -13,6 +13,10 @@ import com.fcourt.facility.events.BranchEventWriter;
 import com.fcourt.facility.persistence.BranchStore;
 import com.fcourt.facility.persistence.CourtStore;
 import com.fcourt.facility.persistence.CourtStore.OwnedCourt;
+import com.fcourt.facility.persistence.LockStore;
+import com.fcourt.facility.api.LockDtos.LockResponse;
+import com.fcourt.facility.api.LockDtos.Restriction;
+import com.fcourt.facility.persistence.PricingRuleStore;
 import com.fcourt.facility.persistence.TemplateStore;
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -34,20 +38,24 @@ public class TemplateService {
     private final BranchStore branches;
     private final CourtStore courts;
     private final TemplateStore templates;
+    private final LockStore locks;
+    private final PricingRuleStore pricingRules;
     private final BranchEventWriter events;
     private final CourtService courtService;
     private final TransactionTemplate tx;
 
-    public TemplateService(BranchStore branches, CourtStore courts, TemplateStore templates, BranchEventWriter events,
-                           CourtService courtService, TransactionTemplate tx) {
+    public TemplateService(BranchStore branches, CourtStore courts, TemplateStore templates, LockStore locks,
+                           PricingRuleStore pricingRules, BranchEventWriter events, CourtService courtService,
+                           TransactionTemplate tx) {
         this.branches = branches;
         this.courts = courts;
         this.templates = templates;
+        this.locks = locks;
+        this.pricingRules = pricingRules;
         this.events = events;
         this.courtService = courtService;
         this.tx = tx;
     }
-
     record Plan(List<PreviewSlot> slots, List<Integer> days) { }
 
     public PreviewResponse preview(long adminId, long courtId, ApplyTemplateRequest request) {
@@ -117,10 +125,21 @@ public class TemplateService {
     public SlotSchedule schedule(long courtId, LocalDate date) {
         OwnedCourt court = courts.find(courtId).orElseThrow(CourtService::notFound);
         boolean outOfService = !"ACTIVE".equals(court.court().status()) || !"ACTIVE".equals(court.branchStatus());
-        int dayOfWeek = date.getDayOfWeek().getValue() % 7; // java Monday=1..Sunday=7 -> Sunday=0
-        List<ScheduleSlot> slots = templates.listLive(courtId, dayOfWeek).stream()
-                .map(t -> new ScheduleSlot(t.id(), t.startTime(), t.endTime(), t.price(), outOfService)).toList();
-        return new SlotSchedule(courtId, date, outOfService, slots);
+        int dayOfWeek = PricingEngine.dayOfWeek(date); // java Monday=1..Sunday=7 -> Sunday=0
+        List<PricingEngine.Rule> rules = pricingRules.listLive(courtId);
+        List<LockResponse> dayLocks = locks.forDay(courtId, date);
+        List<ScheduleSlot> slots = templates.listLive(courtId, dayOfWeek).stream().map(template -> {
+            // Apply the current pricing rules and retain private-event/out-of-service lock metadata.
+            BigDecimal price = PricingEngine.price(rules, dayOfWeek, template.startTime(), template.endTime(),
+                    template.price()).price();
+            LockResponse lock = dayLocks.stream().filter(candidate -> SlotWindows.overlaps(date,
+                    template.startTime(), template.endTime(), candidate.startAt(), candidate.endAt()))
+                    .findFirst().orElse(null);
+            Restriction restriction = lock == null ? null : new Restriction(lock.type(), lock.publicReason(),
+                    lock.contactName(), lock.contactPhone());
+            return new ScheduleSlot(template.id(), template.startTime(), template.endTime(), price,
+                    outOfService || lock != null, restriction);
+        }).toList();        return new SlotSchedule(courtId, date, outOfService, slots);
     }
 
     private Plan plan(OwnedCourt court, BranchResponse branch, ApplyTemplateRequest request) {

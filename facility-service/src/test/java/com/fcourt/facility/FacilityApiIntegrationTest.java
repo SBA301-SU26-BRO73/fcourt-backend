@@ -37,6 +37,11 @@ import org.springframework.kafka.test.utils.KafkaTestUtils;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor;
 import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import com.fcourt.facility.integration.SlotAvailabilityClient;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+import org.mockito.Mockito;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -65,6 +70,7 @@ class FacilityApiIntegrationTest {
         registry.add("spring.datasource.password", POSTGRES::getPassword);
     }
 
+    @MockitoBean SlotAvailabilityClient availability;
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     @Autowired EmbeddedKafkaBroker broker;
@@ -396,5 +402,138 @@ class FacilityApiIntegrationTest {
             }
             throw new AssertionError("Snapshot version " + expectedVersion + " not received, last=" + lastVersion);
         }
+    }
+
+    @Test
+    void imageUploadAnswers503WhenCloudinaryIsNotConfiguredButServiceStillWorks() throws Exception {
+        long owner = 9390;
+        long branchId = id(postJson("/api/admin/branches", branchBody("No cloud", "06:00", "22:00"), owner)
+                .andExpect(status().isCreated()));
+        byte[] png = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0};
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .multipart("/api/admin/branches/{id}/images", branchId)
+                        .file(new org.springframework.mock.web.MockMultipartFile("files", "a.png", "image/png", png))
+                        .with(as(owner, "ADMIN")))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.detail").value("Image storage is not configured on this server"));
+        mvc.perform(get("/api/admin/branches/{id}", branchId).with(as(owner, "ADMIN")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.images", hasSize(0)));
+    }
+
+    @Test
+    void courtLocksCloseSlotsRefuseBookingConflictsAndUnlock() throws Exception {
+        long owner = 9301;
+        long branchId = id(postJson("/api/admin/branches", branchBody("Locks", "06:00", "22:00"), owner)
+                .andExpect(status().isCreated()));
+        String courts = "/api/admin/branches/" + branchId + "/courts";
+        long courtA = id(postJson(courts, courtBody("Court A", "100000"), owner).andExpect(status().isCreated()));
+        long courtB = id(postJson(courts, courtBody("Court B", "100000"), owner).andExpect(status().isCreated()));
+        for (long court : List.of(courtA, courtB)) {
+            postJson("/api/admin/courts/" + court + "/apply-template",
+                    "{\"startTime\":\"08:00\",\"endTime\":\"10:00\",\"price\":90000,\"daysOfWeek\":[1]}", owner)
+                    .andExpect(status().isOk());
+        }
+        LocalDate monday = LocalDate.now().with(TemporalAdjusters.next(java.time.DayOfWeek.MONDAY));
+        String schedule = "/api/internal/courts/{id}/slot-schedule";
+        Mockito.when(availability.conflicts(Mockito.anyLong(), Mockito.any())).thenReturn(List.of());
+
+        // SCRUM-49: lock 08:30-09:30 as a private event with public contact data and internal notes.
+        String lockBody = """
+                {"courtId":%d,"startAt":"%sT08:30:00","endAt":"%sT09:30:00","type":"PRIVATE_EVENT",
+                 "reason":"Corporate event","notes":"Deposit paid in cash","publicReason":"Giai dau noi bo",
+                 "contactName":"Event desk","contactPhone":"0901234567"}
+                """.formatted(courtA, monday, monday);
+        long lockId = id(postJson("/api/admin/courts/lock-slots", lockBody, owner).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.type").value("PRIVATE_EVENT"))
+                .andExpect(jsonPath("$.startAt").value(monday + "T08:30:00"))
+                .andExpect(jsonPath("$.notes").value("Deposit paid in cash")));
+        mvc.perform(get(schedule, courtA).param("date", monday.toString()))
+                .andExpect(jsonPath("$.outOfService").value(false))
+                .andExpect(jsonPath("$.slots[0].outOfService").value(false))
+                .andExpect(jsonPath("$.slots[0].restriction").doesNotExist())
+                .andExpect(jsonPath("$.slots[1].outOfService").value(true))
+                .andExpect(jsonPath("$.slots[1].restriction.type").value("PRIVATE_EVENT"))
+                .andExpect(jsonPath("$.slots[1].restriction.publicReason").value("Giai dau noi bo"))
+                .andExpect(jsonPath("$.slots[1].restriction.contactPhone").value("0901234567"))
+                .andExpect(jsonPath("$.slots[1].restriction.reason").doesNotExist())
+                .andExpect(jsonPath("$.slots[1].restriction.notes").doesNotExist())
+                .andExpect(jsonPath("$.slots[2].outOfService").value(true))
+                .andExpect(jsonPath("$.slots[3].outOfService").value(false));
+        mvc.perform(get(schedule, courtB).param("date", monday.toString()))
+                .andExpect(jsonPath("$.slots[1].outOfService").value(false));
+        mvc.perform(get(schedule, courtA).param("date", monday.plusDays(7).toString()))
+                .andExpect(jsonPath("$.slots[1].outOfService").value(false));
+
+        postJson("/api/admin/courts/lock-slots", lockBody.replace("08:30:00", "09:00:00"), owner)
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("LOCK_OVERLAP"));
+        postJson("/api/admin/courts/lock-slots", lockBody, 9999).andExpect(status().isNotFound());
+        postJson("/api/admin/courts/lock-slots", lockBody.replace("08:30:00", "08:10:00"), owner)
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/admin/courts/lock-slots").param("branchId", Long.toString(branchId))
+                        .with(as(owner, "ADMIN")))
+                .andExpect(jsonPath("$", hasSize(1))).andExpect(jsonPath("$[0].id").value(lockId));
+        mvc.perform(get("/api/admin/courts/lock-slots").param("branchId", Long.toString(branchId))
+                        .with(as(9999, "ADMIN")))
+                .andExpect(status().isNotFound());
+
+        mvc.perform(delete("/api/admin/courts/lock-slots/{id}", lockId).with(as(9999, "ADMIN")))
+                .andExpect(status().isNotFound());
+        mvc.perform(delete("/api/admin/courts/lock-slots/{id}", lockId).with(as(owner, "ADMIN")))
+                .andExpect(status().isNoContent());
+        mvc.perform(delete("/api/admin/courts/lock-slots/{id}", lockId).with(as(owner, "ADMIN")))
+                .andExpect(status().isNotFound());
+        mvc.perform(get(schedule, courtA).param("date", monday.toString()))
+                .andExpect(jsonPath("$.slots[1].outOfService").value(false));
+
+        // Booking/hold conflict: refused with the colliding slots, nothing stored.
+        Mockito.when(availability.conflicts(courtA, monday)).thenReturn(List.of(
+                new SlotAvailabilityClient.SlotConflict(1L, java.time.LocalTime.of(9, 0),
+                        java.time.LocalTime.of(9, 30), "BOOKED")));
+        postJson("/api/admin/courts/lock-slots", lockBody, owner)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("BOOKING_CONFLICT"))
+                .andExpect(jsonPath("$.conflicts[0].status").value("BOOKED"))
+                .andExpect(jsonPath("$.conflicts[0].startTime").value("09:00"));
+        mvc.perform(get("/api/admin/courts/lock-slots").param("branchId", Long.toString(branchId))
+                        .with(as(owner, "ADMIN")))
+                .andExpect(jsonPath("$", hasSize(0)));
+        Mockito.when(availability.conflicts(courtA, monday)).thenThrow(
+                new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "down"));
+        postJson("/api/admin/courts/lock-slots", lockBody, owner).andExpect(status().isServiceUnavailable());
+        Mockito.reset(availability);
+        Mockito.when(availability.conflicts(Mockito.anyLong(), Mockito.any())).thenReturn(List.of());
+
+        // SCRUM-111: one command locks every court of the branch; one command unlocks the group.
+        String branchLock = """
+                {"branchId":%d,"allCourts":true,"startAt":"%sT08:00:00","endAt":"%sT10:00:00",
+                 "reason":"Tournament","publicReason":"Giai dau"}
+                """.formatted(branchId, monday, monday);
+        String group = json.readTree(postJson("/api/admin/courts/out-of-service", branchLock, owner)
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.totalLocks").value(2))
+                .andExpect(jsonPath("$.locks[0].type").value("OUT_OF_SERVICE"))
+                .andReturn().getResponse().getContentAsString()).get("groupId").asText();
+        for (long court : List.of(courtA, courtB)) {
+            mvc.perform(get(schedule, court).param("date", monday.toString()))
+                    .andExpect(jsonPath("$.slots[*].outOfService", org.hamcrest.Matchers.everyItem(
+                            org.hamcrest.Matchers.is(true))))
+                    .andExpect(jsonPath("$.slots[0].restriction.type").value("OUT_OF_SERVICE"));
+        }
+        postJson("/api/admin/courts/out-of-service", branchLock, owner)
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("LOCK_OVERLAP"));
+        postJson("/api/admin/courts/out-of-service",
+                branchLock.replace("\"allCourts\":true", "\"allCourts\":false,\"courtIds\":[999999]"), owner)
+                .andExpect(status().isNotFound());
+        postJson("/api/admin/courts/out-of-service", branchLock.replace("\"allCourts\":true,", ""), owner)
+                .andExpect(status().isBadRequest());
+        mvc.perform(delete("/api/admin/courts/out-of-service/{id}", group).with(as(9999, "ADMIN")))
+                .andExpect(status().isNotFound());
+        mvc.perform(delete("/api/admin/courts/out-of-service/{id}", group).with(as(owner, "ADMIN")))
+                .andExpect(status().isNoContent());
+        mvc.perform(get(schedule, courtB).param("date", monday.toString()))
+                .andExpect(jsonPath("$.slots[0].outOfService").value(false));
+
+        // A window in the past is refused.
+        postJson("/api/admin/courts/lock-slots", lockBody.replace(monday.toString(), "2020-01-06"), owner)
+                .andExpect(status().isBadRequest());
     }
 }

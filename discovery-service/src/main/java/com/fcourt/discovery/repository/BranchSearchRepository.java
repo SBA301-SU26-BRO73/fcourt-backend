@@ -24,6 +24,11 @@ public class BranchSearchRepository {
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public BranchSearchResponse search(BranchSearchRequest request) {
+        return search(request, null);
+    }
+
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public BranchSearchResponse search(BranchSearchRequest request, java.util.List<Long> availableCourts) {
         var params = new MapSqlParameterSource();
         var where = new StringBuilder(" WHERE b.active");
         if (hasText(request.query())) {
@@ -41,17 +46,25 @@ public class BranchSearchRepository {
             where.append(" AND b.district_key = :district");
             params.addValue("district", normalize(request.district()));
         }
-        if (request.courtTypeId() != null || request.minPrice() != null || request.maxPrice() != null) {
+        if (availableCourts != null && availableCourts.isEmpty()) {
+            where.append(" AND false");
+        }
+        if (request.courtTypeId() != null || request.minPrice() != null || request.maxPrice() != null
+                || (availableCourts != null && !availableCourts.isEmpty())) {
             where.append(" AND EXISTS (SELECT 1 FROM court_read_model c WHERE c.branch_id = b.id");
             if (request.courtTypeId() != null) {
                 where.append(" AND c.court_type_id = :courtTypeId");
                 params.addValue("courtTypeId", request.courtTypeId());
             }
-            if (request.minPrice() != null) {
+            if (availableCourts != null && !availableCourts.isEmpty()) {
+                where.append(" AND c.id IN (:availableCourts)");
+                params.addValue("availableCourts", availableCourts);
+            }
+            if (!request.requiresAvailability() && request.minPrice() != null) {
                 where.append(" AND c.max_price >= :minPrice");
                 params.addValue("minPrice", request.minPrice());
             }
-            if (request.maxPrice() != null) {
+            if (!request.requiresAvailability() && request.maxPrice() != null) {
                 where.append(" AND c.min_price <= :maxPrice");
                 params.addValue("maxPrice", request.maxPrice());
             }
@@ -105,6 +118,16 @@ public class BranchSearchRepository {
         long total = totalRows[0];
         return new BranchSearchResponse(content, request.pageNumber(), request.pageSize(), total,
                 (total + request.pageSize() - 1) / request.pageSize());
+    }
+
+    public java.util.List<Long> courtIds(long branchId, Long courtTypeId) {
+        var params = new MapSqlParameterSource("branchId", branchId);
+        String sql = "SELECT id FROM court_read_model WHERE branch_id = :branchId";
+        if (courtTypeId != null) {
+            sql += " AND court_type_id = :courtTypeId";
+            params.addValue("courtTypeId", courtTypeId);
+        }
+        return jdbc.queryForList(sql + " ORDER BY id", params, Long.class);
     }
 
     // Resolve normalization before the search so PostgreSQL can plan the trigram

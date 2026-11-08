@@ -239,7 +239,8 @@ class ReviewIntegrationTest {
 
     @Test void committedRatingRevisionRefreshesSearchCachesAcrossInstances() throws Exception {
         var request=new BranchSearchRequest(null,null,null,null,null,null,null,null,null,null);
-        var other=new BranchSearchService(searchRepository,60);
+        var other=new BranchSearchService(searchRepository,
+                org.mockito.Mockito.mock(CourtSlotService.class), Clock.systemUTC(), 60);
         var initial=search.search(request);var initialOther=other.search(request);
         assertThat(initial.content().getFirst().reviewCount()).isZero();assertThat(other.search(request)).isSameAs(initialOther);
         create(1,10,5);

@@ -97,6 +97,38 @@ class DiscoveryIntegrationTest {
     @Autowired ObjectMapper mapper;
     @Autowired org.springframework.kafka.test.EmbeddedKafkaBroker broker;
     @Autowired org.springframework.data.redis.core.StringRedisTemplate redis;
+    @Autowired com.fcourt.discovery.service.CourtSlotService courtSlots;
+
+    @Test
+    void advancedSearchUsesRealSchedulesBookingsAndRedisInsteadOfTemplatePrices() {
+        projection.apply(snapshot(1, 1, true, false));
+        var clock = java.time.Clock.fixed(java.time.Instant.parse("2099-01-01T01:00:00Z"), java.time.ZoneOffset.UTC);
+        var service = new com.fcourt.discovery.service.BranchSearchService(repository, courtSlots, clock, 5);
+        var request = new BranchSearchRequest(null, "ho chi minh", "quan 1", 1L,
+                new BigDecimal("75000"), new BigDecimal("75000"), null, null, 0, 1, true, "18:00-18:30");
+        // Template range is 100000-200000; actual free slot costs 75000.
+        assertThat(service.search(request).totalElements()).isEqualTo(1);
+        var nextPage = new BranchSearchRequest(null, "ho chi minh", "quan 1", 1L,
+                new BigDecimal("75000"), new BigDecimal("75000"), null, null, 1, 1, true, "18:00-18:30");
+        assertThat(service.search(nextPage).content()).isEmpty();
+        assertThat(service.search(nextPage).totalElements()).isEqualTo(1);
+        String key = "fcourt:hold:1:2099-01-01:1";
+        try {
+            redis.opsForValue().set(key, "private-token", Duration.ofSeconds(300));
+            assertThat(service.search(request).totalElements()).isZero();
+        } finally {
+            redis.delete(key);
+        }
+        assertThat(service.search(request).totalElements()).isEqualTo(1);
+        for (String range : List.of("18:00-19:00", "18:30-19:00", "19:00-19:30")) {
+            assertThat(service.search(new BranchSearchRequest(null, null, null, 1L, null, null,
+                    null, null, 0, 20, true, range)).totalElements()).isZero();
+        }
+        assertThat(repository.courtIds(1, 1L)).containsExactly(1L);
+        assertThat(repository.courtIds(1, 2L)).containsExactly(2L);
+        assertThat(repository.search(request, List.of(2L)).totalElements()).isZero();
+        assertThat(repository.search(request, List.of()).totalElements()).isZero();
+    }
 
     @Test
     void realHttpSlotApiCombinesUpstreamFixturesAndRedisTtl() throws Exception {
