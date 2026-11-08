@@ -12,7 +12,8 @@ class VoucherUsageController {
 
     @GetMapping("/api/admin/vouchers/{id}/usages")
     ResponseEntity<VoucherUsage.Page> list(@PathVariable long id, @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required=false) String phone,
             @RequestParam(defaultValue="0") int page, @RequestParam(defaultValue="20") int size) {
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.list(id, jwt, page, size));
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.list(id, jwt, phone, page, size));
     }
 }

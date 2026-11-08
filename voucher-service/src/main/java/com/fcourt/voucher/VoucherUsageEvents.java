@@ -62,12 +62,22 @@ class VoucherUsageEvents {
             return;
         }
         if (!"RESERVED".equals(application.status())) throw invalid();
-        history.record(application, paymentId, usedAt);
+        history.record(application, paymentId, usedAt, snapshot(data));
         if (jdbc.update("UPDATE vouchers SET used_count=used_count+1,updated_at=now() WHERE id=? AND used_count<usage_limit", application.voucherId()) != 1)
             throw new IllegalStateException("Reserved voucher quota is inconsistent");
         jdbc.update("UPDATE voucher_redemptions SET status='APPLIED',payment_id=?,updated_at=now() WHERE booking_id=?", paymentId, bookingId);
     }
 
+    /** Optional display snapshot from newer producers. Malformed values are dropped, never fail the financial event. */
+    private VoucherUsageRepository.Snapshot snapshot(JsonNode data) {
+        return new VoucherUsageRepository.Snapshot(text(data, "customerName", 150), text(data, "customerPhone", 20), text(data, "bookingCode", 10));
+    }
+    private String text(JsonNode node, String field, int max) {
+        var value = node.path(field);
+        if (!value.isTextual()) return null;
+        String clean = value.textValue().replaceAll("\\p{Cntrl}", " ").strip();
+        return clean.isEmpty() || clean.length() > max ? null : clean;
+    }
     private long positive(JsonNode node, String field) {
         var value = node.path(field);
         if (!value.isIntegralNumber() || !value.canConvertToLong() || value.longValue() <= 0) throw invalid();
