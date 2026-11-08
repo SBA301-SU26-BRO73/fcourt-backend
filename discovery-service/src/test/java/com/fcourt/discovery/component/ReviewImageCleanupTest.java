@@ -1,11 +1,6 @@
 package com.fcourt.discovery.component;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -45,10 +40,18 @@ class ReviewImageCleanupTest {
     }
 
     ReviewImageCleanup cleanup(FakeHost host, Set<String> referenced) {
-        var jdbc = mock(JdbcTemplate.class);
-        when(jdbc.queryForObject(anyString(), eq(Boolean.class), any(Object[].class)))
-                .thenAnswer(call -> referenced.contains((String) call.getArgument(2)));
-        return new ReviewImageCleanup(host, jdbc, clock, 24, true, false);
+        return cleanup(host, referenced, false);
+    }
+
+    ReviewImageCleanup cleanup(FakeHost host, Set<String> referenced, boolean dryRunConfig) {
+        var jdbc = new JdbcTemplate() {
+            @Override
+            @SuppressWarnings("unchecked")
+            public <T> T queryForObject(String sql, Class<T> type, Object... args) {
+                return (T) Boolean.valueOf(referenced.contains((String) args[0]));
+            }
+        };
+        return new ReviewImageCleanup(host, jdbc, clock, 24, true, dryRunConfig);
     }
 
     @Test
@@ -82,6 +85,29 @@ class ReviewImageCleanupTest {
         host.failing = null;
         job.run(false);
         assertThat(host.deleted).contains("fcourt/reviews/1/a");
+    }
+
+    @Test
+    void shippedConfigDefaultsToDryRunSoNothingIsDeletedUntilExplicitlyEnabled() {
+        var yaml = new org.springframework.beans.factory.config.YamlPropertiesFactoryBean();
+        yaml.setResources(new org.springframework.core.io.ClassPathResource("application.yml"));
+        assertThat(yaml.getObject().getProperty("discovery.reviews.images.cleanup.dry-run"))
+                .isEqualTo("${DISCOVERY_REVIEW_CLEANUP_DRY_RUN:true}");
+    }
+
+    @Test
+    void scheduledRunWithDryRunConfiguredDeletesNothing() {
+        var host = new FakeHost(List.of(List.of(asset("fcourt/reviews/1/a", 48))));
+        cleanup(host, Set.of(), true).scheduled();
+        assertThat(host.prefixes).hasSize(1);
+        assertThat(host.deleted).isEmpty();
+    }
+
+    @Test
+    void scheduledRunDeletesOnlyWhenDryRunIsExplicitlyFalse() {
+        var host = new FakeHost(List.of(List.of(asset("fcourt/reviews/1/a", 48))));
+        cleanup(host, Set.of(), false).scheduled();
+        assertThat(host.deleted).containsExactly("fcourt/reviews/1/a");
     }
 
     @Test

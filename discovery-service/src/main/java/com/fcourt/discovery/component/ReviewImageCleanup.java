@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 /**
  * Deletes review photos that were uploaded but never attached to a review. Only files under {@code fcourt/reviews/}
  * that are older than {@code min-age-hours} and whose public id appears in no review are removed. Idempotent (deleting a
- * missing file succeeds) and safe to run on several instances at once. {@code dry-run=true} only logs what would go.
+ * missing file succeeds) and safe to run on several instances at once. Dry run is the default ({@code dry-run=true}): it only logs what would go; deleting needs an explicit {@code dry-run=false}.
  */
 @Component
 public class ReviewImageCleanup {
@@ -32,7 +32,7 @@ public class ReviewImageCleanup {
     public ReviewImageCleanup(ReviewImageStorage storage, JdbcTemplate jdbc, Clock clock,
             @Value("${discovery.reviews.images.cleanup.min-age-hours:24}") long minAgeHours,
             @Value("${discovery.reviews.images.cleanup.enabled:true}") boolean enabled,
-            @Value("${discovery.reviews.images.cleanup.dry-run:false}") boolean dryRun) {
+            @Value("${discovery.reviews.images.cleanup.dry-run:true}") boolean dryRun) {
         this.storage = storage; this.jdbc = jdbc; this.clock = clock;
         this.minAge = Duration.ofHours(Math.max(1, minAgeHours)); this.enabled = enabled; this.dryRun = dryRun;
     }

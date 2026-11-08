@@ -64,7 +64,7 @@ discovery:
         window-seconds: ${DISCOVERY_REVIEW_UPLOAD_WINDOW_SECONDS:600}
       cleanup:
         enabled: ${DISCOVERY_REVIEW_CLEANUP_ENABLED:true}
-        dry-run: ${DISCOVERY_REVIEW_CLEANUP_DRY_RUN:false}
+        dry-run: ${DISCOVERY_REVIEW_CLEANUP_DRY_RUN:true}
         min-age-hours: ${DISCOVERY_REVIEW_CLEANUP_MIN_AGE_HOURS:24}
         cron: ${DISCOVERY_REVIEW_CLEANUP_CRON:0 30 3 * * *}
       cloudinary:
