@@ -6,7 +6,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.stereotype.Component;
 
 /**
@@ -25,7 +28,8 @@ public class EventTranslator {
     /** Status after the event; revenue is recognized only by money events (confirmation, cash walk-in). */
     public record BookingFact(String eventId, String type, long bookingId, long branchId, String status,
                               BigDecimal amount, LocalDate bookingDate, int slotCount,
-                              BigDecimal revenue, Instant revenueAt) { }
+                              BigDecimal revenue, Instant revenueAt,
+                              Long courtId, String courtName, List<LocalTime> slotStarts) { }
 
     public record Ignored(String eventId, String type) { }
 
@@ -53,7 +57,8 @@ public class EventTranslator {
         boolean confirmed = "CONFIRMED".equals(status);
         return new BookingFact(eventId, type, positiveId(payment, "bookingId"), positiveId(payment, "branchId"),
                 status, amount, date(checkout.path("date")), checkout.path("slots").size(),
-                confirmed ? amount : BigDecimal.ZERO, confirmed ? recordTime : null);
+                confirmed ? amount : BigDecimal.ZERO, confirmed ? recordTime : null,
+                null, courtName(checkout.path("courtName")), slotStarts(checkout.path("slots")));
     }
 
     public Object staff(String payload, Instant recordTime) {
@@ -73,11 +78,12 @@ public class EventTranslator {
             BigDecimal amount = money(booking.path("amount"));
             Instant occurredAt = instant(data.path("occurredAt"), recordTime);
             return new BookingFact(eventId, type, bookingId, branchId, "CONFIRMED", amount,
-                    date(booking.path("date")), booking.path("invoice").path("items").size(), amount, occurredAt);
+                    date(booking.path("date")), booking.path("invoice").path("items").size(), amount, occurredAt,
+                    optionalId(booking, "courtId"), null, slotStarts(booking.path("invoice").path("items")));
         }
         // Check-in / completion confirm an existing booking; money was recognized by its payment event.
         return new BookingFact(eventId, type, bookingId, branchId, "CONFIRMED", BigDecimal.ZERO,
-                date(booking.path("date")), 0, BigDecimal.ZERO, null);
+                date(booking.path("date")), 0, BigDecimal.ZERO, null, null, null, List.of());
     }
 
     private JsonNode parse(String payload) {
@@ -108,6 +114,32 @@ public class EventTranslator {
         if (value.isMissingNode() || value.isNull()) return BigDecimal.ZERO;
         if (!value.isNumber() || value.decimalValue().signum() < 0) throw new InvalidEventException("Invalid amount");
         return value.decimalValue();
+    }
+
+    private static Long optionalId(JsonNode node, String field) {
+        JsonNode value = node.path(field);
+        return value.canConvertToLong() && value.asLong() > 0 ? value.asLong() : null;
+    }
+
+    /** Optional: legacy events without a court name still count towards revenue, just not per court. */
+    private static String courtName(JsonNode value) {
+        if (!value.isTextual() || value.asText().isBlank()) return null;
+        return value.asText().strip();
+    }
+
+    /** Start times of the booked slots; entries without {@code startTime} are skipped (older payloads). */
+    private static List<LocalTime> slotStarts(JsonNode slots) {
+        List<LocalTime> starts = new ArrayList<>();
+        for (JsonNode slot : slots) {
+            JsonNode value = slot.path("startTime");
+            if (value.isMissingNode() || value.isNull()) continue;
+            try {
+                starts.add(LocalTime.parse(value.asText()));
+            } catch (DateTimeParseException error) {
+                throw new InvalidEventException("Invalid slot startTime");
+            }
+        }
+        return starts;
     }
 
     private static LocalDate date(JsonNode value) {
