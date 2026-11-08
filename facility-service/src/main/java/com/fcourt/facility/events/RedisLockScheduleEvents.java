@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fcourt.facility.api.LockDtos.LockResponse;
 import com.fcourt.facility.service.SlotWindows;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -21,11 +23,30 @@ class RedisLockScheduleEvents implements LockScheduleEvents {
     static final String CHANNEL = "fcourt:slot-changes";
     private static final Logger log = LoggerFactory.getLogger(RedisLockScheduleEvents.class);
     private final StringRedisTemplate redis;
+    /** Days ahead announced for a court status change (matches the 31-day lock horizon). */
+    static final int STATUS_DAYS = 30;
     private final ObjectMapper json;
+    private final Clock clock;
 
-    RedisLockScheduleEvents(StringRedisTemplate redis, ObjectMapper json) {
+    RedisLockScheduleEvents(StringRedisTemplate redis, ObjectMapper json, Clock clock) {
         this.redis = redis;
         this.json = json;
+        this.clock = clock;
+    }
+
+    @Override public void courtStatusChanged(long courtId) {
+        try {
+            LocalDate today = LocalDate.now(clock);
+            for (int day = 0; day < STATUS_DAYS; day++) {
+                var event = new LinkedHashMap<String, Object>();
+                event.put("courtId", courtId);
+                event.put("date", today.plusDays(day).toString());
+                event.put("type", "SLOT_CHANGED");
+                redis.convertAndSend(CHANNEL, json.writeValueAsString(event));
+            }
+        } catch (JsonProcessingException | RuntimeException e) {
+            log.warn("Court status notification not sent: {}", e.toString());
+        }
     }
 
     @Override public void created(Collection<LockResponse> locks) {

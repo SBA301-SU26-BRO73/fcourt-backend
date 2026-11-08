@@ -11,6 +11,7 @@ public interface LockScheduleEvents {
     LockScheduleEvents NONE = new LockScheduleEvents() {
         @Override public void created(Collection<LockResponse> locks) { }
         @Override public void removed(Collection<LockResponse> locks) { }
+        @Override public void courtStatusChanged(long courtId) { }
     };
 
     /** Call only after the transaction that inserted the locks has committed. */
@@ -18,4 +19,7 @@ public interface LockScheduleEvents {
 
     /** Call only after the transaction that cancelled the locks has committed. */
     void removed(Collection<LockResponse> locks);
+
+    /** A court was set ACTIVE/INACTIVE/MAINTENANCE or deleted: its upcoming days change. Call after commit. */
+    void courtStatusChanged(long courtId);
 }

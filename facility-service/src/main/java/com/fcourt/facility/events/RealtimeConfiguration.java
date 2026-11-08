@@ -1,6 +1,7 @@
 package com.fcourt.facility.events;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Clock;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,7 +12,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 @ConditionalOnProperty(name = "facility.realtime.enabled", havingValue = "true")
 class RealtimeConfiguration {
     @Bean
-    LockScheduleEvents lockScheduleEvents(StringRedisTemplate redis, ObjectMapper json) {
-        return new RedisLockScheduleEvents(redis, json);
+    LockScheduleEvents lockScheduleEvents(StringRedisTemplate redis, ObjectMapper json, Clock clock) {
+        return new RedisLockScheduleEvents(redis, json, clock);
     }
 }

@@ -25,7 +25,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 class RedisLockScheduleEventsTest {
     final StringRedisTemplate redis = mock(StringRedisTemplate.class);
     final ObjectMapper json = new ObjectMapper();
-    final RedisLockScheduleEvents events = new RedisLockScheduleEvents(redis, json);
+    final RedisLockScheduleEvents events = new RedisLockScheduleEvents(redis, json,
+            java.time.Clock.fixed(java.time.Instant.parse("2030-01-05T17:30:00Z"), java.time.ZoneId.of("Asia/Ho_Chi_Minh")));
 
     static LockResponse lock(long court, LockType type, LocalDateTime from, LocalDateTime to) {
         return new LockResponse(99, UUID.randomUUID(), 3, court, type, from, to, "VIP wedding of Mr X",
@@ -74,6 +75,21 @@ class RedisLockScheduleEventsTest {
                 lock(5, LockType.OUT_OF_SERVICE, from, to)));
 
         assertThat(published(2)).extracting(e -> e.path("courtId").asLong()).containsExactly(5L, 6L);
+    }
+
+    @Test
+    void courtStatusChangeAnnouncesTheNext30VenueDaysWithoutLockFields() throws Exception {
+        events.courtStatusChanged(5);
+
+        var sent = published(30);
+        // 17:30Z is already 2030-01-06 in Asia/Ho_Chi_Minh.
+        assertThat(sent.get(0).path("date").asText()).isEqualTo("2030-01-06");
+        assertThat(sent.get(29).path("date").asText()).isEqualTo("2030-02-04");
+        for (JsonNode event : sent) {
+            assertThat(event.size()).isEqualTo(3);
+            assertThat(event.path("courtId").asLong()).isEqualTo(5);
+            assertThat(event.path("type").asText()).isEqualTo("SLOT_CHANGED");
+        }
     }
 
     @Test
