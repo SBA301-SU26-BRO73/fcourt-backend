@@ -1,7 +1,7 @@
 name: deployment-config
 on:
   pull_request:
-    branches: [dev]
+    branches: [dev, feature/minh-scrum-100-production-deployment]
     paths: ['deploy/**', '.github/workflows/deployment-config.yml']
 permissions:
   contents: read

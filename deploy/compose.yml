@@ -35,10 +35,21 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
-      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?required}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?required}
+      SUBSCRIPTION_DB_PASSWORD: ${SUBSCRIPTION_DB_PASSWORD:?required}
+      FACILITY_DB_PASSWORD: ${FACILITY_DB_PASSWORD:?required}
+      REPORTING_DB_PASSWORD: ${REPORTING_DB_PASSWORD:?required}
+      DISCOVERY_DB_PASSWORD: ${DISCOVERY_DB_PASSWORD:?required}
+      VOUCHER_DB_PASSWORD: ${VOUCHER_DB_PASSWORD:?required}
+      BOOKING_DB_PASSWORD: ${BOOKING_DB_PASSWORD:?required}
+      PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:?required}
+      STAFF_DB_PASSWORD: ${STAFF_DB_PASSWORD:?required}
+      POS_DB_PASSWORD: ${POS_DB_PASSWORD:?required}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?required}
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./init-databases.sh:/docker-entrypoint-initdb.d/01-databases.sh:ro
+      - ./rotate-database-passwords.sh:/opt/fcourt/rotate-database-passwords.sh:ro
     networks: [private]
     healthcheck:
       test: [CMD-SHELL, 'pg_isready -U postgres']
@@ -87,7 +98,7 @@ services:
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '5'
       SPRING_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/auth_db'
       SPRING_DATASOURCE_USERNAME: 'auth'
-      SPRING_DATASOURCE_PASSWORD: '${APP_DB_PASSWORD:?required}'
+      SPRING_DATASOURCE_PASSWORD: '${AUTH_DB_PASSWORD:?required}'
   subscription-service:
     <<: *app
     image: ${IMAGE_PREFIX:?required}/subscription-service:${RELEASE_TAG:?required}
@@ -106,7 +117,7 @@ services:
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '5'
       SPRING_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/subscription_db'
       SPRING_DATASOURCE_USERNAME: 'subscription'
-      SPRING_DATASOURCE_PASSWORD: '${APP_DB_PASSWORD:?required}'
+      SPRING_DATASOURCE_PASSWORD: '${SUBSCRIPTION_DB_PASSWORD:?required}'
   facility-service:
     <<: *app
     image: ${IMAGE_PREFIX:?required}/facility-service:${RELEASE_TAG:?required}
@@ -120,7 +131,7 @@ services:
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '5'
       SPRING_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/facility_db'
       SPRING_DATASOURCE_USERNAME: 'facility'
-      SPRING_DATASOURCE_PASSWORD: '${APP_DB_PASSWORD:?required}'
+      SPRING_DATASOURCE_PASSWORD: '${FACILITY_DB_PASSWORD:?required}'
   reporting-service:
     <<: *app
     image: ${IMAGE_PREFIX:?required}/reporting-service:${RELEASE_TAG:?required}
@@ -134,7 +145,7 @@ services:
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '5'
       SPRING_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/reporting_db'
       SPRING_DATASOURCE_USERNAME: 'reporting'
-      SPRING_DATASOURCE_PASSWORD: '${APP_DB_PASSWORD:?required}'
+      SPRING_DATASOURCE_PASSWORD: '${REPORTING_DB_PASSWORD:?required}'
   discovery-service:
     <<: *app
     image: ${IMAGE_PREFIX:?required}/discovery-service:${RELEASE_TAG:?required}
@@ -148,7 +159,7 @@ services:
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '5'
       SPRING_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/discovery_db'
       SPRING_DATASOURCE_USERNAME: 'discovery'
-      SPRING_DATASOURCE_PASSWORD: '${APP_DB_PASSWORD:?required}'
+      SPRING_DATASOURCE_PASSWORD: '${DISCOVERY_DB_PASSWORD:?required}'
   voucher-service:
     <<: *app
     image: ${IMAGE_PREFIX:?required}/voucher-service:${RELEASE_TAG:?required}
@@ -162,7 +173,7 @@ services:
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '5'
       SPRING_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/voucher_db'
       SPRING_DATASOURCE_USERNAME: 'voucher'
-      SPRING_DATASOURCE_PASSWORD: '${APP_DB_PASSWORD:?required}'
+      SPRING_DATASOURCE_PASSWORD: '${VOUCHER_DB_PASSWORD:?required}'
   slot-hold-engine:
     <<: *app
     image: ${IMAGE_PREFIX:?required}/slot-hold-engine:${RELEASE_TAG:?required}
@@ -191,7 +202,7 @@ services:
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '5'
       SPRING_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/booking_db'
       SPRING_DATASOURCE_USERNAME: 'booking'
-      SPRING_DATASOURCE_PASSWORD: '${APP_DB_PASSWORD:?required}'
+      SPRING_DATASOURCE_PASSWORD: '${BOOKING_DB_PASSWORD:?required}'
   payment-service:
     <<: *app
     image: ${IMAGE_PREFIX:?required}/payment-service:${RELEASE_TAG:?required}
@@ -206,7 +217,7 @@ services:
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '5'
       SPRING_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/payment_db'
       SPRING_DATASOURCE_USERNAME: 'payment'
-      SPRING_DATASOURCE_PASSWORD: '${APP_DB_PASSWORD:?required}'
+      SPRING_DATASOURCE_PASSWORD: '${PAYMENT_DB_PASSWORD:?required}'
   staff-operations-service:
     <<: *app
     image: ${IMAGE_PREFIX:?required}/staff-operations-service:${RELEASE_TAG:?required}
@@ -220,7 +231,7 @@ services:
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '5'
       SPRING_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/staff_db'
       SPRING_DATASOURCE_USERNAME: 'staff'
-      SPRING_DATASOURCE_PASSWORD: '${APP_DB_PASSWORD:?required}'
+      SPRING_DATASOURCE_PASSWORD: '${STAFF_DB_PASSWORD:?required}'
   pos-retail-service:
     <<: *app
     image: ${IMAGE_PREFIX:?required}/pos-retail-service:${RELEASE_TAG:?required}
@@ -236,7 +247,7 @@ services:
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '5'
       SPRING_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/pos_retail_db'
       SPRING_DATASOURCE_USERNAME: 'pos'
-      SPRING_DATASOURCE_PASSWORD: '${APP_DB_PASSWORD:?required}'
+      SPRING_DATASOURCE_PASSWORD: '${POS_DB_PASSWORD:?required}'
   notification-service:
     <<: *app
     image: ${IMAGE_PREFIX:?required}/notification-service:${RELEASE_TAG:?required}
@@ -256,7 +267,7 @@ services:
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: '5'
       SPRING_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/notification_db'
       SPRING_DATASOURCE_USERNAME: 'notification'
-      SPRING_DATASOURCE_PASSWORD: '${APP_DB_PASSWORD:?required}'
+      SPRING_DATASOURCE_PASSWORD: '${NOTIFICATION_DB_PASSWORD:?required}'
   nginx:
     image: nginx:1.28-alpine
     restart: unless-stopped
