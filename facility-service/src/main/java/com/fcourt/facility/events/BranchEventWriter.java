@@ -2,6 +2,12 @@ package com.fcourt.facility.events;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fcourt.facility.persistence.PricingRuleStore;
+import com.fcourt.facility.service.PricingEngine;
+import java.math.BigDecimal;
+import com.fcourt.facility.persistence.PricingRuleStore;
+import com.fcourt.facility.service.PricingEngine;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,11 +24,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 public class BranchEventWriter {
     private final JdbcTemplate jdbc;
+    private final PricingRuleStore pricingRules;
     private final ObjectMapper json;
     private final String topic;
 
-    public BranchEventWriter(JdbcTemplate jdbc, ObjectMapper json, @Value("${facility.events.topic}") String topic) {
+    public BranchEventWriter(JdbcTemplate jdbc, PricingRuleStore pricingRules, ObjectMapper json, @Value("${facility.events.topic}") String topic) {
         this.jdbc = jdbc;
+        this.pricingRules = pricingRules;
         this.json = json;
         this.topic = topic;
     }
@@ -60,13 +68,27 @@ public class BranchEventWriter {
 
     private List<BranchUpdatedEvent.CourtSnapshot> courts(long branchId) {
         return jdbc.query("""
-                SELECT c.id, c.court_type_id, min(t.price) AS min_price, max(t.price) AS max_price
-                FROM courts c
-                LEFT JOIN time_slot_templates t ON t.court_id = c.id AND t.is_active AND t.deleted_at IS NULL
-                WHERE c.branch_id = ? AND c.deleted_at IS NULL AND c.status = 'ACTIVE'
-                GROUP BY c.id, c.court_type_id ORDER BY c.id
-                """, (rs, n) -> new BranchUpdatedEvent.CourtSnapshot(rs.getLong("id"), rs.getLong("court_type_id"),
-                rs.getBigDecimal("min_price"), rs.getBigDecimal("max_price")), branchId);
+                SELECT c.id, c.court_type_id FROM courts c
+                WHERE c.branch_id = ? AND c.deleted_at IS NULL AND c.status = 'ACTIVE' ORDER BY c.id
+                """, (rs, n) -> new long[] {rs.getLong("id"), rs.getLong("court_type_id")}, branchId).stream()
+                .map(court -> priceRange(court[0], court[1])).toList();
+    }
+
+    /**
+     * Min/max over every live template slot at its effective price (pricing rules applied, see
+     * PricingEngine), so discovery shows the cheapest and dearest slot a customer can really book.
+     */
+    private BranchUpdatedEvent.CourtSnapshot priceRange(long courtId, long courtTypeId) {
+        List<PricingEngine.Rule> rules = pricingRules.listLive(courtId);
+        List<BigDecimal> prices = jdbc.query("""
+                SELECT day_of_week, start_time, end_time, price FROM time_slot_templates
+                WHERE court_id = ? AND is_active AND deleted_at IS NULL
+                """, (rs, n) -> PricingEngine.price(rules, rs.getInt("day_of_week"),
+                rs.getTime("start_time").toLocalTime(), rs.getTime("end_time").toLocalTime(),
+                rs.getBigDecimal("price")).price(), courtId);
+        BigDecimal min = prices.stream().min(BigDecimal::compareTo).orElse(null);
+        BigDecimal max = prices.stream().max(BigDecimal::compareTo).orElse(null);
+        return new BranchUpdatedEvent.CourtSnapshot(courtId, courtTypeId, min, max);
     }
 
     private String encode(Object value) {

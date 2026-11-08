@@ -12,5 +12,10 @@ public record BranchSearchResponse(List<BranchSummary> content, int page, int si
     public record BranchSummary(long id, String name, String address, String city,
                                 String district, Double latitude, Double longitude,
                                 BigDecimal minPrice, BigDecimal maxPrice,
-                                long courtCount, Double distanceKm) {}
+                                long courtCount, Double distanceKm, BigDecimal averageRating, long reviewCount) {
+        public BranchSummary(long id, String name, String address, String city, String district,
+                Double latitude, Double longitude, BigDecimal minPrice, BigDecimal maxPrice, long courtCount, Double distanceKm) {
+            this(id, name, address, city, district, latitude, longitude, minPrice, maxPrice, courtCount, distanceKm, new BigDecimal("0.00"), 0);
+        }
+    }
 }

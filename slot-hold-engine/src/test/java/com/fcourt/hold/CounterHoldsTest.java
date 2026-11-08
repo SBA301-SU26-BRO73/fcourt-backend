@@ -43,6 +43,7 @@ class CounterHoldsTest {
 
     @Autowired CounterHolds holds;
     @Autowired RedisHoldStore publicHolds;
+    @Autowired OnlineHolds online;
     @Autowired RedissonClient redis;
     @MockBean HoldStaffIdentity identity;
     LocalDate day = LocalDate.of(2026, 11, 1);
@@ -51,6 +52,59 @@ class CounterHoldsTest {
     void clear() {
         redis.getKeys().flushdb();
         reset(identity);
+    }
+
+    @Test
+    void onlineClaimSealsPublicHoldAndInternalReleasePreservesOtherOwners() {
+        String token=UUID.randomUUID().toString();
+        var selection=new HoldRequest(21L,day,List.of(1L,2L),"0901234567");
+        assertThat(publicHolds.acquire(selection,token)).isNotNull();
+        var request=new OnlineHolds.Claim(UUID.fromString(token),200,UUID.randomUUID(),21L,day,List.of(2L,1L));
+        var lease=online.claim("fixture-booking-hold-secret-not-production",request);
+        assertThat(lease.guestPhone()).isEqualTo("0901234567");
+        assertThat(lease.holdHash()).isEqualTo(OnlineHolds.hash(token));
+        assertThat(online.claim("fixture-booking-hold-secret-not-production",request).holdHash()).isEqualTo(lease.holdHash());
+        publicHolds.release(token);
+        assertThat(redis.getBucket(CounterHolds.slotKey(21,day,1)).isExists()).isTrue();
+        assertThatThrownBy(() -> online.claim("fixture-booking-hold-secret-not-production",
+                new OnlineHolds.Claim(UUID.fromString(token),201,UUID.randomUUID(),21L,day,List.of(1L,2L))))
+                .isInstanceOf(ResponseStatusException.class);
+        redis.getBucket(CounterHolds.slotKey(21,day,2),org.redisson.client.codec.StringCodec.INSTANCE).set("another-owner");
+        online.release("fixture-booking-hold-secret-not-production",lease.holdHash());
+        online.release("fixture-booking-hold-secret-not-production",lease.holdHash());
+        assertThat(redis.getBucket(CounterHolds.slotKey(21,day,1)).isExists()).isFalse();
+        assertThat(redis.getBucket(CounterHolds.slotKey(21,day,2),org.redisson.client.codec.StringCodec.INSTANCE).get()).isEqualTo("another-owner");
+    }
+
+    @Test
+    void onlineClaimRejectsMissingExpiredChangedOrUncredentialedHolds() {
+        String token=UUID.randomUUID().toString();
+        var request=new OnlineHolds.Claim(UUID.fromString(token),200,UUID.randomUUID(),21L,day,List.of(1L));
+        assertThatThrownBy(() -> online.claim(null,request)).isInstanceOf(ResponseStatusException.class);
+        assertThatThrownBy(() -> online.claim("fixture-booking-hold-secret-not-production",request)).isInstanceOf(ResponseStatusException.class);
+        publicHolds.acquire(new HoldRequest(21L,day,List.of(1L,2L),"0901234567"),token);
+        assertThatThrownBy(() -> online.claim("fixture-booking-hold-secret-not-production",request)).isInstanceOf(ResponseStatusException.class);
+        redis.getBucket("fcourt:hold-token:"+token).expire(java.time.Duration.ofSeconds(20));
+        var full=new OnlineHolds.Claim(UUID.fromString(token),200,UUID.randomUUID(),21L,day,List.of(1L,2L));
+        assertThatThrownBy(() -> online.claim("fixture-booking-hold-secret-not-production",full)).isInstanceOf(ResponseStatusException.class);
+        assertThat(redis.getBucket("fcourt:online-seal:"+OnlineHolds.hash(token)).isExists()).isFalse();
+    }
+
+    @Test
+    void competingOnlineClaimsHaveOneOwner() throws Exception {
+        String token=UUID.randomUUID().toString();
+        publicHolds.acquire(new HoldRequest(21L,day,List.of(1L),"0901234567"),token);
+        try(var pool=Executors.newVirtualThreadPerTaskExecutor()) {
+            var gate=new CountDownLatch(1);
+            var futures=new ArrayList<Future<Boolean>>();
+            for(long actor:List.of(200L,201L)) futures.add(pool.submit(() -> {
+                gate.await();
+                try { online.claim("fixture-booking-hold-secret-not-production",new OnlineHolds.Claim(UUID.fromString(token),actor,UUID.randomUUID(),21L,day,List.of(1L))); return true; }
+                catch(ResponseStatusException e){return false;}
+            }));
+            gate.countDown();
+            assertThat(List.of(futures.get(0).get(),futures.get(1).get())).containsExactlyInAnyOrder(true,false);
+        }
     }
 
     CounterHolds.Request request(String key) {

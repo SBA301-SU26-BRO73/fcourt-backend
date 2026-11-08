@@ -20,21 +20,24 @@ public class BranchStore {
             """;
     private final JdbcTemplate jdbc;
 
-    public BranchStore(JdbcTemplate jdbc) {
+    private final BranchImageStore images;
+
+    public BranchStore(JdbcTemplate jdbc, BranchImageStore images) {
+        this.images = images;
         this.jdbc = jdbc;
     }
 
     public List<BranchResponse> listOwned(long adminId) {
-        return jdbc.query(SELECT + " WHERE b.admin_id = ? AND b.deleted_at IS NULL ORDER BY b.id", this::row, adminId);
+        return withImages(jdbc.query(SELECT + " WHERE b.admin_id = ? AND b.deleted_at IS NULL ORDER BY b.id", this::row, adminId));
     }
 
     public List<BranchResponse> listAll() {
-        return jdbc.query(SELECT + " WHERE b.deleted_at IS NULL ORDER BY b.id", this::row);
+        return withImages(jdbc.query(SELECT + " WHERE b.deleted_at IS NULL ORDER BY b.id", this::row));
     }
 
     /** Live (not deleted) branch regardless of owner. */
     public Optional<BranchResponse> find(long id) {
-        return jdbc.query(SELECT + " WHERE b.id = ? AND b.deleted_at IS NULL", this::row, id).stream().findFirst();
+        return withImages(jdbc.query(SELECT + " WHERE b.id = ? AND b.deleted_at IS NULL", this::row, id)).stream().findFirst();
     }
 
     public Optional<BranchResponse> findOwned(long id, long adminId) {
@@ -106,6 +109,12 @@ public class BranchStore {
         jdbc.update("UPDATE branches SET deleted_at = now(), updated_at = now() WHERE id = ?", id);
     }
 
+    private List<BranchResponse> withImages(List<BranchResponse> branches) {
+        var byBranch = images.listFor(branches.stream().map(BranchResponse::id).toList()).stream()
+                .collect(java.util.stream.Collectors.groupingBy(com.fcourt.facility.api.BranchImageResponse::branchId));
+        return branches.stream().map(branch -> branch.withImages(byBranch.getOrDefault(branch.id(), List.of()))).toList();
+    }
+
     private static BigDecimal coordinate(BigDecimal value) {
         return value == null ? null : value.setScale(6, RoundingMode.HALF_UP);
     }
@@ -122,6 +131,6 @@ public class BranchStore {
                 rs.getInt("slot_duration_minutes"), rs.getString("bank_name"), rs.getString("bank_bin"),
                 rs.getString("bank_account_number"), rs.getString("bank_account_name"), rs.getString("status"),
                 rs.getInt("court_count"), rs.getTimestamp("created_at").toInstant(),
-                rs.getTimestamp("updated_at").toInstant());
+                rs.getTimestamp("updated_at").toInstant(), List.of());
     }
 }

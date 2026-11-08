@@ -59,6 +59,9 @@ class ReceiptService {
                 if (!info.expiresAt().isAfter(clock.instant())) {
                     throw new ResponseStatusException(HttpStatus.GONE,"Hold expired during upload");
                 }
+                if (info.amount().signum() == 0) throw new ResponseStatusException(HttpStatus.CONFLICT,"Đơn miễn phí không cần tải biên lai");
+                upstreams.freeze(id,auth,hold,info.amount());
+                if (!info.expiresAt().isAfter(clock.instant())) throw new ResponseStatusException(HttpStatus.GONE,"Hold expired while freezing payment");
                 var saved=store.submit(info,url);
                 if(booking.customerPhone()!=null && booking.customerPhone().matches("\\+?[0-9]{9,15}"))
                     store.jdbc().update("UPDATE payments SET customer_phone=? WHERE booking_id=?",booking.customerPhone(),id);
