@@ -80,6 +80,10 @@ class AccountRepository {
                 .stream().filter(java.util.Objects::nonNull).findFirst().orElse(null);
     }
 
+    void updateAvatar(long id, String url) {
+        jdbc.update("UPDATE users SET avatar_url = ? WHERE id = ?", url, id);
+    }
+
     void updateProfile(long id, String fullName, String phone, Instant at) {
         jdbc.update("UPDATE users SET full_name = ?, phone = ?, updated_at = ? WHERE id = ?",
                 fullName, phone, Timestamp.from(at), id);
