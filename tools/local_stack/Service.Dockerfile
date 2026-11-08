@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1.7
 # Compose uses one service directory as the build context and passes SERVICE.
 FROM maven:3.9.11-eclipse-temurin-21 AS build
+# Cap the Maven JVM so a build does not balloon the WSL VM on a low-RAM host.
+ENV MAVEN_OPTS="-Xmx512m -XX:+UseSerialGC -XX:TieredStopAtLevel=1"
 ARG SERVICE
 WORKDIR /workspace/service
 COPY . .
