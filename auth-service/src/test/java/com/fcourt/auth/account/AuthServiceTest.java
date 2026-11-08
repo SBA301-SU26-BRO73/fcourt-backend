@@ -313,6 +313,15 @@ class AuthServiceTest {
     }
 
     @Test
+    void profileCarriesTheAvatarWhenOneIsStoredAndNullOtherwise() {
+        when(accounts.findById(7)).thenReturn(Optional.of(account(7, "customer@demo.com", "CUSTOMER", "ACTIVE")));
+        assertThat(service.profile(7).avatarUrl()).isNull();
+
+        when(accounts.avatarUrl(7)).thenReturn("https://lh3.googleusercontent.com/a.jpg");
+        assertThat(service.profile(7).avatarUrl()).isEqualTo("https://lh3.googleusercontent.com/a.jpg");
+    }
+
+    @Test
     void profileOfMissingOrLockedAccountIsRefused() {
         when(accounts.findById(1)).thenReturn(Optional.empty());
         when(accounts.findById(2)).thenReturn(Optional.of(account(2, "locked@demo.com", "CUSTOMER", "LOCKED")));

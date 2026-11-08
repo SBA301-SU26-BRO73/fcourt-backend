@@ -37,7 +37,7 @@ public class DiscoverySecurity {
                         .requestMatchers(HttpMethod.GET, "/api/public/**", "/actuator/health", "/actuator/info").permitAll()
                         // Service-to-service lock check of facility-service; the X-Internal-Service-Token is verified in the controller.
                         .requestMatchers(HttpMethod.GET, "/api/internal/courts/*/slot-conflicts").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/reviews", "/api/admin/reviews/*/reply").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/reviews", "/api/reviews/images", "/api/admin/reviews/*/reply").authenticated()
                         .anyRequest().denyAll())
                 .oauth2ResourceServer(resource -> resource
                         .bearerTokenResolver(request -> request.getRequestURI().startsWith(request.getContextPath() + "/api/public/") ? null : bearer.resolve(request))

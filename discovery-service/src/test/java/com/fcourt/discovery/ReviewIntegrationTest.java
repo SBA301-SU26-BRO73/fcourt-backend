@@ -51,6 +51,11 @@ class ReviewIntegrationTest {
     static final AtomicReference<String> FACILITY_AUTH = new AtomicReference<>();
     static final AtomicInteger BOOKING_STATUS = new AtomicInteger(200), FACILITY_STATUS = new AtomicInteger(200);
     static final AtomicInteger BOOKING_CALLS = new AtomicInteger(), FACILITY_CALLS = new AtomicInteger();
+    static final AtomicReference<String> PROFILE_AUTH = new AtomicReference<>();
+    static final AtomicReference<String> PROFILE = new AtomicReference<>();
+    static final AtomicInteger PROFILE_STATUS = new AtomicInteger(200), UPLOADS = new AtomicInteger();
+    static final String PROFILE_JSON = "{\"id\":10,\"email\":\"a@b.c\",\"fullName\":\"Nguyễn Văn An\",\"avatarUrl\":\"https://lh3.googleusercontent.com/a.jpg\"}";
+    static String photo(long user) { return "https://res.cloudinary.com/demo/image/upload/v1/fcourt/reviews/" + user + "/court.jpg"; }
     static final HttpServer SOURCE = startSources();
 
     static RSAKey signingKey() {
@@ -83,6 +88,20 @@ class ReviewIntegrationTest {
                 exchange.getResponseHeaders().set("Content-Type","application/json");exchange.sendResponseHeaders(FACILITY_STATUS.get(),bytes.length);
                 try(var out=exchange.getResponseBody()){out.write(bytes);}
             });
+            server.createContext("/api/auth/profile",exchange->{
+                PROFILE_AUTH.set(exchange.getRequestHeaders().getFirst("Authorization"));
+                byte[] bytes=PROFILE.get().getBytes(StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().set("Content-Type","application/json");exchange.sendResponseHeaders(PROFILE_STATUS.get(),bytes.length);
+                try(var out=exchange.getResponseBody()){out.write(bytes);}
+            });
+            server.createContext("/v1_1/demo/image/upload",exchange->{
+                String form=new String(exchange.getRequestBody().readAllBytes(),StandardCharsets.ISO_8859_1);
+                var folder=java.util.regex.Pattern.compile("name=\"folder\"[\\s\\S]*?\r\n\r\n([^\r]*)\r\n").matcher(form);
+                String path=folder.find()?folder.group(1):"missing";
+                byte[] bytes=("{\"secure_url\":\"https://res.cloudinary.com/demo/image/upload/v1/"+path+"/"+UPLOADS.incrementAndGet()+".jpg\"}").getBytes(StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().set("Content-Type","application/json");exchange.sendResponseHeaders(200,bytes.length);
+                try(var out=exchange.getResponseBody()){out.write(bytes);}
+            });
             server.createContext("/.well-known/jwks.json",exchange->{
                 byte[] bytes=new JWKSet(KEY.toPublicJWK()).toString().getBytes(StandardCharsets.UTF_8);
                 exchange.getResponseHeaders().set("Content-Type","application/json");exchange.sendResponseHeaders(200,bytes.length);
@@ -98,6 +117,11 @@ class ReviewIntegrationTest {
         registry.add("discovery.slots.facility-url",()->"http://127.0.0.1:"+SOURCE.getAddress().getPort());
         registry.add("discovery.auth.jwk-set-uri",()->"http://127.0.0.1:"+SOURCE.getAddress().getPort()+"/.well-known/jwks.json");
         registry.add("discovery.auth.issuer",()->ISSUER);
+        registry.add("discovery.auth.base-url",()->"http://127.0.0.1:"+SOURCE.getAddress().getPort());
+        registry.add("storage.cloudinary.cloud-name",()->"demo");
+        registry.add("storage.cloudinary.api-key",()->"k");
+        registry.add("storage.cloudinary.api-secret",()->"s");
+        registry.add("storage.cloudinary.base-url",()->"http://127.0.0.1:"+SOURCE.getAddress().getPort());
     }
     @AfterAll static void stop(){SOURCE.stop(0);}
     @Autowired JdbcTemplate jdbc;
@@ -117,6 +141,7 @@ class ReviewIntegrationTest {
         BOOKINGS.clear();order(1,10,7,11);order(2,20,7,12);order(3,30,7,11);order(4,10,8,21);
         BRANCHES.set("[{\"id\":7,\"adminId\":100}]");
         BOOKING_CALLS.set(0);FACILITY_CALLS.set(0);BOOKING_STATUS.set(200);FACILITY_STATUS.set(200);
+        PROFILE.set(PROFILE_JSON);PROFILE_STATUS.set(200);PROFILE_AUTH.set(null);
     }
     BranchUpdatedEvent snapshot(long id,long version,boolean active) {
         return new BranchUpdatedEvent(id,version,"Branch "+id,"Address","City","District",10.0,106.0,active,false,
@@ -130,7 +155,7 @@ class ReviewIntegrationTest {
                 .claim("roles",List.of(role)).build();
     }
     long create(long booking,long user,int rating) throws Exception {
-        String body="{\"bookingId\":"+booking+",\"rating\":"+rating+",\"comment\":\"Good court\",\"imageUrls\":[\"https://example.test/court.jpg\"]}";
+        String body="{\"bookingId\":"+booking+",\"rating\":"+rating+",\"comment\":\"Good court\",\"imageUrls\":[\""+photo(user)+"\"]}";
         var result=mvc.perform(post("/api/reviews").with(jwt().jwt(actor(user,"CUSTOMER"))).contentType("application/json").content(body))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         return json.readTree(result).path("id").asLong();
@@ -141,7 +166,10 @@ class ReviewIntegrationTest {
         assertThat(BOOKING_AUTH.get()).isEqualTo("Bearer customer-10");
         mvc.perform(get("/api/public/branches/7/reviews")).andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-store"))
                 .andExpect(jsonPath("$.content[0].id").value(id)).andExpect(jsonPath("$.content[0].courtId").value(11))
-                .andExpect(jsonPath("$.content[0].userId").value(10)).andExpect(jsonPath("$.content[0].bookingId").doesNotExist())
+                .andExpect(jsonPath("$.content[0].userId").doesNotExist()).andExpect(jsonPath("$.content[0].bookingId").doesNotExist())
+                .andExpect(jsonPath("$.content[0].reviewerName").value("An N."))
+                .andExpect(jsonPath("$.content[0].reviewerAvatarUrl").value("https://lh3.googleusercontent.com/a.jpg"))
+                .andExpect(jsonPath("$.content[0].imageUrls[0]").value(photo(10)))
                 .andExpect(jsonPath("$.content[0].checkInCode").doesNotExist()).andExpect(jsonPath("$.content[0].holdToken").doesNotExist())
                 .andExpect(jsonPath("$.averageRating").value(5)).andExpect(jsonPath("$.totalElements").value(1));
     }
@@ -162,7 +190,64 @@ class ReviewIntegrationTest {
         mvc.perform(post("/api/reviews").with(jwt().jwt(actor(10,"CUSTOMER"))).contentType("application/json")
                         .content("{\"bookingId\":1,\"rating\":5,\"branchId\":999,\"courtId\":999,\"userId\":999}"))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.branchId").value(7)).andExpect(jsonPath("$.courtId").value(11))
-                .andExpect(jsonPath("$.userId").value(10));
+                .andExpect(jsonPath("$.userId").doesNotExist());
+    }
+
+    @Test void rawFullNameAndUserIdNeverAppearInAnyReviewResponseOrRow() throws Exception {
+        var body=mvc.perform(post("/api/reviews").with(jwt().jwt(actor(10,"CUSTOMER"))).contentType("application/json").content("{\"bookingId\":1,\"rating\":4}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        assertThat(PROFILE_AUTH.get()).isEqualTo("Bearer customer-10");
+        assertThat(body).doesNotContain("userId","user_id","Nguyễn Văn An","a@b.c");
+        var page=mvc.perform(get("/api/public/branches/7/reviews")).andReturn().getResponse().getContentAsString();
+        assertThat(page).doesNotContain("userId","Nguyễn Văn An","a@b.c");
+        assertThat(jdbc.queryForObject("SELECT reviewer_display_name FROM reviews",String.class)).isEqualTo("An N.");
+    }
+
+    @Test void reviewIsSavedWithGenericNameWhenProfileIsUnavailableAndLegacyRowsStillRead() throws Exception {
+        PROFILE_STATUS.set(503);
+        mvc.perform(post("/api/reviews").with(jwt().jwt(actor(10,"CUSTOMER"))).contentType("application/json").content("{\"bookingId\":1,\"rating\":4}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.reviewerName").value("Khách hàng")).andExpect(jsonPath("$.reviewerAvatarUrl").doesNotExist());
+        jdbc.update("INSERT INTO reviews(branch_id,court_id,booking_id,user_id,rating) VALUES (7,11,99,55,3)");
+        jdbc.update("UPDATE reviews SET reviewer_display_name=NULL,reviewer_avatar_url=NULL");
+        mvc.perform(get("/api/public/branches/7/reviews")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].reviewerName").value("Khách hàng")).andExpect(jsonPath("$.content[0].reviewerAvatarUrl").doesNotExist())
+                .andExpect(jsonPath("$.content[0].userId").doesNotExist());
+    }
+
+    @Test void onlyUrlsFromOurUploaderAndTheCallersFolderAreAcceptedAndNothingRemoteIsCalledOtherwise() throws Exception {
+        for(String url:List.of("https://example.test/court.jpg",photo(11),"https://res.cloudinary.com/other/image/upload/v1/fcourt/reviews/10/a.jpg",
+                "https://res.cloudinary.com/demo/image/upload/v1/fcourt/reviews/10/../11/a.jpg")){
+            var input=JSON.createObjectNode().put("bookingId",1).put("rating",5);input.putArray("imageUrls").add(url);
+            mvc.perform(post("/api/reviews").with(jwt().jwt(actor(10,"CUSTOMER"))).contentType("application/json").content(input.toString()))
+                    .andExpect(status().isBadRequest());
+        }
+        assertThat(BOOKING_CALLS.get()).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM reviews",Long.class)).isZero();
+    }
+
+    @Test void customerCanUploadPhotosAndUseTheReturnedUrlsInAReview() throws Exception {
+        var png=new byte[]{(byte)0x89,'P','N','G',0x0D,0x0A,0x1A,0x0A,0,0};
+        var file=new org.springframework.mock.web.MockMultipartFile("files","a.png","image/png",png);
+        var result=mvc.perform(multipart("/api/reviews/images").file(file).file(file).with(jwt().jwt(actor(10,"CUSTOMER"))))
+                .andExpect(status().isCreated()).andExpect(header().string("Cache-Control","no-store")).andReturn().getResponse().getContentAsString();
+        var urls=json.readTree(result).path("urls");
+        assertThat(urls).hasSize(2);
+        for(var url:urls) assertThat(url.asText()).startsWith("https://res.cloudinary.com/demo/image/upload/").contains("/fcourt/reviews/10/");
+        var review=JSON.createObjectNode().put("bookingId",1).put("rating",5);review.putArray("imageUrls").add(urls.get(0).asText()).add(urls.get(1).asText());
+        mvc.perform(post("/api/reviews").with(jwt().jwt(actor(10,"CUSTOMER"))).contentType("application/json").content(review.toString()))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.imageUrls.length()").value(2));
+    }
+
+    @Test void uploadRequiresCustomerRejectsFakeImagesAndTooManyFiles() throws Exception {
+        var png=new byte[]{(byte)0x89,'P','N','G',0x0D,0x0A,0x1A,0x0A,0,0};
+        var good=new org.springframework.mock.web.MockMultipartFile("files","a.png","image/png",png);
+        var fake=new org.springframework.mock.web.MockMultipartFile("files","a.png","image/png","<svg/>".getBytes());
+        mvc.perform(multipart("/api/reviews/images").file(good)).andExpect(status().isUnauthorized());
+        mvc.perform(multipart("/api/reviews/images").file(good).with(jwt().jwt(actor(100,"ADMIN")))).andExpect(status().isForbidden());
+        mvc.perform(multipart("/api/reviews/images").file(fake).with(jwt().jwt(actor(10,"CUSTOMER")))).andExpect(status().isBadRequest());
+        mvc.perform(multipart("/api/reviews/images").with(jwt().jwt(actor(10,"CUSTOMER")))).andExpect(status().isBadRequest());
+        var many=multipart("/api/reviews/images");for(int i=0;i<6;i++)many.file(good);
+        mvc.perform(many.with(jwt().jwt(actor(10,"CUSTOMER")))).andExpect(status().isBadRequest());
     }
 
     @Test void invalidStarsCommentsAndImageUrlsFailBeforeCallingBooking() throws Exception {
