@@ -36,8 +36,8 @@ import org.springframework.test.web.servlet.ResultActions;
  * Subscription purchase end to end: real security chain, Postgres/Flyway and PayOS webhook signatures.
  * Only the outgoing PayOS call is replaced by a stub. Needs Docker.
  *
- * <p>Seeded plans: 2 = Chuyen nghiep (1 499 000 per month, 99 courts), 3 = Co ban (299 000 per month, 5 courts,
- * the cheapest, so the starter plan).
+ * <p>The starter plan follows the cheapest active plan in the shared integration database. Other integration tests
+ * can create plans in this same database, so its ID and court limit are data-dependent.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -72,10 +72,16 @@ class BillingApiIntegrationTest extends IntegrationSupport {
     @Test
     void anOwnerWithoutASubscriptionGetsAStarterOnTheCheapestPlanOnlyOnce() throws Exception {
         long owner = OWNERS.incrementAndGet();
+        long cheapestPlanId = jdbc.queryForObject("""
+                SELECT id FROM subscription_plans WHERE is_active AND deleted_at IS NULL
+                ORDER BY monthly_price ASC NULLS LAST, id LIMIT 1
+                """, Long.class);
+        int cheapestPlanCourts = jdbc.queryForObject("SELECT max_courts FROM subscription_plans WHERE id = ?",
+                Integer.class, cheapestPlanId);
 
         var first = body(mySubscription(owner).andExpect(status().isOk())
-                .andExpect(jsonPath("$.plan.id").value(3))
-                .andExpect(jsonPath("$.maxCourts").value(5))
+                .andExpect(jsonPath("$.plan.id").value(cheapestPlanId))
+                .andExpect(jsonPath("$.maxCourts").value(cheapestPlanCourts))
                 .andExpect(jsonPath("$.active").value(true)));
         var second = body(mySubscription(owner).andExpect(status().isOk()));
 

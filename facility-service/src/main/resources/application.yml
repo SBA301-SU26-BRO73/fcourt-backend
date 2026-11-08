@@ -19,6 +19,10 @@ spring:
     # Baseline such a database at V2 so only V3+ run; an empty database runs V1..Vn.
     baseline-on-migrate: true
     baseline-version: 2
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 55MB
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
@@ -30,6 +34,8 @@ spring:
         max.block.ms: 5000
         delivery.timeout.ms: 10000
         request.timeout.ms: 5000
+  config:
+    import: optional:file:.env[.properties]
 
 facility:
   auth:
@@ -41,6 +47,19 @@ facility:
     base-url: ${SUBSCRIPTION_BASE_URL:}
     default-max-branches: ${SUBSCRIPTION_DEFAULT_MAX_BRANCHES:3}
     default-max-courts: ${SUBSCRIPTION_DEFAULT_MAX_COURTS:15}
+  images:
+    max-per-branch: ${FACILITY_IMAGES_MAX_PER_BRANCH:10}
+    max-file-bytes: ${FACILITY_IMAGES_MAX_FILE_BYTES:5242880}
+    # Empty = upload disabled (503). Never commit real values; set them via environment.
+    cloudinary:
+      url: ${CLOUDINARY_URL:}
+      cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+      api-key: ${CLOUDINARY_API_KEY:}
+      api-secret: ${CLOUDINARY_API_SECRET:}
+  discovery:
+    # Needed to verify bookings/holds before locking; empty = locking answers 503 (fail closed).
+    base-url: ${DISCOVERY_BASE_URL:}
+    internal-token: ${DISCOVERY_INTERNAL_SLOT_TOKEN:}
   events:
     enabled: ${FACILITY_EVENTS_ENABLED:true}
     topic: ${BRANCH_UPDATED_TOPIC:facility.branch-updated.v1}

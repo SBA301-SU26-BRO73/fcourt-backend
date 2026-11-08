@@ -154,6 +154,76 @@ class ReportingIntegrationTest {
         assertThat(stats.get("totalRevenue").decimalValue()).isEqualByComparingTo("110000");
     }
 
+    @Test
+    void analyticsEndpointsFoldCourtsSlotsAndHoursFromEvents() throws Exception {
+        long owner = 9;
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+        var branch = new OwnedBranch(5L, owner, "ACTIVE", LocalTime.of(6, 0), LocalTime.of(22, 0), 2);
+        when(facility.ownedBranches(eq(owner), anyString())).thenReturn(List.of(branch));
+        when(facility.courts(eq(5L), anyString())).thenReturn(List.of(
+                new FacilityClient.CourtInfo(51L, 5L, "Court A", "ACTIVE"),
+                new FacilityClient.CourtInfo(52L, 5L, "Court B", "ACTIVE")));
+
+        kafka.send("facility.branch-updated.v1", "5", """
+                {"branchId":5,"version":1,"name":"A","address":"x","city":"HCM","active":true,"deleted":false,
+                 "courts":[{"id":51,"courtTypeId":6,"minPrice":1,"maxPrice":2},{"id":52,"courtTypeId":6,"minPrice":1,"maxPrice":2}]}
+                """);
+        // Court A by name (payment) 18:00+18:30, court A again by id (walk-in) 19:00, court B 18:00.
+        kafka.send("fcourt.payment.events", "500", """
+                {"eventId":"a-1","type":"PaymentConfirmedEvent","payment":{"bookingId":500,"branchId":5,"amount":100000,
+                 "checkout":{"courtName":"Court A","date":"%s","slots":[{"startTime":"18:00"},{"startTime":"18:30"}]}}}
+                """.formatted(today));
+        kafka.send("fcourt.staff.events", "501", """
+                {"eventId":"a-2","type":"WalkInBookingCreatedEvent","version":1,"data":{"actorId":3,
+                 "occurredAt":"%s","booking":{"bookingId":501,"branchId":5,"courtId":51,"date":"%s",
+                 "status":"CHECKED_IN","paymentMethod":"CASH","amount":60000,
+                 "invoice":{"items":[{"slotId":1,"startTime":"19:00","endTime":"19:30"}]}}}}
+                """.formatted(Instant.now(), today));
+        kafka.send("fcourt.payment.events", "502", """
+                {"eventId":"a-3","type":"PaymentConfirmedEvent","payment":{"bookingId":502,"branchId":5,"amount":40000,
+                 "checkout":{"courtName":"Court B","date":"%s","slots":[{"startTime":"18:00"}]}}}
+                """.formatted(today));
+        kafka.flush();
+
+        JsonNode top = null;
+        Instant deadline = Instant.now().plusSeconds(30);
+        while (Instant.now().isBefore(deadline)) {
+            top = json.readTree(mvc.perform(get("/api/admin/dashboard/analytics/top-courts").with(owner(owner)))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+            if (top.get("courts").size() == 2 && top.at("/courts/0/bookings").asLong() == 2) break;
+            Thread.sleep(200);
+        }
+        assertThat(top.at("/courts/0/courtName").asText()).isEqualTo("Court A");
+        assertThat(top.at("/courts/0/courtId").asLong()).isEqualTo(51);
+        assertThat(top.at("/courts/0/bookedSlots").asLong()).isEqualTo(3);
+        assertThat(top.at("/courts/0/revenue").decimalValue()).isEqualByComparingTo("160000");
+        assertThat(top.at("/courts/1/courtName").asText()).isEqualTo("Court B");
+
+        JsonNode peak = json.readTree(mvc.perform(get("/api/admin/dashboard/analytics/peak-hours")
+                .param("period", "MONTH").with(owner(owner))).andExpect(status().isOk()).andReturn()
+                .getResponse().getContentAsString());
+        assertThat(peak.get("hours").size()).isEqualTo(24);
+        assertThat(peak.at("/hours/18/bookings").asLong()).isEqualTo(2);
+        assertThat(peak.at("/hours/18/slots").asLong()).isEqualTo(3);
+        assertThat(peak.at("/hours/18/peak").asBoolean()).isTrue();
+        assertThat(peak.at("/hours/19/peak").asBoolean()).isFalse();
+
+        JsonNode chart = json.readTree(mvc.perform(get("/api/admin/dashboard/revenue-chart")
+                .param("from", today.toString()).param("to", today.toString()).param("courtId", "51")
+                .with(owner(owner))).andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        assertThat(chart.at("/points/0/revenue").decimalValue()).isEqualByComparingTo("160000");
+        // 3 booked slots / (1 court * 32 slots).
+        assertThat(chart.get("occupancyRate").asDouble()).isEqualTo(0.0938);
+
+        mvc.perform(get("/api/admin/dashboard/revenue-chart").param("courtId", "999").with(owner(owner)))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/admin/dashboard/revenue-chart").param("from", "2030-02-01").param("to", "2030-01-01")
+                .with(owner(owner))).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/admin/dashboard/analytics/top-courts").param("period", "DECADE").with(owner(owner)))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/admin/dashboard/analytics/peak-hours")).andExpect(status().isUnauthorized());
+    }
+
     static org.springframework.test.web.servlet.request.RequestPostProcessor owner(long id) {
         return jwt().jwt(t -> t.subject(Long.toString(id)).claim("roles", List.of("ADMIN")))
                 .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));

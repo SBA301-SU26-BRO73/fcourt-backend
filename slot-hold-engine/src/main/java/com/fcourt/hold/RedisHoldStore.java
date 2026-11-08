@@ -51,7 +51,8 @@ class RedisHoldStore {
             throw new IllegalStateException("Corrupt hold metadata", e);
         }
         redis.getScript(StringCodec.INSTANCE).eval(RScript.Mode.READ_WRITE, releaseScript,
-                RScript.ReturnType.INTEGER, keysOf(request, token), token);
+                RScript.ReturnType.INTEGER, keysOf(request, token), token,
+                "fcourt:online-seal:" + OnlineHolds.hash(token));
     }
 
     private static List<Object> keysOf(HoldRequest request, String token) {

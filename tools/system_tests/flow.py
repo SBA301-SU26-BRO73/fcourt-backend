@@ -24,9 +24,10 @@ def identifier(data):
 
 
 class Flow:
-    def __init__(self, config, client, environment, now=None):
+    def __init__(self, config, client, environment, now=None, before_check_in=None):
         self.config, self.client, self.env = config, client, environment
         self.now = now or datetime.now(timezone.utc)
+        self.before_check_in = before_check_in
         self.tokens = {}
         self.report = {"task": "SCRUM-91", "scope": config["scope"], "runId": client.run_id,
                        "overall": "NOT_RUN", "steps": [], "ids": {}, "liveAcceptance": False}
@@ -86,19 +87,20 @@ class Flow:
         require(min(len(owner_password), len(staff_password)) >= 12, "Use strong disposable owner/staff passwords")
         local = self.now.astimezone(timezone(timedelta(hours=7)))
         day = local.date()
-        start = local.replace(second=0, microsecond=0)+timedelta(minutes=60)
+        start = local.replace(second=0, microsecond=0)+timedelta(minutes=1)
         start += timedelta(minutes=(-start.minute) % 30)
         opening = datetime.combine(day, datetime.strptime(c["branch"]["openTime"], "%H:%M").time(), local.tzinfo)
         closing = datetime.combine(day, datetime.strptime(c["branch"]["closeTime"], "%H:%M").time(), local.tzinfo)
         start = max(start, opening)
         require(start.date() == day and start+timedelta(hours=1) <= closing, "No two future slots remain today; run within venue hours")
+        require(start-local <= timedelta(minutes=15), "Run within the 15 minutes before the next half-hour; booking admission enforces its real check-in window")
         run_id = self.client.run_id
         domain = c["ownerRegistration"]["emailDomain"]
         owner_email, staff_email = f"e2e-owner-{run_id}@{domain}", f"e2e-staff-{run_id}@{domain}"
         owner_body = {k: v for k, v in c["ownerRegistration"].items() if k != "emailDomain"}
         phone_suffix = str(int(uuid.uuid5(uuid.NAMESPACE_URL, run_id).hex[:8], 16) % 100000000).zfill(8)
-        owner_body.update(email=owner_email, password=owner_password, role="ADMIN", phone="09"+phone_suffix)
-        owner = self.step("register-owner", lambda: request("registerOwner", owner_body, expected=(201,)))
+        owner_body.update(email=owner_email, password=owner_password, phone="09"+phone_suffix)
+        owner = self.step("register-owner", lambda: request("registerOwner", owner_body, expected=(201,), upload="owner"))
         owner_id = identifier(owner); self.report["ids"]["ownerId"] = owner_id
         self.step("login-super-admin", lambda: self.login("super", super_email, super_password))
         self.step("approve-owner", lambda: request("approveOwner", {"reason": "isolated integration test"}, self.tokens["super"], {"ownerId": owner_id}))
@@ -106,7 +108,8 @@ class Flow:
         branch_body = dict(c["branch"]); branch_body["name"] += " " + run_id
         branch = self.step("create-branch", lambda: request("createBranch", branch_body, self.tokens["owner"], expected=(201,)))
         branch_id = identifier(branch); self.report["ids"]["branchId"] = branch_id
-        court = self.step("create-court", lambda: request("createCourt", c["court"], self.tokens["owner"], {"branchId": branch_id}, expected=(201,)))
+        court_body = dict(c["court"], defaultPricePerHour=c["slotPrice"]*2)
+        court = self.step("create-court", lambda: request("createCourt", court_body, self.tokens["owner"], {"branchId": branch_id}, expected=(201,)))
         court_id = identifier(court); self.report["ids"]["courtId"] = court_id
         for index in range(2):
             begins = start+timedelta(minutes=30*index)
@@ -151,12 +154,6 @@ class Flow:
         self.step("awaiting-confirmation", lambda: booking_state(first, "AWAITING_CONFIRMATION"))
         self.step("confirm-payment", lambda: request("confirm", token=self.tokens["owner"], bindings={"paymentId": payment}))
         self.step("booking-confirmed", lambda: booking_state(first, "CONFIRMED"))
-        ticket = self.step("read-ticket", lambda: request("ticket", token=self.tokens["customer"], bindings={"bookingId": first}))
-        code = ticket.get("checkInCode"); require(isinstance(code, str) and bool(code), "Ticket lacks check-in code")
-        checked = self.step("staff-check-in", lambda: request("verify", {"checkInCode": code}, self.tokens["staff"], {"attempt": "first"}))
-        require(checked.get("status") == "CHECKED_IN" and checked.get("branchId") == branch_id, "Check-in did not commit correct branch/state")
-        self.step("booking-checked-in", lambda: booking_state(first, "CHECKED_IN"))
-        self.step("reject-double-check-in", lambda: request("verify", {"checkInCode": code}, self.tokens["staff"], {"attempt": "double"}, expected=(409,)))
         second = self.step("saga-hold-and-book", lambda: create_booking(1)); self.report["ids"]["cancelledBookingId"] = second
         second_payment = self.step("saga-upload-bill", lambda: receipt(second))
         self.step("saga-awaiting", lambda: booking_state(second, "AWAITING_CONFIRMATION"))
@@ -165,6 +162,19 @@ class Flow:
         self.step("saga-slot-released", lambda: self.poll("cancelled slot release", lambda: request("slots", bindings=bindings),
                   lambda rows: any(s.get("slotId") == selected[1] and s.get("status") == "AVAILABLE" for s in rows)
                   and any(s.get("slotId") == selected[0] and s.get("status") == "BOOKED" for s in rows)))
+        ticket = self.step("read-ticket", lambda: request("ticket", token=self.tokens["customer"], bindings={"bookingId": first}))
+        code = ticket.get("checkInCode"); require(isinstance(code, str) and bool(code), "Ticket lacks check-in code")
+        if self.before_check_in is not None:
+            self.step("local-clock-control", lambda: self.before_check_in(start-timedelta(minutes=5)))
+        checked = self.step("staff-check-in", lambda: request("verify", {"checkInCode": code}, self.tokens["staff"], {"attempt": "first"}))
+        require(checked.get("status") == "CHECKED_IN" and checked.get("branchId") == branch_id, "Check-in did not commit correct branch/state")
+        self.step("booking-checked-in", lambda: booking_state(first, "CHECKED_IN"))
+        self.step("reject-double-check-in", lambda: request("verify", {"checkInCode": code}, self.tokens["staff"], {"attempt": "double"}, expected=(409,)))
+        if c.get("verifyReporting"):
+            self.step("reporting-projection", lambda: self.poll("reporting payment/staff projection",
+                      lambda: request("reportingStats",token=self.tokens["owner"],bindings={"branchId":branch_id}),
+                      lambda result: result.get("totalBookings")==2 and result.get("totalRevenue")==c["slotPrice"]
+                      and result.get("bookingStatusCounts",{}).get("CONFIRMED")==1 and result.get("bookingStatusCounts",{}).get("CANCELLED")==1))
 
 
 def write_report(report, path):

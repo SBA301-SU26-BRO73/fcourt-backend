@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import date, datetime, time, timedelta, timezone
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 import hashlib
 import json
 import os
@@ -20,6 +20,8 @@ class SeedError(RuntimeError):
 def literal(value):
     if value is None:
         return "NULL"
+    if isinstance(value, dict):
+        return literal(json_text(value)) + "::jsonb"
     if isinstance(value, bool):
         return "TRUE" if value else "FALSE"
     if isinstance(value, (int, Decimal)):
@@ -50,8 +52,8 @@ def validate(manifest, allow_fixtures=False):
         price = Decimal(str(manifest["slotPrice"]))
     except (ValueError, TypeError, ArithmeticError):
         raise SeedError("Invalid demoDate or slotPrice") from None
-    if not price.is_finite() or price < 10000 or price > Decimal("49999999.99") or price.as_tuple().exponent < -2:
-        raise SeedError("slotPrice must fit two-slot numeric(10,2) invoices")
+    if not price.is_finite() or price < 10000 or price*32 > Decimal("99999999.99") or price.as_tuple().exponent < -2:
+        raise SeedError("slotPrice must fit a 32-slot numeric(10,2) invoice")
     if not 2000 <= day.year <= 2099:
         raise SeedError("demoDate must be between 2000 and 2099")
     if type(manifest["demoOnly"]) is not bool or manifest["demoOnly"] and not allow_fixtures:
@@ -71,8 +73,8 @@ def validate(manifest, allow_fixtures=False):
                 raise SeedError("Invalid branch field: " + field)
         if not re.fullmatch(r"[0-9]{6}", branch["bankBin"]):
             raise SeedError("bankBin must be a six-digit string")
-        if not manifest["demoOnly"] and not re.fullmatch(r"[0-9]{6,34}", branch["bankAccountNumber"]):
-            raise SeedError("Real manifest requires numeric bank account strings, preserving leading zeros")
+        if not re.fullmatch(r"[0-9]{6,20}", branch["bankAccountNumber"]):
+            raise SeedError("Bank accounts must contain 6-20 digits, preserving leading zeros")
     assets = manifest["courtImages"] + [manifest["receiptImageUrl"]] + [b["bankQrImageUrl"] for b in manifest["branches"]]
     if any(not isinstance(url, str) or len(url) > 2000 or not re.fullmatch(r"https://res\.cloudinary\.com/[^/\s]+/image/upload/[^\s]+", url) for url in assets):
         raise SeedError("Assets must be explicit HTTPS Cloudinary image delivery URLs")
@@ -110,7 +112,7 @@ def build_rows(m, hashed_password, plan_limits=(15, 3)):
         rows[db].setdefault(table, []).append(values)
     for index, role in [(0, "ADMIN"), (1, "STAFF"), (2, "STAFF"), (3, "STAFF")] + [(i, "CUSTOMER") for i in range(10, 15)]:
         add("auth_db", "users", id=base + index, email=f"demo.{key}.{index}@demo.invalid", password_hash=hashed_password,
-            phone=f"09{base:010d}{index:02d}", role=role, status="ACTIVE", full_name=f"DEMO {key} {role} {index}",
+            phone=f"09{(base+index)%100000000:08d}", role=role, status="ACTIVE", full_name=f"DEMO {key} {role} {index}",
             created_at=stamp, updated_at=stamp, deleted_at=None)
     add("subscription_db", "subscriptions", id=base, admin_id=base, plan_id=m["subscriptionPlanId"], max_courts=plan_limits[0],
         max_branches=plan_limits[1], start_date=day - timedelta(days=30), end_date=day + timedelta(days=365), created_at=stamp, updated_at=stamp, deleted_at=None)
@@ -121,13 +123,14 @@ def build_rows(m, hashed_password, plan_limits=(15, 3)):
             bank_account_name=branch["bankAccountName"], bank_qr_image_url=branch["bankQrImageUrl"],
             status="ACTIVE", slot_duration_minutes=30, created_at=stamp, updated_at=stamp, deleted_at=None)
         add("staff_db", "staff", id=base+i+1, user_id=base+i+1, branch_id=base+i,
-            email=f"demo.{key}.{i+1}@demo.invalid", full_name=f"DEMO {key} STAFF {i+1}", phone=f"09{base:010d}{i+1:02d}",
+            email=f"demo.{key}.{i+1}@demo.invalid", full_name=f"DEMO {key} STAFF {i+1}", phone=f"09{(base+i+1)%100000000:08d}",
             created_at=stamp, updated_at=stamp, deleted_at=None)
     for court in range(10):
         branch_index = 0 if court < 4 else 1 if court < 7 else 2
         court_type = m["courtTypeIds"]["badminton" if court < 5 else "pickleball"]
         add("facility_db", "courts", id=base+court, branch_id=base+branch_index, name=f"DEMO {key} Court {court+1}", court_type_id=court_type,
-            description="Explicit demo dataset", image_url=m["courtImages"][court], status="ACTIVE", created_at=stamp, updated_at=stamp, deleted_at=None)
+            description="Explicit demo dataset", image_url=m["courtImages"][court], default_price_per_hour=price*2,
+            status="ACTIVE", created_at=stamp, updated_at=stamp, deleted_at=None)
         for weekday in range(7):
             for slot in range(32):
                 start = datetime.combine(day, time(6)) + timedelta(minutes=30*slot)
@@ -137,37 +140,56 @@ def build_rows(m, hashed_password, plan_limits=(15, 3)):
     for i, kind in enumerate(["FIXED", "PERCENTAGE"]):
         add("voucher_db", "vouchers", id=base+i, code=f"DEMO-{key}-{kind}", discount_type=kind,
             discount_value=Decimal(10000 if i == 0 else 10), min_order_value=Decimal(20000), max_discount_value=Decimal(10000),
-            usage_limit=100, usage_count=1, start_date=stamp-timedelta(days=1), expiry_date=stamp+timedelta(days=30), active=True,
+            usage_limit=100, usage_count=0, start_date=stamp-timedelta(days=1), expiry_date=stamp+timedelta(days=30), active=True,
             branch_id=base, created_at=stamp, updated_at=stamp, deleted_at=None)
     statuses = ["CONFIRMED", "CHECKED_IN", "COMPLETED", "AWAITING_CONFIRMATION", "PENDING_PAYMENT", "CANCELLED"]
-    for i in range(30):
-        state, court = statuses[i//5], i % 10
+    for i in range(31):
+        full_day = i == 30
+        state, court = ("CONFIRMED", 0) if full_day else (statuses[i//5], i % 10)
         branch_index = 0 if court < 4 else 1 if court < 7 else 2
-        booking_day = day-timedelta(days=1) if state == "COMPLETED" else day
+        booking_day = day+timedelta(days=1) if full_day else day-timedelta(days=1) if state == "COMPLETED" else day
         created = datetime.combine(booking_day, time(6), zone)
-        start = datetime.combine(booking_day, time(8 + i//10*2), zone)
-        total = price*2
-        discount = (Decimal(10000) if i == 0 else min(total*Decimal("0.10"), Decimal(10000)) if i == 1 else Decimal(0))
-        discount = discount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        start = datetime.combine(booking_day, time(6 if full_day else 8 + i//10*2), zone)
+        slot_count = 32 if full_day else 2
+        total = price*slot_count
+        discount = Decimal("0.00")
         confirmed = state in {"CONFIRMED", "CHECKED_IN", "COMPLETED"}
         payment_state = "CONFIRMED" if confirmed else "REJECTED" if state == "CANCELLED" else "PENDING"
+        ticket = f"{base+i:032d}" if confirmed else None
+        code = f"D{base36(base)}{i:02d}"
+        qr = f"/api/payments/{base+i}/ticket/qr" if confirmed else None
+        name = f"DEMO {key} GUEST {i}" if i%5 == 4 else f"DEMO {key} CUSTOMER {10+i%5}"
+        branch = m["branches"][branch_index]
+        expiry = created+timedelta(minutes=5)
+        submitted = confirmed or state in {"AWAITING_CONFIRMATION", "CANCELLED"}
+        checkout = {"bookingId":base+i,"bookingCode":code,"branchId":base+branch_index,
+                    "branchName":f"DEMO {key} {branch['name']}","courtName":f"DEMO {key} Court {court+1}",
+                    "date":booking_day.isoformat(),"amount":float(total),"bankName":branch["bankName"],
+                    "bankBin":branch["bankBin"],"bankAccountNumber":branch["bankAccountNumber"],
+                    "bankAccountName":branch["bankAccountName"],"transferContent":"FC "+code,
+                    "expiresAt":expiry.isoformat(),"customerName":name,
+                    "slots":[{"startTime":(start+timedelta(minutes=30*n)).time().isoformat(),
+                              "endTime":(start+timedelta(minutes=30*(n+1))).time().isoformat(),
+                              "price":float(price)} for n in range(slot_count)]}
         add("payment_db", "payments", id=base+i, branch_id=base+branch_index, amount=total-discount,
             status=payment_state, confirmed_at=created+timedelta(minutes=5) if confirmed else None,
-            confirmed_by=base if confirmed else None, bill_image_url=m["receiptImageUrl"] if confirmed or state == "AWAITING_CONFIRMATION" else None,
-            voucher_id=base+i if i < 2 else None, discount_amount=discount, created_at=created, updated_at=created+timedelta(minutes=5),
-            booking_id=base+i, submitted_at=created if confirmed or state == "AWAITING_CONFIRMATION" else None)
+            confirmed_by=base if confirmed else None, bill_image_url=m["receiptImageUrl"] if submitted else None,
+            voucher_id=None, discount_amount=discount, created_at=created, updated_at=created+timedelta(minutes=5),
+            booking_id=base+i, submitted_at=created if submitted else None, checkout=checkout,
+            check_in_code=ticket, qr_image_url=qr, expires_at=expiry,
+            customer_id=None if i%5 == 4 else base+10+i%5)
         add("booking_db", "bookings", id=base+i, court_id=base+court, customer_id=None if i % 5 == 4 else base+10+i%5,
-            guest_phone=f"08{base:010d}{i:02d}" if i % 5 == 4 else None, payment_id=base+i, date=booking_day,
+            guest_phone=f"08{(base+5000+i)%100000000:08d}" if i % 5 == 4 else None, payment_id=base+i, date=booking_day,
             branch_id=base+branch_index, branch_name=f"DEMO {key} {m['branches'][branch_index]['name']}", branch_address=m["branches"][branch_index]["address"],
-            court_name=f"DEMO {key} Court {court+1}", customer_name=None if i % 5 == 4 else f"DEMO {key} CUSTOMER {i%5}", payment_status=payment_state,
-            qr_image_url=f"/api/payments/{base+i}/ticket/qr" if confirmed else None,
-            receipt_image_url=m["receiptImageUrl"] if confirmed or state == "AWAITING_CONFIRMATION" else None,
-            status=state, total_price=total, booking_code=f"D{base36(base)}{i:02d}", checkin_code=f"DS-{base36(base)}-{i:02d}" if confirmed else None,
+            court_name=f"DEMO {key} Court {court+1}", customer_name=name, payment_status=payment_state,
+            qr_image_url=qr, hold_expires_at=expiry,
+            receipt_image_url=m["receiptImageUrl"] if submitted else None,
+            status=state, total_price=total, booking_code=code, checkin_code=ticket,
             checked_in_at=start if state in {"CHECKED_IN", "COMPLETED"} else None,
-            completed_at=start+timedelta(hours=1) if state == "COMPLETED" else None, created_at=created,
+            completed_at=start+timedelta(minutes=30*slot_count) if state == "COMPLETED" else None, created_at=created,
             updated_at=start+timedelta(hours=1) if state == "COMPLETED" else start if state == "CHECKED_IN" else created+timedelta(minutes=5))
         if state != "CANCELLED":
-            for slot in range(2):
+            for slot in range(slot_count):
                 begins = start+timedelta(minutes=30*slot)
                 add("booking_db", "booking_slots", id=base+i*2+slot, booking_id=base+i, court_id=base+court,
                     booking_date=booking_day, slot_start=begins.time(), slot_end=(begins+timedelta(minutes=30)).time(),
@@ -176,7 +198,7 @@ def build_rows(m, hashed_password, plan_limits=(15, 3)):
 
 
 def sql_for(db, tables, m, hashed_password, plan_limits):
-    fingerprint = hashlib.sha256(json_text([m, hashed_password, plan_limits]).encode()).hexdigest()
+    fingerprint = hashlib.sha256(json_text(["runtime-v2", m, hashed_password, plan_limits]).encode()).hexdigest()
     base, key = m["idBase"], literal(m["seedKey"])
     sql = ["BEGIN; SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='30s'; SET LOCAL TIME ZONE 'UTC'; SET LOCAL standard_conforming_strings=on;",
            "SELECT pg_advisory_xact_lock(hashtextextended('fcourt-demo-bootstrap',0));",
@@ -232,6 +254,12 @@ def apply(m, hashed_password, runner, allow_fixtures=False):
     for db, table, column, owner in [("booking_db", "bookings", "branch_name", "booking"), ("payment_db", "payments", "booking_id", "payment")]:
         if runner.execute(db, f"SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='{table}' AND column_name='{column}');") != "t":
             raise SeedError(f"{owner}-service read-model columns are missing; apply its V2 migration before seeding")
+    for db, table, columns, version in [
+            ("facility_db", "courts", ["default_price_per_hour"], "facility V3"),
+            ("payment_db", "payments", ["checkout", "check_in_code", "qr_image_url", "expires_at", "customer_id"], "payment V2/V3/V4")]:
+        names=','.join(literal(column) for column in columns)
+        if runner.execute(db, f"SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='{table}' AND column_name IN ({names});") != str(len(columns)):
+            raise SeedError(f"Runtime columns are missing; apply {version} migrations before seeding")
     plan_id = m["subscriptionPlanId"]
     raw = runner.execute("subscription_db", f"SELECT json_build_array(max_courts,max_branches) FROM subscription_plans WHERE id={plan_id} AND is_active AND deleted_at IS NULL;")
     try:
