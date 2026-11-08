@@ -6,7 +6,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class ReviewImagePolicyTest {
-    final ReviewImagePolicy policy = new ReviewImagePolicy("demo");
+    final ReviewImagePolicy policy = new ReviewImagePolicy("https://res.cloudinary.com/demo/image/upload/", "fcourt/");
     static final String OK = "https://res.cloudinary.com/demo/image/upload/v1700000000/fcourt/reviews/10/abc.jpg";
 
     @Test
@@ -41,9 +41,9 @@ class ReviewImagePolicyTest {
 
     @Test
     void everythingIsRejectedWhenCloudinaryIsNotConfigured() {
-        assertThat(new ReviewImagePolicy("").allows(OK, 10)).isFalse();
-        assertThat(new ReviewImagePolicy(null).configured()).isFalse();
-        assertThat(new ReviewImagePolicy("").allowsAll(List.of(), 10)).as("no photos is always fine").isTrue();
+        assertThat(new ReviewImagePolicy("", "").allows(OK, 10)).isFalse();
+        assertThat(new ReviewImagePolicy(null, null).configured()).isFalse();
+        assertThat(new ReviewImagePolicy("", "").allowsAll(List.of(), 10)).as("no photos is always fine").isTrue();
     }
 
     @Test
@@ -62,6 +62,32 @@ class ReviewImagePolicyTest {
             assertThat(policy.allows(url, 10)).as(url).isFalse();
         }
         assertThat(policy.allows("HTTPS://RES.CLOUDINARY.COM/demo/image/upload/fcourt/reviews/10/a.jpg", 10)).as("scheme and host are case-insensitive").isTrue();
+    }
+
+    @Test
+    void worksForAnyProviderThroughTheConfiguredBaseUrlAndPrefix() {
+        var cdn = new ReviewImagePolicy("https://cdn.example.test/media", "");
+        assertThat(cdn.allows("https://cdn.example.test/media/reviews/10/a.jpg", 10)).isTrue();
+        assertThat(cdn.allows("https://cdn.example.test/media/reviews/11/a.jpg", 10)).isFalse();
+        assertThat(cdn.allows("https://cdn.example.test/other/reviews/10/a.jpg", 10)).isFalse();
+        assertThat(cdn.allows("https://cdn.example.test/media/avatars/10/a.jpg", 10)).as("other key space").isFalse();
+        assertThat(cdn.allows("https://evil.test/media/reviews/10/a.jpg", 10)).isFalse();
+        assertThat(cdn.allows("https://cdn.example.test/media/reviews/10/../11/a.jpg", 10)).isFalse();
+        assertThat(cdn.allows("https://res.cloudinary.com/demo/image/upload/fcourt/reviews/10/a.jpg", 10)).as("other provider").isFalse();
+    }
+
+    @Test
+    void anInsecureOrMalformedBaseMeansNotConfigured() {
+        for (String base : new String[] {"http://cdn.example.test/", "cdn.example.test", "https://u:p@cdn.example.test/", "https://cdn.example.test:8443/", "https://cdn.example.test/?x=1", " "}) {
+            assertThat(new ReviewImagePolicy(base, "").configured()).as(base).isFalse();
+        }
+    }
+
+    @Test
+    void newKeysAreProviderNeutralAndInTheUsersOwnSpace() {
+        String key = ReviewImagePolicy.newKey(10, "png");
+        assertThat(key).matches("reviews/10/[0-9a-f-]{36}\\.png");
+        assertThat(ReviewImagePolicy.newKey(10, "png")).isNotEqualTo(key);
     }
 
     @Test

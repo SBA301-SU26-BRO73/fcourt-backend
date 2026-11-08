@@ -6,7 +6,11 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
@@ -23,11 +27,14 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Cloudinary signed upload (same approach as facility-service branch gallery, SCRUM-47).
- * Not exercised against a real Cloudinary account: unit tests use a fake HTTP server.
+ * Cloudinary adapter for {@link ImageStorage} (signed upload like facility-service, SCRUM-47). Objects live under the
+ * root folder {@code fcourt/}; the neutral key {@code reviews/10/abc.jpg} becomes folder {@code fcourt/reviews/10} and
+ * public id {@code abc}. Not exercised against a real Cloudinary account: unit tests use a fake HTTP server.
  */
-public class CloudinaryReviewImageStorage implements ReviewImageStorage {
-    private static final Logger log = LoggerFactory.getLogger(CloudinaryReviewImageStorage.class);
+public class CloudinaryImageStorage implements ImageStorage {
+    private static final Logger log = LoggerFactory.getLogger(CloudinaryImageStorage.class);
+    static final String ROOT = "fcourt/";
+    private static final int PAGE = 100;
 
     /** Credentials from CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET or CLOUDINARY_URL. */
     public record Credentials(String cloudName, String apiKey, String apiSecret) {
@@ -49,11 +56,20 @@ public class CloudinaryReviewImageStorage implements ReviewImageStorage {
     @JsonIgnoreProperties(ignoreUnknown = true)
     record UploadResult(String secure_url, String public_id) { }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record Resource(String public_id, String secure_url, String created_at) { }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record Listing(List<Resource> resources, String next_cursor) { }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record DestroyResult(String result) { }
+
     private final Credentials credentials;
     private final RestClient client;
     private final Clock clock;
 
-    public CloudinaryReviewImageStorage(Credentials credentials, String baseUrl, Clock clock) {
+    public CloudinaryImageStorage(Credentials credentials, String baseUrl, Clock clock) {
         this.credentials = credentials;
         this.clock = clock;
         var factory = new SimpleClientHttpRequestFactory();
@@ -73,17 +89,33 @@ public class CloudinaryReviewImageStorage implements ReviewImageStorage {
     }
 
     @Override
-    public String store(String folder, Upload upload) {
+    public String publicBaseUrl() { return "https://res.cloudinary.com/" + credentials.cloudName() + "/image/upload/"; }
+
+    @Override
+    public String keyPrefix() { return ROOT; }
+
+    /** Cloudinary public id (no extension) of a neutral key. */
+    static String publicId(String key) {
+        int dot = key.lastIndexOf('.');
+        return ROOT + (dot > key.lastIndexOf('/') ? key.substring(0, dot) : key);
+    }
+
+    @Override
+    public String upload(String key, String contentType, byte[] content) {
+        String publicId = publicId(key);
+        int slash = publicId.lastIndexOf('/');
+        String folder = publicId.substring(0, slash), name = publicId.substring(slash + 1);
         String timestamp = Long.toString(clock.instant().getEpochSecond());
         MultiValueMap<String, Object> form = new LinkedMultiValueMap<>();
-        // The client file name is never forwarded: Cloudinary generates the public id.
-        form.add("file", new ByteArrayResource(upload.content()) {
+        // The client file name is never forwarded: the name comes from the server-generated key.
+        form.add("file", new ByteArrayResource(content) {
             @Override public String getFilename() { return "image"; }
         });
         form.add("api_key", credentials.apiKey());
         form.add("folder", folder);
+        form.add("public_id", name);
         form.add("timestamp", timestamp);
-        form.add("signature", sign(Map.of("folder", folder, "timestamp", timestamp), credentials.apiSecret()));
+        form.add("signature", sign(Map.of("folder", folder, "public_id", name, "timestamp", timestamp), credentials.apiSecret()));
         try {
             UploadResult result = client.post().uri("/image/upload").contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(form).retrieve().body(UploadResult.class);
@@ -94,42 +126,41 @@ public class CloudinaryReviewImageStorage implements ReviewImageStorage {
         }
     }
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    record Resource(String public_id, String secure_url, String created_at) { }
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    record Listing(java.util.List<Resource> resources, String next_cursor) { }
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    record DestroyResult(String result) { }
-
     @Override
     public boolean supportsCleanup() { return true; }
 
-    /** Admin API listing (basic auth with the API key/secret). */
+    /** Admin API listing (basic auth with the API key/secret); keys come back without root folder or extension. */
     @Override
-    public AssetPage list(String prefix, String cursor) {
+    public List<StoredObject> listByPrefix(String prefix, Instant olderThan, int max) {
+        var found = new ArrayList<StoredObject>();
+        String cursor = null;
         try {
-            Listing listing = client.get().uri(uri -> {
-                var builder = uri.path("/resources/image/upload").queryParam("prefix", prefix).queryParam("max_results", 100);
-                if (cursor != null) builder.queryParam("next_cursor", cursor);
-                return builder.build();
-            }).headers(headers -> headers.setBasicAuth(credentials.apiKey(), credentials.apiSecret()))
-                    .retrieve().body(Listing.class);
-            if (listing == null || listing.resources() == null) throw unavailable("Cloudinary listing returned nothing", null);
-            var assets = new java.util.ArrayList<StoredAsset>();
-            for (Resource resource : listing.resources()) {
-                if (resource.public_id() == null || resource.secure_url() == null || resource.created_at() == null) continue;
-                assets.add(new StoredAsset(resource.public_id(), resource.secure_url(), java.time.Instant.parse(resource.created_at())));
+            for (int page = 0; page < (max + PAGE - 1) / PAGE + 1 && found.size() < max; page++) {
+                String next = cursor;
+                Listing listing = client.get().uri(uri -> {
+                    var builder = uri.path("/resources/image/upload").queryParam("prefix", ROOT + prefix).queryParam("max_results", PAGE);
+                    if (next != null) builder.queryParam("next_cursor", next);
+                    return builder.build();
+                }).headers(headers -> headers.setBasicAuth(credentials.apiKey(), credentials.apiSecret()))
+                        .retrieve().body(Listing.class);
+                if (listing == null || listing.resources() == null) throw unavailable("Cloudinary listing returned nothing", null);
+                for (Resource resource : listing.resources()) {
+                    if (resource.public_id() == null || !resource.public_id().startsWith(ROOT + prefix) || resource.created_at() == null) continue;
+                    Instant created = Instant.parse(resource.created_at());
+                    if (created.isBefore(olderThan) && found.size() < max) found.add(new StoredObject(resource.public_id().substring(ROOT.length()), created));
+                }
+                cursor = listing.next_cursor() == null || listing.next_cursor().isBlank() ? null : listing.next_cursor();
+                if (cursor == null) break;
             }
-            return new AssetPage(java.util.List.copyOf(assets), listing.next_cursor() == null || listing.next_cursor().isBlank() ? null : listing.next_cursor());
-        } catch (RestClientException | java.time.format.DateTimeParseException error) {
+        } catch (RestClientException | DateTimeParseException error) {
             throw unavailable("Cloudinary listing failed: " + error.getClass().getSimpleName(), error);
         }
+        return List.copyOf(found);
     }
 
     @Override
-    public void delete(String publicId) {
+    public void delete(String key) {
+        String publicId = publicId(key);
         String timestamp = Long.toString(clock.instant().getEpochSecond());
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("public_id", publicId);

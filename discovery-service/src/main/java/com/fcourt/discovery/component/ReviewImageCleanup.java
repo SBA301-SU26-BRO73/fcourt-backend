@@ -2,7 +2,6 @@ package com.fcourt.discovery.component;
 
 import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,25 +10,27 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Deletes review photos that were uploaded but never attached to a review. Only files under {@code fcourt/reviews/}
- * that are older than {@code min-age-hours} and whose public id appears in no review are removed. Idempotent (deleting a
- * missing file succeeds) and safe to run on several instances at once. Dry run is the default ({@code dry-run=true}): it only logs what would go; deleting needs an explicit {@code dry-run=false}.
+ * Deletes review photos that were uploaded but never attached to a review. Only objects under the neutral prefix
+ * {@code reviews/} that are older than {@code min-age-hours} and whose key appears in no review are removed.
+ * Idempotent (deleting a missing object succeeds) and safe to run on several instances at once.
+ * Dry run is the default ({@code dry-run=true}): it only logs what would go; deleting needs an explicit
+ * {@code dry-run=false}. Works with any {@link ImageStorage} that supports listing and deleting.
  */
 @Component
 public class ReviewImageCleanup {
     private static final Logger log = LoggerFactory.getLogger(ReviewImageCleanup.class);
-    static final String PREFIX = "fcourt/reviews/";
-    static final int MAX_PAGES = 20;
+    static final String PREFIX = "reviews/";
+    static final int MAX_OBJECTS = 2000;
 
-    public record Result(int scanned, int tooNew, int referenced, int deleted, int wouldDelete, int failed) { }
+    public record Result(int scanned, int referenced, int deleted, int wouldDelete, int failed) { }
 
-    private final ReviewImageStorage storage;
+    private final ImageStorage storage;
     private final JdbcTemplate jdbc;
     private final Clock clock;
     private final Duration minAge;
     private final boolean enabled, dryRun;
 
-    public ReviewImageCleanup(ReviewImageStorage storage, JdbcTemplate jdbc, Clock clock,
+    public ReviewImageCleanup(ImageStorage storage, JdbcTemplate jdbc, Clock clock,
             @Value("${discovery.reviews.images.cleanup.min-age-hours:24}") long minAgeHours,
             @Value("${discovery.reviews.images.cleanup.enabled:true}") boolean enabled,
             @Value("${discovery.reviews.images.cleanup.dry-run:true}") boolean dryRun) {
@@ -48,33 +49,26 @@ public class ReviewImageCleanup {
     }
 
     public Result run(boolean dry) {
-        Instant cutoff = clock.instant().minus(minAge);
-        int scanned = 0, tooNew = 0, referenced = 0, deleted = 0, would = 0, failed = 0;
-        String cursor = null;
-        for (int page = 0; page < MAX_PAGES; page++) {
-            var listing = storage.list(PREFIX, cursor);
-            for (var asset : listing.assets()) {
-                scanned++;
-                if (!asset.publicId().startsWith(PREFIX)) continue; // defence in depth: never touch other folders
-                if (!asset.createdAt().isBefore(cutoff)) { tooNew++; continue; }
-                if (isReferenced(asset.publicId())) { referenced++; continue; }
-                if (dry) { would++; log.info("Review photo cleanup (dry run) would delete {}", asset.publicId()); continue; }
-                try {
-                    storage.delete(asset.publicId());
-                    deleted++;
-                } catch (RuntimeException error) {
-                    failed++; // retried by the next run
-                }
+        var candidates = storage.listByPrefix(PREFIX, clock.instant().minus(minAge), MAX_OBJECTS);
+        int scanned = 0, referenced = 0, deleted = 0, would = 0, failed = 0;
+        for (var object : candidates) {
+            scanned++;
+            if (!object.key().startsWith(PREFIX)) continue; // defence in depth: never touch other key spaces
+            if (isReferenced(object.key())) { referenced++; continue; }
+            if (dry) { would++; log.info("Review photo cleanup (dry run) would delete {}", object.key()); continue; }
+            try {
+                storage.delete(object.key());
+                deleted++;
+            } catch (RuntimeException error) {
+                failed++; // retried by the next run
             }
-            cursor = listing.nextCursor();
-            if (cursor == null) break;
         }
-        return new Result(scanned, tooNew, referenced, deleted, would, failed);
+        return new Result(scanned, referenced, deleted, would, failed);
     }
 
-    /** Literal substring match (strpos, no LIKE wildcards) of the public id in any review's stored image URLs. */
-    private boolean isReferenced(String publicId) {
+    /** Literal substring match (strpos, no LIKE wildcards) of the key in any review's stored image URLs. */
+    private boolean isReferenced(String key) {
         return Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT EXISTS(SELECT 1 FROM reviews WHERE strpos(image_urls::text, ?) > 0)", Boolean.class, publicId));
+                "SELECT EXISTS(SELECT 1 FROM reviews WHERE strpos(image_urls::text, ?) > 0)", Boolean.class, key));
     }
 }

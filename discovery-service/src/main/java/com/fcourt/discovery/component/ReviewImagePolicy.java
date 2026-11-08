@@ -2,38 +2,63 @@ package com.fcourt.discovery.component;
 
 import java.net.URI;
 import java.util.List;
+import java.util.UUID;
 
 /**
- * Decides which image URLs a review may store: only files this service uploaded to our Cloudinary cloud,
- * in the caller's own folder. Existing rows are never re-validated.
+ * Decides which image URLs a review may store, independent of the storage provider: the URL must start with the
+ * configured public HTTPS base, and its key part must be {@code reviews/{callerId}/...}, so only files this service
+ * uploaded for that user are accepted. Existing rows are never re-validated.
  */
 public final class ReviewImagePolicy {
-    static final String HOST = "res.cloudinary.com";
-    private final String cloudName;
+    private final URI base;
+    private final String keyPrefix;
 
-    public ReviewImagePolicy(String cloudName) { this.cloudName = cloudName == null ? "" : cloudName.trim(); }
+    /** @param publicBaseUrl HTTPS base of every issued URL (empty or non-HTTPS means not configured)
+     *  @param keyPrefix folder the provider adds in front of the key inside the URL (may be empty) */
+    public ReviewImagePolicy(String publicBaseUrl, String keyPrefix) {
+        URI parsed = null;
+        if (publicBaseUrl != null && !publicBaseUrl.isBlank()) {
+            try {
+                String text = publicBaseUrl.trim();
+                URI candidate = URI.create(text.endsWith("/") ? text : text + "/");
+                if ("https".equalsIgnoreCase(candidate.getScheme()) && candidate.getHost() != null && candidate.getPort() == -1
+                        && candidate.getRawUserInfo() == null && candidate.getRawQuery() == null && candidate.getRawFragment() == null) {
+                    parsed = candidate;
+                }
+            } catch (IllegalArgumentException error) { parsed = null; }
+        }
+        this.base = parsed;
+        this.keyPrefix = keyPrefix == null ? "" : keyPrefix;
+    }
 
-    public boolean configured() { return !cloudName.isEmpty(); }
+    public boolean configured() { return base != null; }
 
-    /** Folder used for a user's uploads; derived server-side, never from client input. */
-    public static String folder(long userId) { return "fcourt/reviews/" + userId; }
+    /** Key space of one user's review photos; derived server-side, never from client input. */
+    public static String userPrefix(long userId) { return "reviews/" + userId + "/"; }
+
+    /** Fresh provider-neutral key for an upload, e.g. {@code reviews/10/<uuid>.jpg}. */
+    public static String newKey(long userId, String extension) { return userPrefix(userId) + UUID.randomUUID() + "." + extension; }
 
     public boolean allows(String url, long userId) {
-        if (!configured() || url == null) return false;
+        if (base == null || url == null) return false;
         URI uri;
         try { uri = URI.create(url); } catch (IllegalArgumentException error) { return false; }
-        if (!"https".equalsIgnoreCase(uri.getScheme()) || !HOST.equalsIgnoreCase(uri.getHost()) || uri.getPort() != -1
+        if (!"https".equalsIgnoreCase(uri.getScheme()) || !base.getHost().equalsIgnoreCase(uri.getHost()) || uri.getPort() != -1
                 || uri.getRawUserInfo() != null || uri.getRawQuery() != null || uri.getRawFragment() != null) return false;
         String path = uri.getRawPath();
-        // No percent-encoding or dot segments: nothing that could escape the expected folder.
+        // No percent-encoding, dot segments or empty segments: nothing that could escape the expected key space.
         if (path == null || path.contains("%") || path.contains("..") || path.contains("//") || path.contains("\\")) return false;
-        String prefix = "/" + cloudName + "/image/upload/";
-        if (!path.startsWith(prefix)) return false;
-        String rest = path.substring(prefix.length());
-        // Optional version segment (v123) precedes the folder.
+        String basePath = base.getRawPath();
+        if (!path.startsWith(basePath)) return false;
+        String rest = path.substring(basePath.length());
+        // Optional version segment (v123) some hosts put before the key.
         if (rest.matches("v\\d+/.*")) rest = rest.substring(rest.indexOf('/') + 1);
-        String folder = folder(userId) + "/";
-        return rest.startsWith(folder) && rest.length() > folder.length();
+        if (!keyPrefix.isEmpty()) {
+            if (!rest.startsWith(keyPrefix)) return false;
+            rest = rest.substring(keyPrefix.length());
+        }
+        String prefix = userPrefix(userId);
+        return rest.startsWith(prefix) && rest.length() > prefix.length();
     }
 
     public boolean allowsAll(List<String> urls, long userId) { return urls.stream().allMatch(url -> allows(url, userId)); }

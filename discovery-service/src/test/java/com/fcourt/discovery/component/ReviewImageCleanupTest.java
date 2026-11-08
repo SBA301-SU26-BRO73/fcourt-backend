@@ -15,32 +15,28 @@ class ReviewImageCleanupTest {
     static final Instant NOW = Instant.parse("2026-11-08T12:00:00Z");
     final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
 
-    /** Fake host: two pages of assets, records deletes; a delete of {@code failing} throws. */
-    static class FakeHost implements ReviewImageStorage {
-        final List<List<StoredAsset>> pages;
+    /** Fake host (any provider): serves objects, honours olderThan like a real adapter, records deletes. */
+    static class FakeHost implements ImageStorage {
+        final List<StoredObject> objects;
         final List<String> deleted = new ArrayList<>();
-        final List<String> prefixes = new ArrayList<>();
+        final List<String> listedPrefixes = new ArrayList<>();
         String failing;
-        FakeHost(List<List<StoredAsset>> pages) { this.pages = pages; }
-        @Override public String store(String folder, Upload upload) { throw new UnsupportedOperationException(); }
+        FakeHost(List<StoredObject> objects) { this.objects = objects; }
+        @Override public String upload(String key, String contentType, byte[] content) { throw new UnsupportedOperationException(); }
+        @Override public String publicBaseUrl() { return "https://cdn.example.test/"; }
         @Override public boolean supportsCleanup() { return true; }
-        @Override public AssetPage list(String prefix, String cursor) {
-            prefixes.add(prefix);
-            int index = cursor == null ? 0 : Integer.parseInt(cursor);
-            return new AssetPage(pages.get(index), index + 1 < pages.size() ? Integer.toString(index + 1) : null);
+        @Override public List<StoredObject> listByPrefix(String prefix, Instant olderThan, int max) {
+            listedPrefixes.add(prefix);
+            return objects.stream().filter(o -> o.createdAt().isBefore(olderThan)).limit(max).toList();
         }
-        @Override public void delete(String publicId) {
-            if (publicId.equals(failing)) throw new IllegalStateException("boom");
-            deleted.add(publicId);
+        @Override public void delete(String key) {
+            if (key.equals(failing)) throw new IllegalStateException("boom");
+            deleted.add(key);
         }
     }
 
-    static ReviewImageStorage.StoredAsset asset(String id, long ageHours) {
-        return new ReviewImageStorage.StoredAsset(id, "https://res.cloudinary.com/demo/image/upload/v1/" + id + ".jpg", NOW.minusSeconds(ageHours * 3600));
-    }
-
-    ReviewImageCleanup cleanup(FakeHost host, Set<String> referenced) {
-        return cleanup(host, referenced, false);
+    static ImageStorage.StoredObject object(String key, long ageHours) {
+        return new ImageStorage.StoredObject(key, NOW.minusSeconds(ageHours * 3600));
     }
 
     ReviewImageCleanup cleanup(FakeHost host, Set<String> referenced, boolean dryRunConfig) {
@@ -55,20 +51,19 @@ class ReviewImageCleanupTest {
     }
 
     @Test
-    void deletesOnlyOldUnreferencedPhotosAcrossPages() {
-        var host = new FakeHost(List.of(
-                List.of(asset("fcourt/reviews/1/old-orphan", 48), asset("fcourt/reviews/1/new-orphan", 2), asset("fcourt/reviews/1/attached", 72)),
-                List.of(asset("fcourt/reviews/2/old-orphan", 25), asset("fcourt/branches/9/other-folder", 99))));
-        var result = cleanup(host, Set.of("fcourt/reviews/1/attached")).run(false);
-        assertThat(host.deleted).containsExactly("fcourt/reviews/1/old-orphan", "fcourt/reviews/2/old-orphan");
-        assertThat(result).isEqualTo(new ReviewImageCleanup.Result(5, 1, 1, 2, 0, 0));
-        assertThat(host.prefixes).containsOnly("fcourt/reviews/");
+    void deletesOnlyOldUnreferencedPhotos() {
+        var host = new FakeHost(List.of(object("reviews/1/old-orphan", 48), object("reviews/1/new-orphan", 2),
+                object("reviews/1/attached", 72), object("reviews/2/old-orphan", 25), object("branches/9/other-key-space", 99)));
+        var result = cleanup(host, Set.of("reviews/1/attached"), false).run(false);
+        assertThat(host.deleted).containsExactly("reviews/1/old-orphan", "reviews/2/old-orphan");
+        assertThat(result).isEqualTo(new ReviewImageCleanup.Result(4, 1, 2, 0, 0));
+        assertThat(host.listedPrefixes).containsOnly("reviews/");
     }
 
     @Test
     void dryRunDeletesNothingButCountsCandidates() {
-        var host = new FakeHost(List.of(List.of(asset("fcourt/reviews/1/a", 48), asset("fcourt/reviews/1/b", 48))));
-        var result = cleanup(host, Set.of()).run(true);
+        var host = new FakeHost(List.of(object("reviews/1/a", 48), object("reviews/1/b", 48)));
+        var result = cleanup(host, Set.of(), true).run(true);
         assertThat(host.deleted).isEmpty();
         assertThat(result.wouldDelete()).isEqualTo(2);
         assertThat(result.deleted()).isZero();
@@ -76,15 +71,14 @@ class ReviewImageCleanupTest {
 
     @Test
     void aFailedDeleteIsCountedAndDoesNotStopTheRunAndRerunsAreIdempotent() {
-        var host = new FakeHost(List.of(List.of(asset("fcourt/reviews/1/a", 48), asset("fcourt/reviews/1/b", 48))));
-        host.failing = "fcourt/reviews/1/a";
-        var job = cleanup(host, Set.of());
-        var first = job.run(false);
-        assertThat(first.failed()).isEqualTo(1);
-        assertThat(host.deleted).containsExactly("fcourt/reviews/1/b");
+        var host = new FakeHost(List.of(object("reviews/1/a", 48), object("reviews/1/b", 48)));
+        host.failing = "reviews/1/a";
+        var job = cleanup(host, Set.of(), false);
+        assertThat(job.run(false).failed()).isEqualTo(1);
+        assertThat(host.deleted).containsExactly("reviews/1/b");
         host.failing = null;
         job.run(false);
-        assertThat(host.deleted).contains("fcourt/reviews/1/a");
+        assertThat(host.deleted).contains("reviews/1/a");
     }
 
     @Test
@@ -97,26 +91,26 @@ class ReviewImageCleanupTest {
 
     @Test
     void scheduledRunWithDryRunConfiguredDeletesNothing() {
-        var host = new FakeHost(List.of(List.of(asset("fcourt/reviews/1/a", 48))));
+        var host = new FakeHost(List.of(object("reviews/1/a", 48)));
         cleanup(host, Set.of(), true).scheduled();
-        assertThat(host.prefixes).hasSize(1);
+        assertThat(host.listedPrefixes).hasSize(1);
         assertThat(host.deleted).isEmpty();
     }
 
     @Test
     void scheduledRunDeletesOnlyWhenDryRunIsExplicitlyFalse() {
-        var host = new FakeHost(List.of(List.of(asset("fcourt/reviews/1/a", 48))));
+        var host = new FakeHost(List.of(object("reviews/1/a", 48)));
         cleanup(host, Set.of(), false).scheduled();
-        assertThat(host.deleted).containsExactly("fcourt/reviews/1/a");
+        assertThat(host.deleted).containsExactly("reviews/1/a");
     }
 
     @Test
     void scheduledRunDoesNothingWhenStorageHasNoCleanupSupport() {
-        var host = new FakeHost(List.of(List.of(asset("fcourt/reviews/1/a", 48)))) {
+        var host = new FakeHost(List.of(object("reviews/1/a", 48))) {
             @Override public boolean supportsCleanup() { return false; }
         };
-        cleanup(host, Set.of()).scheduled();
+        cleanup(host, Set.of(), false).scheduled();
         assertThat(host.deleted).isEmpty();
-        assertThat(host.prefixes).isEmpty();
+        assertThat(host.listedPrefixes).isEmpty();
     }
 }

@@ -58,7 +58,7 @@ comes from the `roles` array or a single `role` claim. `/api/super-admin/**` req
 | POST | `/api/auth/logout` | `{refreshToken}` | `204`, idempotent |
 | GET | `/api/auth/profile` | | `UserResponse` (needs a Bearer token) |
 | PATCH | `/api/auth/profile` | `{fullName, phone}` | `UserResponse` |
-| PUT | `/api/auth/profile/avatar` | multipart `file` (JPEG/PNG/WebP by content, max 2 MB) | `UserResponse` with `avatarUrl`; stored in Cloudinary `fcourt/avatars/{userId}`, the previous own file is deleted |
+| PUT | `/api/auth/profile/avatar` | multipart `file` (JPEG/PNG/WebP by content, max 2 MB) | `UserResponse` with `avatarUrl`; stored through the `DocumentStorage` port under the neutral key `avatars/{userId}` (Cloudinary adapter today, S3 planned), the previous own file is deleted |
 | DELETE | `/api/auth/profile/avatar` | | `UserResponse` with `avatarUrl` null; deletes our own file, a Google photo is only unlinked |
 | POST | `/api/auth/password/forgot` | `{email}` | `202 {message}`, the same answer for any email |
 | POST | `/api/auth/password/reset` | `{token, newPassword}` | `200 {message}`; 400 when the token is unknown, used or expired |

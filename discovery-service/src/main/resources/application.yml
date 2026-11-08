@@ -50,6 +50,16 @@ management:
   endpoint:
     health:
       show-details: never
+storage:
+  # Image host for the review photo feature. Only "cloudinary" is implemented; another host needs an adapter + its settings.
+  provider: ${STORAGE_PROVIDER:cloudinary}
+  # Optional: HTTPS base of every issued image URL; overrides what the adapter derives (CDN or custom domain).
+  public-base-url: ${STORAGE_PUBLIC_BASE_URL:}
+  cloudinary:
+    url: ${CLOUDINARY_URL:}
+    cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+    api-key: ${CLOUDINARY_API_KEY:}
+    api-secret: ${CLOUDINARY_API_SECRET:}
 discovery:
   auth:
     jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
@@ -67,11 +77,6 @@ discovery:
         dry-run: ${DISCOVERY_REVIEW_CLEANUP_DRY_RUN:true}
         min-age-hours: ${DISCOVERY_REVIEW_CLEANUP_MIN_AGE_HOURS:24}
         cron: ${DISCOVERY_REVIEW_CLEANUP_CRON:0 30 3 * * *}
-      cloudinary:
-        url: ${CLOUDINARY_URL:}
-        cloud-name: ${CLOUDINARY_CLOUD_NAME:}
-        api-key: ${CLOUDINARY_API_KEY:}
-        api-secret: ${CLOUDINARY_API_SECRET:}
   internal:
     slot-token: ${DISCOVERY_INTERNAL_SLOT_TOKEN:}
   slots:

@@ -13,13 +13,20 @@ import org.springframework.web.server.ResponseStatusException;
 @Component
 public class ReviewImageValidator {
     public static final int MAX_FILES = 5;
+
+    /** A file whose type was detected from its content. */
+    public record ValidatedImage(String contentType, byte[] content) {
+        public String extension() {
+            return switch (contentType) { case "image/png" -> "png"; case "image/webp" -> "webp"; default -> "jpg"; };
+        }
+    }
     private final long maxBytes;
 
     public ReviewImageValidator(@Value("${discovery.reviews.images.max-file-bytes:5242880}") long maxBytes) {
         this.maxBytes = maxBytes;
     }
 
-    public ReviewImageStorage.Upload validate(MultipartFile file) {
+    public ReviewImageValidator.ValidatedImage validate(MultipartFile file) {
         if (file == null || file.isEmpty()) throw bad("Tệp ảnh trống");
         if (file.getSize() > maxBytes) throw bad("Ảnh vượt quá dung lượng tối đa " + maxBytes / (1024 * 1024) + " MB");
         byte[] content;
@@ -27,10 +34,10 @@ public class ReviewImageValidator {
         catch (IOException error) { throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Không đọc được tệp tải lên", error); }
         String type = detect(content);
         if (type == null) throw bad("Chỉ chấp nhận ảnh JPEG, PNG hoặc WebP");
-        return new ReviewImageStorage.Upload(type, content);
+        return new ReviewImageValidator.ValidatedImage(type, content);
     }
 
-    public List<ReviewImageStorage.Upload> validateAll(List<MultipartFile> files) {
+    public List<ReviewImageValidator.ValidatedImage> validateAll(List<MultipartFile> files) {
         if (files == null || files.isEmpty()) throw bad("Cần ít nhất một ảnh");
         if (files.size() > MAX_FILES) throw bad("Tối đa " + MAX_FILES + " ảnh mỗi lần tải lên");
         return files.stream().map(this::validate).toList();

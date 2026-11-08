@@ -118,10 +118,10 @@ class ReviewIntegrationTest {
         registry.add("discovery.auth.jwk-set-uri",()->"http://127.0.0.1:"+SOURCE.getAddress().getPort()+"/.well-known/jwks.json");
         registry.add("discovery.auth.issuer",()->ISSUER);
         registry.add("discovery.auth.base-url",()->"http://127.0.0.1:"+SOURCE.getAddress().getPort());
-        registry.add("discovery.reviews.images.cloudinary.cloud-name",()->"demo");
-        registry.add("discovery.reviews.images.cloudinary.api-key",()->"k");
-        registry.add("discovery.reviews.images.cloudinary.api-secret",()->"s");
-        registry.add("discovery.reviews.images.cloudinary.base-url",()->"http://127.0.0.1:"+SOURCE.getAddress().getPort());
+        registry.add("storage.cloudinary.cloud-name",()->"demo");
+        registry.add("storage.cloudinary.api-key",()->"k");
+        registry.add("storage.cloudinary.api-secret",()->"s");
+        registry.add("storage.cloudinary.base-url",()->"http://127.0.0.1:"+SOURCE.getAddress().getPort());
     }
     @AfterAll static void stop(){SOURCE.stop(0);}
     @Autowired JdbcTemplate jdbc;
