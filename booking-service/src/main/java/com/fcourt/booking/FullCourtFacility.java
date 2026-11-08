@@ -23,6 +23,7 @@ import org.springframework.web.client.RestClientException;
  */
 @Component
 class FullCourtFacility {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(FullCourtFacility.class);
     static final String TOKEN_HEADER = "X-Internal-Service-Token";
 
     /** Definite refusal by facility (4xx); {@code code} is its problem code, e.g. LOCK_OVERLAP. */
@@ -96,6 +97,7 @@ class FullCourtFacility {
         try {
             Reservation result = action.get();
             if (result == null || !id.equals(result.reservationId()) || !expectedState.equals(result.state())) {
+                log.warn("Unexpected facility reservation answer for {}: {}", id, result);
                 throw new Unavailable("Unexpected facility reservation answer", null);
             }
             return result;
@@ -111,6 +113,7 @@ class FullCourtFacility {
             }
             throw new Refused(status, code);
         } catch (RestClientException error) {
+            log.warn("Facility reservation call for {} failed: {}", id, error.toString());
             throw new Unavailable("Facility reservation authority unavailable", error);
         }
     }
