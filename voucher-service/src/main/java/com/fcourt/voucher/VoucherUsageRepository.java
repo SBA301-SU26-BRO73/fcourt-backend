@@ -32,6 +32,20 @@ class VoucherUsageRepository {
                 """, params);
     }
 
+    /** Backfill: fills only NULL snapshot columns of the matching usage; returns rows changed (0 or 1). Never overwrites. */
+    int fillSnapshot(UUID applicationId, long voucherId, long bookingId, long userId, long branchId, Snapshot snapshot) {
+        var params = new MapSqlParameterSource("id", applicationId).addValue("voucher", voucherId).addValue("booking", bookingId)
+                .addValue("user", userId).addValue("branch", branchId).addValue("name", snapshot.customerName())
+                .addValue("phone", snapshot.customerPhone()).addValue("digits", VoucherPhone.storable(snapshot.customerPhone()))
+                .addValue("code", snapshot.bookingCode());
+        return jdbc.update("""
+                UPDATE voucher_usages SET customer_name=COALESCE(customer_name,:name),customer_phone=COALESCE(customer_phone,:phone),
+                    customer_phone_digits=COALESCE(customer_phone_digits,:digits),booking_code=COALESCE(booking_code,:code)
+                WHERE id=:id AND voucher_id=:voucher AND booking_id=:booking AND user_id=:user AND branch_id=:branch
+                  AND (customer_name IS NULL OR customer_phone IS NULL OR customer_phone_digits IS NULL OR booking_code IS NULL)
+                """, params);
+    }
+
     boolean visible(long voucherId, List<Long> branches) {
         if (branches.isEmpty()) return false;
         return Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM vouchers WHERE id=:voucher AND branch_id IN (:branches))",
