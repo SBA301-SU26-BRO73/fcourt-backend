@@ -4,11 +4,15 @@ import com.fcourt.reporting.events.EventTranslator.BookingFact;
 import java.math.BigDecimal;
 import java.sql.Array;
 import java.sql.Date;
+import java.sql.Time;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.Collection;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -36,8 +40,8 @@ public class ReadModelStore {
     public void apply(BookingFact fact) {
         jdbc.update("""
                 INSERT INTO booking_facts (booking_id, branch_id, status, amount, revenue, revenue_at, booking_date,
-                    slot_count, last_event_type)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    slot_count, last_event_type, court_id, court_name, customer_name)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (booking_id) DO UPDATE SET
                     status = CASE WHEN booking_facts.status = 'PENDING' THEN EXCLUDED.status
                         WHEN booking_facts.status = 'CONFIRMED' AND EXCLUDED.last_event_type = 'BookingCancelledEvent'
@@ -51,11 +55,21 @@ public class ReadModelStore {
                         AND booking_facts.status <> 'CANCELLED' THEN EXCLUDED.revenue_at ELSE booking_facts.revenue_at END,
                     booking_date = COALESCE(booking_facts.booking_date, EXCLUDED.booking_date),
                     slot_count = GREATEST(booking_facts.slot_count, EXCLUDED.slot_count),
+                    court_id = COALESCE(booking_facts.court_id, EXCLUDED.court_id),
+                    court_name = COALESCE(booking_facts.court_name, EXCLUDED.court_name),
+                    customer_name = COALESCE(booking_facts.customer_name, EXCLUDED.customer_name),
                     last_event_type = EXCLUDED.last_event_type,
                     updated_at = now()
                 """, fact.bookingId(), fact.branchId(), fact.status(), fact.amount(), fact.revenue(),
                 fact.revenueAt() == null ? null : Timestamp.from(fact.revenueAt()),
-                fact.bookingDate() == null ? null : Date.valueOf(fact.bookingDate()), fact.slotCount(), fact.type());
+                fact.bookingDate() == null ? null : Date.valueOf(fact.bookingDate()), fact.slotCount(), fact.type(),
+                fact.courtId(), fact.courtName(), fact.customerName());
+        for (LocalTime start : fact.slotStarts()) {
+            jdbc.update("""
+                    INSERT INTO booking_slot_facts (booking_id, slot_start) VALUES (?, ?)
+                    ON CONFLICT DO NOTHING
+                    """, fact.bookingId(), Time.valueOf(start));
+        }
     }
 
     /** Version guard: only a newer snapshot replaces the stored one; replays are ignored. */
@@ -123,6 +137,103 @@ public class ReadModelStore {
             statement.setArray(1, ids(con, branchIds));
             return statement;
         }, rs -> { result.put(rs.getLong(1), rs.getInt(2)); });
+        return result;
+    }
+
+    /** Restricts analytics to one court: by id (walk-ins) or by branch-unique name (payment events). */
+    public record CourtFilter(Long id, String normalizedName) {
+        public static final CourtFilter NONE = new CourtFilter(null, null);
+
+        public static String normalize(String name) {
+            return name == null ? null : name.strip().toLowerCase(java.util.Locale.ROOT);
+        }
+
+        boolean active() {
+            return id != null || normalizedName != null;
+        }
+
+        String sql(String alias) {
+            if (!active()) return "";
+            return " AND (" + alias + ".court_id = ?" + (normalizedName == null ? ""
+                    : " OR (" + alias + ".court_id IS NULL AND lower(btrim(" + alias + ".court_name)) = ?)") + ")";
+        }
+
+        int bind(java.sql.PreparedStatement statement, int index) throws java.sql.SQLException {
+            if (!active()) return index;
+            statement.setObject(index++, id, java.sql.Types.BIGINT);
+            if (normalizedName != null) statement.setString(index++, normalizedName);
+            return index;
+        }
+    }
+
+    public record DayAggregate(LocalDate day, BigDecimal revenue, long bookings, long bookedSlots) { }
+
+    /** Confirmed bookings per booking date in [from, to]; days without bookings are absent. */
+    public List<DayAggregate> dailyTotals(Collection<Long> branchIds, LocalDate from, LocalDate to, CourtFilter court) {
+        List<DayAggregate> result = new ArrayList<>();
+        jdbc.query(con -> {
+            var statement = con.prepareStatement("""
+                    SELECT b.booking_date, COALESCE(sum(b.revenue), 0), count(*), COALESCE(sum(b.slot_count), 0)
+                    FROM booking_facts b
+                    WHERE b.branch_id = ANY (?) AND b.status = 'CONFIRMED' AND b.booking_date BETWEEN ? AND ?
+                    """ + court.sql("b") + " GROUP BY b.booking_date ORDER BY b.booking_date");
+            statement.setArray(1, ids(con, branchIds));
+            statement.setDate(2, Date.valueOf(from));
+            statement.setDate(3, Date.valueOf(to));
+            court.bind(statement, 4);
+            return statement;
+        }, rs -> { result.add(new DayAggregate(rs.getDate(1).toLocalDate(), rs.getBigDecimal(2), rs.getLong(3),
+                rs.getLong(4))); });
+        return result;
+    }
+
+    public record CourtAggregate(long branchId, Long courtId, String courtName, long bookings, long bookedSlots,
+                                 BigDecimal revenue) { }
+
+    /** Confirmed bookings per court identity (id or name) in [from, to]. Bookings with no court are skipped. */
+    public List<CourtAggregate> courtTotals(Collection<Long> branchIds, LocalDate from, LocalDate to) {
+        List<CourtAggregate> result = new ArrayList<>();
+        jdbc.query(con -> {
+            var statement = con.prepareStatement("""
+                    SELECT branch_id, court_id, min(court_name), count(*), COALESCE(sum(slot_count), 0),
+                           COALESCE(sum(revenue), 0)
+                    FROM booking_facts
+                    WHERE branch_id = ANY (?) AND status = 'CONFIRMED' AND booking_date BETWEEN ? AND ?
+                      AND (court_id IS NOT NULL OR court_name IS NOT NULL)
+                    GROUP BY branch_id, court_id, lower(btrim(court_name))
+                    """);
+            statement.setArray(1, ids(con, branchIds));
+            statement.setDate(2, Date.valueOf(from));
+            statement.setDate(3, Date.valueOf(to));
+            return statement;
+        }, rs -> {
+            long branchId = rs.getLong(1);
+            long courtId = rs.getLong(2);
+            Long court = rs.wasNull() ? null : courtId; // wasNull() refers to the column read last
+            result.add(new CourtAggregate(branchId, court, rs.getString(3), rs.getLong(4), rs.getLong(5),
+                    rs.getBigDecimal(6)));
+        });
+        return result;
+    }
+
+    public record HourAggregate(int hour, long bookings, long slots) { }
+
+    /** Confirmed booked slots grouped by the hour the slot starts in (local time), in [from, to]. */
+    public List<HourAggregate> hourlyTotals(Collection<Long> branchIds, LocalDate from, LocalDate to,
+                                            CourtFilter court) {
+        List<HourAggregate> result = new ArrayList<>();
+        jdbc.query(con -> {
+            var statement = con.prepareStatement("""
+                    SELECT extract(hour FROM s.slot_start)::int, count(DISTINCT b.booking_id), count(*)
+                    FROM booking_facts b JOIN booking_slot_facts s ON s.booking_id = b.booking_id
+                    WHERE b.branch_id = ANY (?) AND b.status = 'CONFIRMED' AND b.booking_date BETWEEN ? AND ?
+                    """ + court.sql("b") + " GROUP BY 1 ORDER BY 1");
+            statement.setArray(1, ids(con, branchIds));
+            statement.setDate(2, Date.valueOf(from));
+            statement.setDate(3, Date.valueOf(to));
+            court.bind(statement, 4);
+            return statement;
+        }, rs -> { result.add(new HourAggregate(rs.getInt(1), rs.getLong(2), rs.getLong(3))); });
         return result;
     }
 

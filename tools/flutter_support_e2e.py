@@ -90,7 +90,7 @@ $fixtureRsa=[System.Security.Cryptography.RSA]::Create()
 $fixtureRsa.KeySize=2048
 $fixturePublic=$fixtureRsa.ExportParameters($false)
 $fixtureTokens=@{}
-foreach($fixturePair in @(@('1','ADMIN'),@('100','STAFF'))) {
+foreach($fixturePair in @(@('1','ADMIN'),@('100','STAFF'),@('200','CUSTOMER'))) {
   $fixtureHead=fixtureB64 ([Text.Encoding]::UTF8.GetBytes((@{alg='RS256';kid='fixture'}|ConvertTo-Json -Compress)))
   $fixtureBody=@{sub=$fixturePair[0];roles=@($fixturePair[1]);iss='ISSUER';aud=@('fcourt');exp=([DateTimeOffset]::UtcNow.ToUnixTimeSeconds()+900)}|ConvertTo-Json -Compress
   $fixturePayload=$fixtureHead+'.'+(fixtureB64 ([Text.Encoding]::UTF8.GetBytes($fixtureBody)))
@@ -150,7 +150,8 @@ $fixtureRsa.Dispose()
                        SERVER_PORT=str(ports[name]), AUTH_URL=bases["auth"], STAFF_URL=bases["staff"], BOOKING_URL=bases["booking"],
                        FACILITY_URL=bases["facility"], DISCOVERY_URL=fixture_url, HOLD_URL=bases["hold"], POS_URL=bases["pos"], AUTH_JWK_SET_URI=fixture_url + "/jwks", AUTH_JWT_ISSUER=fixture_url,
                        AUTH_JWT_AUDIENCE="fcourt", STAFF_OFFLINE_SIGNING_KEY=signing_key, STAFF_BOOKING_SERVICE_TOKEN=service_key,
-                       BOOKING_HOLD_SERVICE_TOKEN=hold_key, POS_BOOKING_SERVICE_TOKEN=pos_key, POS_SETTLEMENT_SERVICE_TOKEN=settlement_key, REDIS_ADDRESS=f"redis://127.0.0.1:{redis_port}",
+                       BOOKING_HOLD_SERVICE_TOKEN=hold_key, PAYMENT_BOOKING_SERVICE_TOKEN=service_key,
+                       POS_BOOKING_SERVICE_TOKEN=pos_key, POS_SETTLEMENT_SERVICE_TOKEN=settlement_key, REDIS_ADDRESS=f"redis://127.0.0.1:{redis_port}",
                        FACILITY_EVENTS_ENABLED="false", FACILITY_BOOTSTRAP_SNAPSHOTS="false",
                        COUNTER_GRPC_ENABLED="true" if name in grpc_ports else "false",
                        COUNTER_GRPC_PORT=str(grpc_ports.get(name,0)), STAFF_GRPC_PLAINTEXT="true",
@@ -249,10 +250,15 @@ $fixtureRsa.Dispose()
         # Both online holds and counter reservation use the real hold service and Redis.
         status,canonical=request("facility",f"/api/internal/courts/23/slot-schedule?date={local.date()}")
         assert status==200
-        current_time=f"{(start+dt.timedelta(minutes=30)):%H:%M}:00"
+        current_time=f"{start:%H:%M}:00"
+        if not any(slot["startTime"]==current_time for slot in canonical["slots"]):
+            current_time=canonical["slots"][-1]["startTime"]
         slot_id=next(slot["slotId"] for slot in canonical["slots"] if slot["startTime"]==current_time)
-        held={"courtId":23,"date":str(local.date()),"slotIds":[slot_id],"guestPhone":"0912345688"}
-        hold_status=request("hold","/api/bookings/hold-slots","POST",held)[0]; assert hold_status==201,f"Public hold returned {hold_status}"
+        # A held-current-slot fixture models a customer who held it before its
+        # start. This also runs late at night, without requiring a future slot.
+        # The real public hold endpoint is exercised below on tomorrow's slots.
+        subprocess.run(["docker","exec",redis_container,"redis-cli","SET",
+            f"fcourt:hold:23:{local.date()}:{slot_id}",str(uuid.uuid4()),"EX","300"],capture_output=True,check=True)
         walk={"courtId":23,"date":str(local.date()),"slotIds":[slot_id],"guestPhone":"0912345689","guestName":"Cash Guest"}
         assert request("staff","/api/staff/walk-in","POST",walk,staff,str(uuid.uuid4()))[0]==409
         walk["courtId"]=24
@@ -264,7 +270,7 @@ $fixtureRsa.Dispose()
         assert request("staff","/api/staff/walk-in","POST",walk,staff,cash_key)==(201,cash)
         cash_id=cash["bookingId"]
         assert sql("booking_db",f"SELECT customer_name FROM bookings WHERE id={cash_id}")=="Cash Guest"
-        checks.append("public hold blocks walk-in; cash booking and contact persist once")
+        checks.append("public-format held slot blocks walk-in; cash booking and contact persist once")
         product={"branchId":7,"name":"Water","unit":"bottle","category":"Drinks","price":10000,"stockQuantity":10}
         status,product=request("pos","/api/admin/pos/products","POST",product,owner,str(uuid.uuid4()))
         assert status==201,f"POS product returned {status}"
@@ -296,6 +302,22 @@ $fixtureRsa.Dispose()
             time.sleep(.2)
         assert paid["status"]=="PAID","POS settlement did not reconcile"
         checks.append("overtime and POS total confirmed; checkout and POS settlement commit once")
+        # Exercise online creation through real IAM, facility, Redis and booking.
+        sql("auth_db", "INSERT INTO users(id,email,password_hash,full_name,phone,role,status) OVERRIDING SYSTEM VALUE VALUES (200,'customer@fixture.test','fixture-hash','Customer','0901234567','CUSTOMER','ACTIVE')")
+        customer=token(200,"CUSTOMER")
+        tomorrow=local.date()+dt.timedelta(days=1)
+        canonical=request("facility",f"/api/internal/courts/24/slot-schedule?date={tomorrow}")[1]
+        selected=[s["slotId"] for s in canonical["slots"] if s["startTime"] in ("09:00:00","09:30:00")]
+        assert len(selected)==2
+        status,hold=request("hold","/api/bookings/hold-slots","POST",{"courtId":24,"date":str(tomorrow),"slotIds":selected,"guestPhone":"0901234567"})
+        assert status==201
+        online_key=str(uuid.uuid4());online_body={"courtId":24,"date":str(tomorrow),"slotIds":selected,"holdToken":hold["holdToken"]}
+        status,online=request("booking","/api/bookings","POST",online_body,customer,online_key)
+        assert status==201 and online["status"]=="PENDING_PAYMENT" and online["totalPrice"]==200000,f"Online create returned {status}"
+        assert request("booking","/api/bookings","POST",online_body,customer,online_key)[1]["id"]==online["id"]
+        assert request("booking","/api/bookings","POST",online_body,customer,str(uuid.uuid4()))[0]==409
+        assert sql("booking_db",f"SELECT count(*) FROM booking_slots WHERE booking_id={online['id']} AND active")=="2"
+        checks.append("online hold becomes one durable customer booking with canonical prices; retry and duplicate guards hold across real services")
         report = {"passed": True, "checks": checks, "discovery_and_jwks": "local fixtures", "services": "real auth/staff/booking/facility/hold/POS jars", "holds": "disposable Redis 7", "database": "disposable PostgreSQL 16, separate service databases"}
         (args.output / "report.json").write_text(json.dumps(report, indent=2), encoding="utf8")
         print(json.dumps(report))

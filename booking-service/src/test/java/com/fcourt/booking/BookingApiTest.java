@@ -20,7 +20,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Testcontainers
-@SpringBootTest(properties="booking.events-enabled=false")
+@SpringBootTest(properties={"booking.events-enabled=false","booking.integration-token=integration"})
 @org.springframework.test.annotation.DirtiesContext(classMode=org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 @AutoConfigureMockMvc
 class BookingApiTest {
@@ -32,6 +32,7 @@ class BookingApiTest {
     @Autowired MockMvc mvc;
     @Autowired TransactionTemplate tx;
     @Autowired ObjectMapper json;
+    @Autowired BookingVoucherBridge voucherBridge;
     @BeforeEach void seed() {
         jdbc.execute("TRUNCATE booking_outbox,booking_inbox,bookings CASCADE");
         for(int i=1;i<=4;i++) jdbc.update("""
@@ -100,4 +101,107 @@ class BookingApiTest {
         assertThat(jdbc.queryForObject("SELECT checkin_code FROM bookings WHERE id=1",String.class)).isNull();
     }
     String eventUnchecked(String amount) { try{return event(UUID.randomUUID(),"PaymentConfirmedEvent",amount);}catch(Exception e){throw new RuntimeException(e);} }
+
+    @Test void completedBookingDetailExposesTheBookedCourtForReviewVerification() throws Exception {
+        jdbc.update("UPDATE bookings SET court_id=7,status='COMPLETED' WHERE id=1");
+        mvc.perform(get("/api/bookings/1").with(jwt().jwt(token->token.subject("10"))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.courtId").value(7)).andExpect(jsonPath("$.branchId").value(7))
+                .andExpect(jsonPath("$.status").value("COMPLETED")).andExpect(jsonPath("$.customerId").doesNotExist());
+        mvc.perform(get("/api/bookings/1").with(jwt().jwt(token->token.subject("20")))).andExpect(status().isNotFound());
+    }
+
+    @Test void voucherAttachmentRequiresMachineAndCustomerIdentityAndFreezeProtectsPrice() throws Exception {
+        jdbc.update("UPDATE bookings SET hold_expires_at=? WHERE id=1",java.sql.Timestamp.from(Instant.now().plusSeconds(3600)));
+        UUID application=UUID.randomUUID();
+        String body="{\"applicationId\":\""+application+"\",\"voucherId\":7,\"originalAmount\":100000,\"discountAmount\":20000,\"finalAmount\":80000}";
+        mvc.perform(post("/api/internal/bookings/1/voucher").with(jwt().jwt(j->j.subject("10"))).contentType("application/json").content(body))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/internal/bookings/1/voucher").with(jwt().jwt(j->j.subject("20"))).header("X-Service-Token","integration")
+                .contentType("application/json").content(body)).andExpect(status().isNotFound());
+        mvc.perform(post("/api/internal/bookings/1/voucher").with(jwt().jwt(j->j.subject("10"))).header("X-Service-Token","integration")
+                .contentType("application/json").content(body)).andExpect(status().isOk()).andExpect(jsonPath("$.totalPrice").value(80000));
+        mvc.perform(post("/api/internal/bookings/1/payment-freeze").with(jwt().jwt(j->j.subject("10"))).header("X-Service-Token","integration")
+                .contentType("application/json").content("{\"amount\":100000}")).andExpect(status().isConflict());
+        mvc.perform(post("/api/internal/bookings/1/payment-freeze").with(jwt().jwt(j->j.subject("10"))).header("X-Service-Token","integration")
+                .contentType("application/json").content("{\"amount\":80000}")).andExpect(status().isOk()).andExpect(jsonPath("$.paymentFrozen").value(true));
+        mvc.perform(post("/api/internal/bookings/1/voucher").with(jwt().jwt(j->j.subject("10"))).header("X-Service-Token","integration")
+                .contentType("application/json").content(body)).andExpect(status().isOk());
+        mvc.perform(post("/api/internal/bookings/1/voucher").with(jwt().jwt(j->j.subject("10"))).header("X-Service-Token","integration")
+                .contentType("application/json").content(body.replace(application.toString(),UUID.randomUUID().toString())))
+                .andExpect(status().isConflict());
+        mvc.perform(get("/api/internal/bookings/1/voucher-snapshot")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/internal/bookings/1/voucher-snapshot").header("X-Service-Token","integration"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.customerId").value(10));
+    }
+
+    @Test void voucherAppliedOutboxIsAtomicWithPaidBookingAndNeverDuplicated() throws Exception {
+        UUID application=UUID.randomUUID();
+        jdbc.update("UPDATE bookings SET voucher_application_id=?,voucher_id=7,original_amount=100000,discount_amount=20000,total_price=80000,payment_frozen=true WHERE id=1",application);
+        consume(event(UUID.randomUUID(),"PaymentSubmittedEvent","80000"));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM booking_outbox",Long.class)).isZero();
+        String paid=event(UUID.randomUUID(),"PaymentConfirmedEvent","80000");consume(paid);consume(paid);
+        consume(event(UUID.randomUUID(),"PaymentConfirmedEvent","80000"));
+        var out=json.readTree(jdbc.queryForObject("SELECT payload::text FROM booking_outbox",String.class));
+        assertThat(out.path("type").asText()).isEqualTo("VoucherAppliedEvent");
+        assertThat(out.path("voucher").path("applicationId").asText()).isEqualTo(application.toString());
+        assertThat(out.path("voucher").path("customerId").asLong()).isEqualTo(10);
+        assertThat(out.path("voucher").path("paymentId").asLong()).isEqualTo(42);
+        assertThat(out.path("voucher").path("finalAmount").decimalValue()).isEqualByComparingTo("80000");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM booking_outbox",Long.class)).isEqualTo(1);
+    }
+
+    @Test void latePaymentAfterCancellationKeepsBookingCancelledButRecordsVoucherUse() throws Exception {
+        UUID application=UUID.randomUUID();
+        jdbc.update("UPDATE bookings SET voucher_application_id=?,voucher_id=7,original_amount=100000,discount_amount=20000,total_price=80000,payment_frozen=true,status='CANCELLED' WHERE id=1",application);
+        consume(event(UUID.randomUUID(),"PaymentConfirmedEvent","80000"));
+        assertThat(jdbc.queryForObject("SELECT status FROM bookings WHERE id=1",String.class)).isEqualTo("CANCELLED");
+        assertThat(jdbc.queryForObject("SELECT payment_status FROM bookings WHERE id=1",String.class)).isEqualTo("CONFIRMED");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM booking_outbox",Long.class)).isEqualTo(1);
+        var out=json.readTree(jdbc.queryForObject("SELECT payload::text FROM booking_outbox",String.class));
+        assertThat(out.path("type").asText()).isEqualTo("VoucherAppliedEvent");
+        assertThat(out.path("voucher").path("applicationId").asText()).isEqualTo(application.toString());
+    }
+
+    @Test void concurrentApplyAndFreezeCannotAcceptTwoDifferentPrices() throws Exception {
+        jdbc.update("UPDATE bookings SET hold_expires_at=? WHERE id=1",java.sql.Timestamp.from(Instant.now().plusSeconds(3600)));
+        var actor=org.springframework.security.oauth2.jwt.Jwt.withTokenValue("fixture").header("alg","RS256").subject("10").build();
+        var attachment=new BookingVoucherBridge.Attachment(UUID.randomUUID(),7,new java.math.BigDecimal("100000"),new java.math.BigDecimal("20000"),new java.math.BigDecimal("80000"));
+        var start=new java.util.concurrent.CountDownLatch(1);
+        try(var executor=java.util.concurrent.Executors.newFixedThreadPool(2)){
+            var apply=executor.submit(()->{start.await();try{voucherBridge.attach(1,actor,attachment);return true;}catch(org.springframework.web.server.ResponseStatusException error){return false;}});
+            var freeze=executor.submit(()->{start.await();try{voucherBridge.freeze(1,actor,null,new java.math.BigDecimal("100000"));return true;}catch(org.springframework.web.server.ResponseStatusException error){return false;}});
+            start.countDown();
+            assertThat(List.of(apply.get(10,java.util.concurrent.TimeUnit.SECONDS),freeze.get(10,java.util.concurrent.TimeUnit.SECONDS)))
+                    .containsExactlyInAnyOrder(true,false);
+        }
+        var order=jdbc.queryForMap("SELECT payment_frozen,total_price FROM bookings WHERE id=1");
+        assertThat((java.math.BigDecimal)order.get("total_price")).isEqualByComparingTo(Boolean.TRUE.equals(order.get("payment_frozen"))?"100000":"80000");
+    }
+
+    @Test void databaseRejectsPartialVoucherSnapshotsAndNegativeFinalTotals() {
+        assertThatThrownBy(()->jdbc.update("UPDATE bookings SET voucher_application_id=? WHERE id=1",UUID.randomUUID()))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        assertThatThrownBy(()->jdbc.update("UPDATE bookings SET voucher_application_id=?,voucher_id=7,original_amount=100000,discount_amount=100001,total_price=-1 WHERE id=1",UUID.randomUUID()))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        assertThat(jdbc.queryForObject("SELECT total_price FROM bookings WHERE id=1",java.math.BigDecimal.class)).isEqualByComparingTo("100000");
+    }
+
+    @Test void voucherUsageOutboxPreservesOriginalPaymentTime() throws Exception {
+        jdbc.update("UPDATE bookings SET voucher_application_id=?,voucher_id=7,original_amount=100000,discount_amount=20000,total_price=80000,payment_frozen=true WHERE id=1",UUID.randomUUID());
+        var paid=(com.fasterxml.jackson.databind.node.ObjectNode)json.readTree(event(UUID.randomUUID(),"PaymentConfirmedEvent","80000"));
+        String time="2026-01-02T03:04:05.123456Z";
+        ((com.fasterxml.jackson.databind.node.ObjectNode)paid.path("payment")).put("confirmedAt",time);consume(paid.toString());
+        var published=json.readTree(jdbc.queryForObject("SELECT payload::text FROM booking_outbox",String.class));
+        assertThat(published.path("voucher").path("usedAt").asText()).isEqualTo(time);
+    }
+
+    @Test void malformedPaymentTimestampRollsBackBookingAndVoucherOutbox() throws Exception {
+        jdbc.update("UPDATE bookings SET voucher_application_id=?,voucher_id=7,original_amount=100000,discount_amount=20000,total_price=80000,payment_frozen=true WHERE id=1",UUID.randomUUID());
+        var paid=(com.fasterxml.jackson.databind.node.ObjectNode)json.readTree(event(UUID.randomUUID(),"PaymentConfirmedEvent","80000"));
+        ((com.fasterxml.jackson.databind.node.ObjectNode)paid.path("payment")).put("confirmedAt","invalid-date");
+        assertThatThrownBy(()->consume(paid.toString())).isInstanceOf(RuntimeException.class);
+        assertThat(jdbc.queryForObject("SELECT status FROM bookings WHERE id=1",String.class)).isEqualTo("PENDING_PAYMENT");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM booking_outbox",Long.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM booking_inbox",Long.class)).isZero();
+    }
 }

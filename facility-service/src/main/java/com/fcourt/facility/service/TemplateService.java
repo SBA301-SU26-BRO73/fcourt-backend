@@ -3,6 +3,12 @@ package com.fcourt.facility.service;
 import com.fcourt.facility.api.BranchResponse;
 import com.fcourt.facility.api.TemplateDtos.ApplyResponse;
 import com.fcourt.facility.api.TemplateDtos.ApplyTemplateRequest;
+import com.fcourt.facility.api.TemplateDtos.BulkAppliedCourt;
+import com.fcourt.facility.api.TemplateDtos.BulkApplyRequest;
+import com.fcourt.facility.api.TemplateDtos.BulkApplyResponse;
+import com.fcourt.facility.api.TemplateDtos.BulkConflict;
+import com.fcourt.facility.api.TemplateDtos.BulkPreviewCourt;
+import com.fcourt.facility.api.TemplateDtos.BulkPreviewResponse;
 import com.fcourt.facility.api.TemplateDtos.PreviewResponse;
 import com.fcourt.facility.api.TemplateDtos.PreviewSlot;
 import com.fcourt.facility.api.TemplateDtos.ScheduleSlot;
@@ -13,6 +19,10 @@ import com.fcourt.facility.events.BranchEventWriter;
 import com.fcourt.facility.persistence.BranchStore;
 import com.fcourt.facility.persistence.CourtStore;
 import com.fcourt.facility.persistence.CourtStore.OwnedCourt;
+import com.fcourt.facility.persistence.LockStore;
+import com.fcourt.facility.api.LockDtos.LockResponse;
+import com.fcourt.facility.api.LockDtos.Restriction;
+import com.fcourt.facility.persistence.PricingRuleStore;
 import com.fcourt.facility.persistence.TemplateStore;
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -20,10 +30,14 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.stream.IntStream;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.ErrorResponseException;
 import org.springframework.web.server.ResponseStatusException;
 
 /** 30-minute time slot templates per court and weekday (SCRUM-18). Sunday = 0 .. Saturday = 6. */
@@ -34,20 +48,24 @@ public class TemplateService {
     private final BranchStore branches;
     private final CourtStore courts;
     private final TemplateStore templates;
+    private final LockStore locks;
+    private final PricingRuleStore pricingRules;
     private final BranchEventWriter events;
     private final CourtService courtService;
     private final TransactionTemplate tx;
 
-    public TemplateService(BranchStore branches, CourtStore courts, TemplateStore templates, BranchEventWriter events,
-                           CourtService courtService, TransactionTemplate tx) {
+    public TemplateService(BranchStore branches, CourtStore courts, TemplateStore templates, LockStore locks,
+                           PricingRuleStore pricingRules, BranchEventWriter events, CourtService courtService,
+                           TransactionTemplate tx) {
         this.branches = branches;
         this.courts = courts;
         this.templates = templates;
+        this.locks = locks;
+        this.pricingRules = pricingRules;
         this.events = events;
         this.courtService = courtService;
         this.tx = tx;
     }
-
     record Plan(List<PreviewSlot> slots, List<Integer> days) { }
 
     public PreviewResponse preview(long adminId, long courtId, ApplyTemplateRequest request) {
@@ -72,6 +90,101 @@ public class TemplateService {
             events.branchChanged(branchId);
             return new ApplyResponse(courtId, plan.days(), created.size(), created);
         });
+    }
+
+    /**
+     * Dry run of a bulk apply (SCRUM-51). Unknown or foreign courts are a 404 for the whole request;
+     * courts that cannot take the template are reported per court instead of failing the preview.
+     */
+    public BulkPreviewResponse bulkPreview(Map<Long, Long> ownerByCourt, BulkApplyRequest request) {
+        requireValidRange(request.template());
+        List<BulkPreviewCourt> result = new ArrayList<>();
+        int total = 0;
+        boolean conflicts = false;
+        for (long courtId : request.courtIds()) {
+            OwnedCourt court = courtService.owned(ownerByCourt.get(courtId), courtId);
+            try {
+                Plan plan = plan(court, branch(court), request.template());
+                int count = plan.slots().size() * plan.days().size();
+                total += count;
+                result.add(new BulkPreviewCourt(courtId, court.court().name(), court.court().branchId(), plan.days(),
+                        plan.slots(), count, null));
+            } catch (ResponseStatusException invalid) {
+                if (invalid.getStatusCode() != HttpStatus.BAD_REQUEST) throw invalid;
+                conflicts = true;
+                result.add(new BulkPreviewCourt(courtId, court.court().name(), court.court().branchId(), List.of(),
+                        List.of(), 0, invalid.getReason()));
+            }
+        }
+        return new BulkPreviewResponse(result, total, conflicts);
+    }
+
+    /**
+     * Applies one template to every court in a single transaction (SCRUM-51). An unknown/foreign court (404) or
+     * any court that cannot take the template (409 listing every conflict) aborts and rolls back everything.
+     */
+    public BulkApplyResponse bulkApply(Map<Long, Long> ownerByCourt, BulkApplyRequest request) {
+        requireValidRange(request.template());
+        // Only to learn which branches to lock; every court is re-read after the locks are held.
+        Map<Long, Long> branchOwners = new TreeMap<>();
+        for (long courtId : request.courtIds()) {
+            long owner = ownerByCourt.get(courtId);
+            branchOwners.put(courtService.owned(owner, courtId).court().branchId(), owner);
+        }
+        return tx.execute(status -> {
+            // TreeMap = ascending branch id, so concurrent bulk requests cannot deadlock on each other.
+            branchOwners.forEach((branchId, owner) -> {
+                if (!branches.lockOwned(branchId, owner)) throw CourtService.notFound();
+            });
+            List<BulkAppliedCourt> applied = new ArrayList<>();
+            List<BulkConflict> conflicts = new ArrayList<>();
+            int total = 0;
+            for (long courtId : request.courtIds()) {
+                OwnedCourt court = courtService.owned(ownerByCourt.get(courtId), courtId);
+                Plan plan;
+                try {
+                    plan = plan(court, branch(court), request.template());
+                } catch (ResponseStatusException invalid) {
+                    if (invalid.getStatusCode() != HttpStatus.BAD_REQUEST) throw invalid;
+                    conflicts.add(new BulkConflict(courtId, invalid.getReason()));
+                    continue;
+                }
+                if (!conflicts.isEmpty()) continue; // already doomed: only keep collecting conflicts
+                for (int day : plan.days()) {
+                    templates.retireDay(courtId, day);
+                    for (PreviewSlot slot : plan.slots()) {
+                        templates.insert(courtId, day, slot.startTime(), slot.endTime(), slot.price());
+                    }
+                }
+                int count = plan.slots().size() * plan.days().size();
+                total += count;
+                applied.add(new BulkAppliedCourt(courtId, court.court().name(), plan.days(), plan.slots().size(), count));
+            }
+            if (!conflicts.isEmpty()) throw bulkConflict(conflicts); // rolls back every court written so far
+            branchOwners.keySet().forEach(events::branchChanged);
+            return new BulkApplyResponse(applied, total);
+        });
+    }
+
+    /** Rejects a request that is wrong whatever the court is, so it is a 400 and not a per-court conflict. */
+    private static void requireValidRange(ApplyTemplateRequest request) {
+        try {
+            int duration = request.durationMinutes() == null ? SlotTemplateEngine.SLOT_MINUTES : request.durationMinutes();
+            if (request.startTime() != null && request.endTime() != null) {
+                SlotTemplateEngine.split(request.startTime(), request.endTime(), duration);
+            } else if (duration != SlotTemplateEngine.SLOT_MINUTES) {
+                throw new IllegalArgumentException("durationMinutes must be " + SlotTemplateEngine.SLOT_MINUTES);
+            }
+        } catch (IllegalArgumentException invalid) {
+            throw badRequest(invalid.getMessage());
+        }
+    }
+
+    private static ErrorResponseException bulkConflict(List<BulkConflict> conflicts) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
+                "Template cannot be applied to " + conflicts.size() + " court(s); nothing was changed");
+        problem.setProperty("conflicts", conflicts);
+        return new ErrorResponseException(HttpStatus.CONFLICT, problem, null);
     }
 
     public List<TemplateSlot> list(long adminId, long courtId, Integer dayOfWeek) {
@@ -117,10 +230,21 @@ public class TemplateService {
     public SlotSchedule schedule(long courtId, LocalDate date) {
         OwnedCourt court = courts.find(courtId).orElseThrow(CourtService::notFound);
         boolean outOfService = !"ACTIVE".equals(court.court().status()) || !"ACTIVE".equals(court.branchStatus());
-        int dayOfWeek = date.getDayOfWeek().getValue() % 7; // java Monday=1..Sunday=7 -> Sunday=0
-        List<ScheduleSlot> slots = templates.listLive(courtId, dayOfWeek).stream()
-                .map(t -> new ScheduleSlot(t.id(), t.startTime(), t.endTime(), t.price(), outOfService)).toList();
-        return new SlotSchedule(courtId, date, outOfService, slots);
+        int dayOfWeek = PricingEngine.dayOfWeek(date); // java Monday=1..Sunday=7 -> Sunday=0
+        List<PricingEngine.Rule> rules = pricingRules.listLive(courtId);
+        List<LockResponse> dayLocks = locks.forDay(courtId, date);
+        List<ScheduleSlot> slots = templates.listLive(courtId, dayOfWeek).stream().map(template -> {
+            // Apply the current pricing rules and retain private-event/out-of-service lock metadata.
+            BigDecimal price = PricingEngine.price(rules, dayOfWeek, template.startTime(), template.endTime(),
+                    template.price()).price();
+            LockResponse lock = dayLocks.stream().filter(candidate -> SlotWindows.overlaps(date,
+                    template.startTime(), template.endTime(), candidate.startAt(), candidate.endAt()))
+                    .findFirst().orElse(null);
+            Restriction restriction = lock == null ? null : new Restriction(lock.type(), lock.publicReason(),
+                    lock.contactName(), lock.contactPhone());
+            return new ScheduleSlot(template.id(), template.startTime(), template.endTime(), price,
+                    outOfService || lock != null, restriction);
+        }).toList();        return new SlotSchedule(courtId, date, outOfService, slots);
     }
 
     private Plan plan(OwnedCourt court, BranchResponse branch, ApplyTemplateRequest request) {

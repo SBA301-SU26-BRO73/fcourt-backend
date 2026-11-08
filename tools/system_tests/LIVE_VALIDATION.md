@@ -1,5 +1,11 @@
 # SCRUM-91 validation evidence
 
+Current reassessment (2026-11-05): [REASSESSMENT.md](REASSESSMENT.md) supersedes
+the preparation-only local status below. Eight real local services, a loopback
+gateway, real IAM JWTs/Kafka/Redis/PostgreSQL passed 32 steps. External storage and
+admission clock are explicit test-only fixtures. Deployed gateway/provider and
+production acceptance remain NOT_RUN; the following table is historical evidence.
+
 2026-10-31: 12 Python unittest cases passed, no skips. Tests use actual HTTP on
 loopback and verify happy flow plus negative paths; service behavior is a fixture.
 

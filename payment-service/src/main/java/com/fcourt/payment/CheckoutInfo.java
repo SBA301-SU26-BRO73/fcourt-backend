@@ -9,6 +9,14 @@ import java.util.List;
 public record CheckoutInfo(Long bookingId, String bookingCode, Long branchId,
         String branchName, String courtName, LocalDate date, List<Slot> slots,
         BigDecimal amount, String bankName, String bankBin, String bankAccountNumber,
-        String bankAccountName, String transferContent, Instant expiresAt, String customerName) {
+        String bankAccountName, String transferContent, Instant expiresAt, String customerName,
+        String customerEmail, Long recipientUserId) {
+    public CheckoutInfo(Long bookingId, String bookingCode, Long branchId, String branchName,
+            String courtName, LocalDate date, List<Slot> slots, BigDecimal amount, String bankName,
+            String bankBin, String bankAccountNumber, String bankAccountName, String transferContent,
+            Instant expiresAt, String customerName) {
+        this(bookingId, bookingCode, branchId, branchName, courtName, date, slots, amount, bankName,
+                bankBin, bankAccountNumber, bankAccountName, transferContent, expiresAt, customerName, null, null);
+    }
     public record Slot(LocalTime startTime, LocalTime endTime, BigDecimal price) { }
 }
