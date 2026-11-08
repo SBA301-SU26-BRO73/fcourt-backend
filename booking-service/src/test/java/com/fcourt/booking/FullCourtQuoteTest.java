@@ -65,12 +65,11 @@ class FullCourtQuoteTest {
         when(catalog.slots(1,date)).thenReturn(List.of(duplicate,duplicate));
         assertThatThrownBy(()->service.quote(request(List.of(1L)),admin)).isInstanceOf(ResponseStatusException.class);
     }
-    @Test void reservationFailsClosedWithoutCreatingBookingOrLocks() {
-        clearInvocations(catalog);
-        var response=new FullCourtController(service).reserve(request(List.of(1L)),admin);
-        assertThat(response.getStatusCode().value()).isEqualTo(503);
-        assertThat(response.getBody().getProperties()).containsEntry("code","FULL_COURT_ATOMIC_AUTHORITY_REQUIRED");
-        verifyNoInteractions(catalog);
+    @Test void pricingExposesTheExactSlotsItPricedForTheReservationSaga() {
+        var priced=service.price(request(List.of(1L,2L)),admin);
+        assertThat(priced.quote().total()).isEqualByComparingTo("35000.04");
+        assertThat(priced.slots().keySet()).containsExactly(1L,2L);
+        assertThat(priced.slots().get(2L)).extracting(CounterDependencies.Slot::slotId).containsExactly(1L,2L);
     }
     @Test void invalidServerPolicyFailsAtStartup() {
         assertThatThrownBy(()->new FullCourtQuote(catalog,clock,BigDecimal.ONE,new BigDecimal("101"))).isInstanceOf(IllegalArgumentException.class);
