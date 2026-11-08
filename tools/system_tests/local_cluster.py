@@ -48,7 +48,7 @@ def main():
     if any(not jar.is_file() for jar in jars.values()) or not classpath_file.is_file():raise SystemExit("Build all eight jars, test classes and the staff test dependency classpath first")
     args.output.mkdir(parents=True,exist_ok=True)
     png=args.output/"receipt-fixture.png";png.write_bytes(fixture_png())
-    control_key=secrets.token_urlsafe(36);hold_key=secrets.token_urlsafe(36);payment_key=secrets.token_urlsafe(36);staff_key=secrets.token_urlsafe(36);booking_integration_key=secrets.token_urlsafe(36)
+    reservation_key=secrets.token_urlsafe(36);slot_key=secrets.token_urlsafe(36);control_key=secrets.token_urlsafe(36);hold_key=secrets.token_urlsafe(36);payment_key=secrets.token_urlsafe(36);staff_key=secrets.token_urlsafe(36);booking_integration_key=secrets.token_urlsafe(36)
     processes=[];logs=[];infra=None;proxy=None
     os_keys={"PATH","SYSTEMROOT","WINDIR","TEMP","TMP","JAVA_HOME","USERPROFILE","APPDATA","LOCALAPPDATA","PROGRAMDATA","COMSPEC","PATHEXT","LANG","LC_ALL","TZ","USER","LOGNAME","HOME"}
     service_environment={key:value for key,value in os.environ.items() if key.upper() in os_keys}
@@ -82,6 +82,7 @@ def main():
                      KAFKA_BOOTSTRAP_SERVERS=info["kafka"],BOOKING_HOLD_SERVICE_TOKEN=hold_key,PAYMENT_BOOKING_SERVICE_TOKEN=payment_key,
                      BOOKING_INTEGRATION_TOKEN=booking_integration_key,
                      SUBSCRIPTION_URL="",AUTH_JWT_PRIVATE_KEY="",AUTH_JWT_KEY_ID="local-fixture",AUTH_JWT_ACCESS_TTL="15m",
+                     FACILITY_RESERVATION_TOKEN=reservation_key,DISCOVERY_BASE_URL=bases["discovery"],DISCOVERY_INTERNAL_SLOT_TOKEN=slot_key,BOOKING_CANCEL_CUTOFF_HOURS="0",
                      STAFF_BOOKING_SERVICE_TOKEN=staff_key,STAFF_OFFLINE_SIGNING_KEY=secrets.token_urlsafe(36),FCOURT_LOCAL_TEST="true",FCOURT_FIXTURE_CONTROL_KEY=control_key)
             log=(args.output/(name+".log")).open("w",encoding="utf8");logs.append(log)
             if name in {"auth","booking","payment","staff"}:
@@ -117,7 +118,7 @@ def main():
                 elif path.startswith("/api/admin/dashboard/"):name="reporting"
                 elif path=="/api/public/branches" or path.startswith("/api/public/courts/"):name="discovery"
                 elif path.startswith("/api/bookings/hold-slots"):name="hold"
-                elif path.startswith("/api/bookings"):name="booking"
+                elif path.startswith(("/api/bookings","/api/admin/bookings")):name="booking"
                 elif path.startswith(("/api/admin/branches","/api/admin/courts")):name="facility"
                 else:self.send_error(404);return
                 size=int(self.headers.get("Content-Length","0"))
@@ -136,6 +137,8 @@ def main():
         config["branch"].update(address="Local fixture address",city="HCM",ward="Fixture",bankName="Fixture bank",bankBin="000000",bankAccountNumber="000000000001",bankAccountName="FIXTURE")
         config["court"]["imageUrl"]="https://res.cloudinary.com/local-fixture/image/upload/court.png"
         config["verifyReporting"]=True
+        config["routes"].update(fullCourtQuote={"method":"POST","path":"/api/admin/bookings/full-court/quote"},fullCourt={"method":"POST","path":"/api/admin/bookings/full-court"},
+                                fullCourtCancel={"method":"POST","path":"/api/admin/bookings/full-court/{packageId}/cancel"})
         config["routes"]["reportingStats"]={"method":"GET","path":"/api/admin/dashboard/stats?branchId={branchId}"}
         environment={"FCOURT_E2E_SUPERADMIN_EMAIL":super_email,"FCOURT_E2E_SUPERADMIN_PASSWORD":password,"FCOURT_E2E_CUSTOMER_EMAIL":customer_email,"FCOURT_E2E_CUSTOMER_PASSWORD":password,
                      "FCOURT_E2E_CUSTOMER_PHONE":"0930000002","FCOURT_E2E_OWNER_PASSWORD":password,"FCOURT_E2E_STAFF_PASSWORD":password}
@@ -152,8 +155,16 @@ def main():
                 runner.step("reporting-check-in-event",lambda:runner.poll("reporting check-in inbox",
                     lambda:int(sql("reporting_db","SELECT count(*) FROM processed_events WHERE topic='fcourt.staff.events' AND event_type='BookingCheckedInEvent';").strip()),lambda count:count==1))
             except Failure:report["overall"]="FAIL"
+        if report["overall"]=="PASS":
+            try:runner.full_court()
+            except Failure:report["overall"]="FAIL"
         if report["overall"]!="PASS":
-            report["diagnostics"]={"facilityOutbox":sql("facility_db","SELECT count(*),count(published_at) FROM facility_outbox;"),
+            def tail(name):
+                try:
+                    lines=[l.rstrip()[:300] for l in (args.output/(name+".log")).read_text(encoding="utf8",errors="replace").splitlines() if any(k in l for k in ("ERROR","WARN","Exception","eservation"))]
+                    return chr(10).join(lines[-30:])
+                except OSError:return ""
+            report["diagnostics"]={"facilityLog":tail("facility"),"bookingLog":tail("booking"),"packages":sql("booking_db","SELECT state,failure,attempt FROM full_court_packages;"),"reservations":sql("facility_db","SELECT state,cancel_cause FROM court_reservations;"),"facilityOutbox":sql("facility_db","SELECT count(*),count(published_at) FROM facility_outbox;"),
                     "discoveryRows":sql("discovery_db","SELECT count(*) FROM branch_read_model; SELECT count(*) FROM court_read_model;")}
         report.update(realServices=list(SERVICES),infrastructure="real PostgreSQL 16 / Redis 7 / Kafka",externalStorage="test-classpath fixtures",admissionClock="test-classpath controlled; JWT clock real",gateway="loopback reverse proxy; not production Nginx",productionAcceptance=False)
         write_report(report,args.output/"report.json")
