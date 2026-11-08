@@ -40,7 +40,7 @@ public class BranchSearchService {
 
     public BranchSearchResponse search(BranchSearchRequest request) {
         if (request.requiresAvailability()) return searchAvailable(request);
-        var key = new SearchKey(revision.get(), request);
+        var key = new SearchKey(revision.get(), repository.ratingVersion(), request);
         return cache.get(key, ignored -> repository.search(request));
     }
 
@@ -93,5 +93,5 @@ public class BranchSearchService {
         // Old revision entries expire naturally within the bounded cache.
     }
 
-    private record SearchKey(long revision, BranchSearchRequest request) {}
+    private record SearchKey(long revision, long ratingRevision, BranchSearchRequest request) {}
 }
