@@ -31,10 +31,14 @@ class FullCourtQuote {
     record Quote(long branchId, List<Long> courtIds, LocalDate date, LocalTime startTime, LocalTime endTime,
             BigDecimal courtHours, BigDecimal subtotal, BigDecimal discountPercent, BigDecimal discountAmount,
             BigDecimal total, String currency, boolean reserved, String reservationState) {}
-    Quote quote(Request request, Jwt jwt) {
+    Quote quote(Request request, Jwt jwt) { return price(request,jwt).quote(); }
+    /** Quote plus the exact per-court slots it priced, so a reservation never reprices a replay. */
+    record Priced(Quote quote, FullCourtCatalog.Venue venue, Map<Long,List<CounterDependencies.Slot>> slots) {}
+    Priced price(Request request, Jwt jwt) {
         requireAdmin(jwt);
         validate(request);
-        catalog.requireOwned(request.branchId(), request.courtIds(), jwt);
+        var venue=catalog.requireOwned(request.branchId(), request.courtIds(), jwt);
+        var priced=new LinkedHashMap<Long,List<CounterDependencies.Slot>>();
         BigDecimal subtotal=BigDecimal.ZERO;
         int count=0;
         for(long court:request.courtIds()) {
@@ -42,21 +46,23 @@ class FullCourtQuote {
             var available=catalog.availability(court,request.date());
             var byStart=new HashMap<LocalTime,CounterDependencies.Slot>();
             for(var slot:canonical) if(byStart.put(slot.startTime(),slot)!=null) throw unavailable();
+            var chosen=new ArrayList<CounterDependencies.Slot>();priced.put(court,chosen);
             for(var start=request.startTime();start.isBefore(request.endTime());start=start.plusMinutes(30)) {
                 var slot=byStart.get(start);
                 if(slot==null || !slot.endTime().equals(start.plusMinutes(30)) || !slot.status().equals("AVAILABLE")) throw conflict();
                 var live=available.stream().filter(s->s.slotId()==slot.slotId()).toList();
                 if(live.size()!=1 || !live.getFirst().status().equals("AVAILABLE")) throw conflict();
                 if(slot.price()==null || slot.price().signum()<0 || slot.price().scale()>2) throw unavailable();
-                subtotal=subtotal.add(slot.price());count++;
+                subtotal=subtotal.add(slot.price());count++;chosen.add(slot);
             }
         }
         if(subtotal.compareTo(new BigDecimal("99999999.99"))>0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Package exceeds supported amount");
         var hours=BigDecimal.valueOf(count).divide(BigDecimal.valueOf(2));
         var applied=hours.compareTo(minimumHours)>=0?percent:BigDecimal.ZERO;
         var discount=subtotal.multiply(applied).divide(BigDecimal.valueOf(100),2,RoundingMode.DOWN);
-        return new Quote(request.branchId(),List.copyOf(request.courtIds()),request.date(),request.startTime(),request.endTime(),hours,
+        var quote=new Quote(request.branchId(),List.copyOf(request.courtIds()),request.date(),request.startTime(),request.endTime(),hours,
                 subtotal.setScale(2),applied,discount,subtotal.subtract(discount).setScale(2),"VND",false,"ATOMIC_AUTHORITY_REQUIRED");
+        return new Priced(quote,venue,priced);
     }
     private void validate(Request request) {
         if(request==null || request.branchId()<=0 || request.courtIds()==null || request.courtIds().isEmpty() || request.courtIds().size()>50
@@ -82,16 +88,17 @@ class FullCourtQuote {
 @RestController
 class FullCourtController {
     private final FullCourtQuote quotes;
-    FullCourtController(FullCourtQuote quotes){this.quotes=quotes;}
+    private final FullCourtReservation reservations;
+    FullCourtController(FullCourtQuote quotes,FullCourtReservation reservations){this.quotes=quotes;this.reservations=reservations;}
     @PostMapping("/api/admin/bookings/full-court/quote")
     ResponseEntity<FullCourtQuote.Quote> quote(@Valid @RequestBody FullCourtQuote.Request request,@AuthenticationPrincipal Jwt jwt) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(quotes.quote(request,jwt));
     }
+    /** 201 created and locked, 200 idempotent replay, 202 booked but the facility lock commit is still pending. */
     @PostMapping("/api/admin/bookings/full-court")
-    ResponseEntity<ProblemDetail> reserve(@Valid @RequestBody FullCourtQuote.Request request,@AuthenticationPrincipal Jwt jwt) {
-        FullCourtQuote.requireAdmin(jwt);
-        var problem=ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE,"Atomic cross-service reservation is not integrated; no booking or lock was created");
-        problem.setProperty("code","FULL_COURT_ATOMIC_AUTHORITY_REQUIRED");
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).cacheControl(CacheControl.noStore()).body(problem);
+    ResponseEntity<FullCourtReservation.Package> reserve(@RequestHeader("Idempotency-Key") UUID key,
+            @Valid @RequestBody FullCourtReservation.Request request,@AuthenticationPrincipal Jwt jwt) {
+        var result=reservations.reserve(jwt,key,request);
+        return ResponseEntity.status(result.status()).cacheControl(CacheControl.noStore()).body(result.body());
     }
 }
