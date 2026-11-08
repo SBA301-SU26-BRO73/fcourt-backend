@@ -147,7 +147,20 @@ class BookingApiTest {
         assertThat(out.path("voucher").path("customerId").asLong()).isEqualTo(10);
         assertThat(out.path("voucher").path("paymentId").asLong()).isEqualTo(42);
         assertThat(out.path("voucher").path("finalAmount").decimalValue()).isEqualByComparingTo("80000");
+        assertThat(out.path("voucher").has("customerName")).isFalse();
+        assertThat(out.path("voucher").has("customerPhone")).isFalse();
+        assertThat(out.path("voucher").path("bookingCode").asText()).isEqualTo("BK00000001");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM booking_outbox",Long.class)).isEqualTo(1);
+    }
+
+    @Test void voucherAppliedEventCarriesCustomerDisplaySnapshotWhenBookingHasIt() throws Exception {
+        jdbc.update("UPDATE bookings SET voucher_application_id=?,voucher_id=7,original_amount=100000,discount_amount=20000,total_price=80000,payment_frozen=true,customer_name=?,guest_phone=? WHERE id=1",
+                UUID.randomUUID(),"  Nguyen Van A ","0912345678");
+        consume(event(UUID.randomUUID(),"PaymentConfirmedEvent","80000"));
+        var voucher=json.readTree(jdbc.queryForObject("SELECT payload::text FROM booking_outbox",String.class)).path("voucher");
+        assertThat(voucher.path("customerName").asText()).isEqualTo("Nguyen Van A");
+        assertThat(voucher.path("customerPhone").asText()).isEqualTo("0912345678");
+        assertThat(voucher.path("bookingCode").asText()).isEqualTo("BK00000001");
     }
 
     @Test void latePaymentAfterCancellationKeepsBookingCancelledButRecordsVoucherUse() throws Exception {
