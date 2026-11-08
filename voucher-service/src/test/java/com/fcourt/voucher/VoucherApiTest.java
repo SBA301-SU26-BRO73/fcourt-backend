@@ -167,7 +167,7 @@ class VoucherApiTest {
         String path="/api/admin/vouchers/"+id+"/usages";
         mvc.perform(get(path+"?phone=0912").with(admin())).andExpect(status().isOk()).andExpect(jsonPath("$.total").value(2))
                 .andExpect(jsonPath("$.totalDiscountAmount").value(30.00)).andExpect(jsonPath("$.items[0].bookingId").value(2));
-        mvc.perform(get(path+"?phone=%2B84912345678").with(admin())).andExpect(jsonPath("$.total").value(1))
+        mvc.perform(get(path).param("phone","+84912345678").with(admin())).andExpect(jsonPath("$.total").value(1))
                 .andExpect(jsonPath("$.items[0].bookingId").value(1));
         mvc.perform(get(path+"?phone=0912&size=1&page=1").with(admin())).andExpect(jsonPath("$.total").value(2))
                 .andExpect(jsonPath("$.items[0].bookingId").value(1));
@@ -178,11 +178,11 @@ class VoucherApiTest {
     @Test void phoneSearchRejectsInvalidInputWithoutCallingUpstreamAndNeverTreatsWildcardsAsPatterns() throws Exception {
         long id=create("PHONEBAD");usage(id,1,10,7,"10.00",Instant.parse("2030-01-09T12:00:00Z"));snapshot(1,"A","0912345678","FC1");
         String path="/api/admin/vouchers/"+id+"/usages";CALLS.set(0);
-        for(String bad:List.of("ab","12","%25","1".repeat(40),"0".repeat(16))){
-            mvc.perform(get(path+"?phone="+bad).with(admin())).andExpect(status().isBadRequest());
+        for(String bad:List.of("ab","12","%","1".repeat(40),"0".repeat(16))){
+            mvc.perform(get(path).param("phone",bad).with(admin())).andExpect(status().isBadRequest());
         }
         assertThat(CALLS.get()).isZero();
-        mvc.perform(get(path+"?phone=0912%25").with(admin())).andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1));
+        mvc.perform(get(path).param("phone","0912%").with(admin())).andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1));
     }
 
     @Test void phoneSearchStaysInsideBranchOwnershipAndAuthentication() throws Exception {
