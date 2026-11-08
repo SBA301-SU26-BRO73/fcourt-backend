@@ -49,7 +49,7 @@ class ManifestTest(unittest.TestCase):
         self.assertEqual(sum(s["price_at_booking"] for s in slots),full["total_price"])
         self.assertEqual(full["status"],"CONFIRMED")
         for user in rows["auth_db"]["users"]: self.assertRegex(user["phone"],r"^0[35789][0-9]{8}$")
-        self.assertTrue(all(v["usage_count"]==0 for v in rows["voucher_db"]["vouchers"]))
+        self.assertTrue(all(v["used_count"]==0 for v in rows["voucher_db"]["vouchers"]))
 
     def test_fixture_requires_explicit_opt_in(self):
         with self.assertRaises(seed.SeedError):
@@ -238,7 +238,7 @@ class PostgreSQLSeedTest(unittest.TestCase):
         self.assertEqual(self.db.execute("payment_db","SELECT check_in_code FROM payments WHERE id=1400030;"),
                          self.db.execute("booking_db","SELECT checkin_code FROM bookings WHERE id=1400030;"))
         self.assertEqual(self.db.execute("booking_db","SELECT count(*) FROM booking_slots WHERE booking_id=1400030;"),"32")
-        self.assertEqual(self.db.execute("voucher_db","SELECT sum(usage_count) FROM vouchers WHERE id BETWEEN 1400000 AND 1400001;"),"0")
+        self.assertEqual(self.db.execute("voucher_db","SELECT sum(used_count) FROM vouchers WHERE id BETWEEN 1400000 AND 1400001;"),"0")
         self.assertEqual(self.db.execute("facility_db","SELECT count(*) FROM courts WHERE id BETWEEN 1400000 AND 1400009 AND default_price_per_hour=100000;"),"10")
 
     def test_missing_runtime_payment_columns_fail_before_any_seed_write(self):

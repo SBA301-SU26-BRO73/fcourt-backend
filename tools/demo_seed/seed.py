@@ -138,9 +138,10 @@ def build_rows(m, hashed_password, plan_limits=(15, 3)):
                     start_time=start.time(), end_time=(start+timedelta(minutes=30)).time(), price=price, is_active=True,
                     created_at=stamp, updated_at=stamp, deleted_at=None)
     for i, kind in enumerate(["FIXED", "PERCENTAGE"]):
-        add("voucher_db", "vouchers", id=base+i, code=f"DEMO-{key}-{kind}", discount_type=kind,
-            discount_value=Decimal(10000 if i == 0 else 10), min_order_value=Decimal(20000), max_discount_value=Decimal(10000),
-            usage_limit=100, usage_count=0, start_date=stamp-timedelta(days=1), expiry_date=stamp+timedelta(days=30), active=True,
+        # Column names and enum values follow voucher-service migration V1 (discount_type is FIXED_AMOUNT or PERCENTAGE).
+        add("voucher_db", "vouchers", id=base+i, code=f"DEMO-{key}-{kind}", discount_type="FIXED_AMOUNT" if i == 0 else "PERCENTAGE",
+            discount_value=Decimal(10000 if i == 0 else 10), min_order_amount=Decimal(20000), max_discount_amount=Decimal(10000),
+            usage_limit=100, used_count=0, start_date=stamp-timedelta(days=1), end_date=stamp+timedelta(days=30), status="ACTIVE",
             branch_id=base, created_at=stamp, updated_at=stamp, deleted_at=None)
     statuses = ["CONFIRMED", "CHECKED_IN", "COMPLETED", "AWAITING_CONFIRMATION", "PENDING_PAYMENT", "CANCELLED"]
     for i in range(31):
@@ -213,7 +214,7 @@ def sql_for(db, tables, m, hashed_password, plan_limits):
         if any(list(row) != columns for row in values):
             raise SeedError("Inconsistent generated columns")
         tuples = ["("+",".join(literal(row[col]) for col in columns)+")" for row in values]
-        identity = "" if table == "vouchers" else " OVERRIDING SYSTEM VALUE"
+        identity = " OVERRIDING SYSTEM VALUE"  # vouchers.id is GENERATED ALWAYS since voucher-service V1, like the other tables
         sql.append(f"INSERT INTO public.{table}({','.join(columns)}){identity} VALUES"+",".join(tuples)+" ON CONFLICT(id) DO NOTHING;")
         expected = []
         for row in values:
