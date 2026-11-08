@@ -18,7 +18,7 @@ class EventTranslatorTest {
     static String payment(String type) {
         return """
                 {"eventId":"e-1","type":"%s","payment":{"id":5,"bookingId":42,"branchId":7,"amount":100000.00,
-                 "status":"CONFIRMED","checkout":{"courtName":" Court A ","date":"2030-01-01","slots":[{"startTime":"18:00"},{"startTime":"18:30"}]}}}
+                 "status":"CONFIRMED","checkout":{"courtName":" Court A ","customerName":" Alex Nguyen ","date":"2030-01-01","slots":[{"startTime":"18:00"},{"startTime":"18:30"}]}}}
                 """.formatted(type);
     }
 
@@ -30,6 +30,7 @@ class EventTranslatorTest {
         assertThat(submitted.slotCount()).isEqualTo(2);
         assertThat(submitted.bookingDate()).isEqualTo(LocalDate.of(2030, 1, 1));
         assertThat(submitted.courtName()).isEqualTo("Court A");
+        assertThat(submitted.customerName()).isEqualTo("Alex Nguyen");
         assertThat(submitted.courtId()).isNull();
         assertThat(submitted.slotStarts()).containsExactly(LocalTime.of(18, 0), LocalTime.of(18, 30));
 
@@ -49,6 +50,7 @@ class EventTranslatorTest {
                 {"eventId":"s-1","type":"WalkInBookingCreatedEvent","version":1,"data":{"actorId":3,
                  "occurredAt":"2030-01-01T02:00:00Z","booking":{"bookingId":9,"branchId":7,"courtId":1,
                  "date":"2030-01-01","status":"CHECKED_IN","paymentMethod":"CASH","amount":60000,
+                 "customerName":"Lan Nguyen",
                  "invoice":{"items":[{"slotId":1,"startTime":"19:00","endTime":"19:30"}]}}}}
                 """, now);
         assertThat(fact.status()).isEqualTo("CONFIRMED");
@@ -56,6 +58,7 @@ class EventTranslatorTest {
         assertThat(fact.revenueAt()).isEqualTo(Instant.parse("2030-01-01T02:00:00Z"));
         assertThat(fact.slotCount()).isEqualTo(1);
         assertThat(fact.courtId()).isEqualTo(1L);
+        assertThat(fact.customerName()).isEqualTo("Lan Nguyen");
         assertThat(fact.slotStarts()).containsExactly(LocalTime.of(19, 0));
 
         var checkIn = (BookingFact) translator.staff("""
