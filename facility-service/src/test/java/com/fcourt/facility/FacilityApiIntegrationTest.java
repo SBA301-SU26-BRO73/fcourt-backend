@@ -381,7 +381,7 @@ class FacilityApiIntegrationTest {
     }
     @Test
     void bulkApplyAppliesToManyCourtsAtomically() throws Exception {
-        long owner = 9301;
+        long owner = 9306;
         long branchA = id(postJson("/api/admin/branches", branchBody("Bulk A", "06:00", "22:00"), owner)
                 .andExpect(status().isCreated()));
         long branchB = id(postJson("/api/admin/branches", branchBody("Bulk B", "08:00", "20:00"), owner)
@@ -483,7 +483,7 @@ class FacilityApiIntegrationTest {
 
     @Test
     void courtLocksCloseSlotsRefuseBookingConflictsAndUnlock() throws Exception {
-        long owner = 9301;
+        long owner = 9307;
         long branchId = id(postJson("/api/admin/branches", branchBody("Locks", "06:00", "22:00"), owner)
                 .andExpect(status().isCreated()));
         String courts = "/api/admin/branches/" + branchId + "/courts";
