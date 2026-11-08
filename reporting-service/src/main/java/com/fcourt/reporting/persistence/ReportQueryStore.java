@@ -29,7 +29,8 @@ public class ReportQueryStore {
     }
 
     /** {@code revenueAt} is when the money was recognized; null when a check-in preceded the payment event. */
-    public record RevenueRow(long bookingId, long branchId, LocalDate bookingDate, Instant revenueAt, int slotCount,
+    public record RevenueRow(long bookingId, String courtName, String customerName, long branchId,
+                             LocalDate bookingDate, Instant revenueAt, int slotCount,
                              BigDecimal revenue, String status) { }
 
     /** Streams CONFIRMED bookings with booking_date in [from, to] (inclusive) of the given branches, oldest first. */
@@ -37,7 +38,8 @@ public class ReportQueryStore {
     public void revenueRows(Collection<Long> branchIds, LocalDate from, LocalDate to, Consumer<RevenueRow> sink) {
         jdbc.query(con -> {
             var statement = con.prepareStatement("""
-                    SELECT booking_id, branch_id, booking_date, revenue_at, slot_count, revenue, status
+                    SELECT booking_id, court_name, customer_name, branch_id, booking_date, revenue_at,
+                        slot_count, revenue, status
                     FROM booking_facts
                     WHERE branch_id = ANY (?) AND status = 'CONFIRMED' AND booking_date >= ? AND booking_date <= ?
                     ORDER BY booking_date, booking_id
@@ -49,7 +51,8 @@ public class ReportQueryStore {
             return statement;
         }, rs -> {
             Timestamp recognized = rs.getTimestamp("revenue_at");
-            sink.accept(new RevenueRow(rs.getLong("booking_id"), rs.getLong("branch_id"),
+            sink.accept(new RevenueRow(rs.getLong("booking_id"), rs.getString("court_name"),
+                    rs.getString("customer_name"), rs.getLong("branch_id"),
                     rs.getDate("booking_date").toLocalDate(), recognized == null ? null : recognized.toInstant(),
                     rs.getInt("slot_count"), rs.getBigDecimal("revenue"), rs.getString("status")));
         });

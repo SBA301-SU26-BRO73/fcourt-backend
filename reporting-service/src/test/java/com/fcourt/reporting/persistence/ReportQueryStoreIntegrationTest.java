@@ -41,7 +41,8 @@ class ReportQueryStoreIntegrationTest {
 
     void fact(long booking, long branch, String status, int amount, int revenue, LocalDate date) {
         model.apply(new BookingFact("e-" + booking, "T", booking, branch, status, BigDecimal.valueOf(amount), date, 2,
-                BigDecimal.valueOf(revenue), revenue > 0 ? Instant.parse("2026-10-01T00:00:00Z") : null));
+                BigDecimal.valueOf(revenue), revenue > 0 ? Instant.parse("2026-10-01T00:00:00Z") : null,
+                17L, "Court A", "Customer A", List.of()));
     }
 
     @Test
@@ -62,6 +63,8 @@ class ReportQueryStoreIntegrationTest {
         // The dashboard's per-day figure (todayRevenue) is the same rule: CONFIRMED revenue by booking date.
         assertThat(model.revenueOnBookingDate(List.of(3L), LocalDate.of(2026, 10, 31))).isEqualByComparingTo("250000");
         assertThat(rows.get(0).slotCount()).isEqualTo(2);
+        assertThat(rows.get(0).courtName()).isEqualTo("Court A");
+        assertThat(rows.get(0).customerName()).isEqualTo("Customer A");
         assertThat(rows.get(0).bookingDate()).isEqualTo(LocalDate.of(2026, 10, 1));
         assertThat(rows.get(0).revenueAt()).isNotNull();
     }

@@ -30,8 +30,8 @@ import org.apache.poi.xssf.streaming.SXSSFWorkbook;
  * Money is the same recognized {@code revenue} the owner dashboard sums, so totals match it exactly.
  */
 public final class RevenueReport {
-    public static final String[] COLUMNS = {"Mã đơn", "Chi nhánh", "Ngày chơi", "Ngày ghi nhận doanh thu",
-            "Số slot", "Số tiền (VND)", "Trạng thái"};
+    public static final String[] COLUMNS = {"Mã đơn", "Sân", "Khách hàng", "Chi nhánh", "Ngày chơi",
+            "Ngày ghi nhận doanh thu", "Số slot", "Số tiền (VND)", "Trạng thái"};
     static final String TITLE = "BÁO CÁO DOANH THU";
     static final String NET_LABEL = "Doanh thu ròng";
     static final String MONEY_FORMAT = "#,##0";
@@ -138,18 +138,20 @@ public final class RevenueReport {
         public void accept(RevenueRow value) {
             Row row = sheet.createRow(rowIndex++);
             row.createCell(0).setCellValue(value.bookingId());
-            row.createCell(1).setCellValue("#" + value.branchId());
-            var played = row.createCell(2);
+            row.createCell(1).setCellValue(value.courtName() == null ? "" : value.courtName());
+            row.createCell(2).setCellValue(value.customerName() == null ? "" : value.customerName());
+            row.createCell(3).setCellValue("#" + value.branchId());
+            var played = row.createCell(4);
             if (value.bookingDate() != null) {
                 played.setCellValue(value.bookingDate());
                 played.setCellStyle(date);
             }
-            if (value.revenueAt() != null) row.createCell(3).setCellValue(DATE_TIME.format(value.revenueAt().atZone(header.zone())));
-            row.createCell(4).setCellValue(value.slotCount());
-            var amount = row.createCell(5);
+            if (value.revenueAt() != null) row.createCell(5).setCellValue(DATE_TIME.format(value.revenueAt().atZone(header.zone())));
+            row.createCell(6).setCellValue(value.slotCount());
+            var amount = row.createCell(7);
             amount.setCellValue(value.revenue().doubleValue());
             amount.setCellStyle(money);
-            row.createCell(6).setCellValue(statusLabel(value.status()));
+            row.createCell(8).setCellValue(statusLabel(value.status()));
             net = net.add(value.revenue());
             count++;
         }
@@ -160,11 +162,11 @@ public final class RevenueReport {
             var label = total.createCell(0);
             label.setCellValue(NET_LABEL + " (" + count + " đơn)");
             label.setCellStyle(bold);
-            var amount = total.createCell(5);
+            var amount = total.createCell(7);
             amount.setCellValue(net.doubleValue());
             amount.setCellStyle(boldMoney);
             // Widths are fixed: auto-sizing a streaming sheet would need every row kept in memory.
-            int[] widths = {14, 14, 14, 26, 10, 18, 16};
+            int[] widths = {14, 22, 24, 14, 14, 26, 10, 18, 16};
             for (int i = 0; i < widths.length; i++) sheet.setColumnWidth(i, widths[i] * 256);
             try {
                 workbook.write(output);
@@ -234,7 +236,8 @@ public final class RevenueReport {
 
         @Override
         public void accept(RevenueRow value) {
-            line(String.valueOf(value.bookingId()), "#" + value.branchId(),
+            line(String.valueOf(value.bookingId()), value.courtName() == null ? "" : value.courtName(),
+                    value.customerName() == null ? "" : value.customerName(), "#" + value.branchId(),
                     value.bookingDate() == null ? "" : DATE.format(value.bookingDate()),
                     value.revenueAt() == null ? "" : DATE_TIME.format(value.revenueAt().atZone(header.zone())), String.valueOf(value.slotCount()),
                     value.revenue().toPlainString(), statusLabel(value.status()));
@@ -244,7 +247,7 @@ public final class RevenueReport {
 
         @Override
         public void finish(OutputStream output) {
-            line(NET_LABEL + " (" + count + " đơn)", "", "", "", "", net.toPlainString(), "");
+            line(NET_LABEL + " (" + count + " đơn)", "", "", "", "", "", "", net.toPlainString(), "");
             try {
                 out.flush();
                 output.flush();

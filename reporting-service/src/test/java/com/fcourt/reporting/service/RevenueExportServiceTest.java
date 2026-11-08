@@ -58,7 +58,7 @@ class RevenueExportServiceTest {
         when(facility.ownedBranches(7, "tok")).thenReturn(List.of(branch(9), branch(3)));
         doAnswer(call -> {
             Consumer<RevenueRow> sink = call.getArgument(3);
-            sink.accept(new RevenueRow(11, 3, LocalDate.of(2026, 10, 5), Instant.parse("2026-10-05T11:30:00Z"), 2,
+            sink.accept(new RevenueRow(11, "Court A", "Alex Nguyen", 3, LocalDate.of(2026, 10, 5), Instant.parse("2026-10-05T11:30:00Z"), 2,
                     new BigDecimal("300000.00"), "CONFIRMED"));
             return null;
         }).when(store).revenueRows(anyCollection(), any(), any(), any());
@@ -71,7 +71,9 @@ class RevenueExportServiceTest {
         assertThat(file.filename()).isEqualTo("bao-cao-doanh-thu_20261001_20261031.xlsx");
         assertThat(file.mediaType()).contains("spreadsheetml");
         try (var workbook = new XSSFWorkbook(new ByteArrayInputStream(output.toByteArray()))) {
-            assertThat(workbook.getSheetAt(0).getRow(8).getCell(5).getNumericCellValue()).isEqualTo(300000.0);
+            assertThat(workbook.getSheetAt(0).getRow(7).getCell(1).getStringCellValue()).isEqualTo("Court A");
+            assertThat(workbook.getSheetAt(0).getRow(7).getCell(2).getStringCellValue()).isEqualTo("Alex Nguyen");
+            assertThat(workbook.getSheetAt(0).getRow(7).getCell(7).getNumericCellValue()).isEqualTo(300000.0);
         }
     }
 
