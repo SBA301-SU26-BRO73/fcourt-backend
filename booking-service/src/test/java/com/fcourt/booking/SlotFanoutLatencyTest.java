@@ -19,7 +19,6 @@ import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServic
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -35,7 +34,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @SpringBootTest(classes = SlotFanoutLatencyTest.App.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {"booking.realtime.enabled=true"})
 class SlotFanoutLatencyTest {
-    @Configuration
     @EnableAutoConfiguration(exclude = {DataSourceAutoConfiguration.class, DataSourceTransactionManagerAutoConfiguration.class,
             JdbcTemplateAutoConfiguration.class, FlywayAutoConfiguration.class, SecurityAutoConfiguration.class,
             SecurityFilterAutoConfiguration.class, UserDetailsServiceAutoConfiguration.class,
@@ -49,8 +47,9 @@ class SlotFanoutLatencyTest {
         @Bean RedisConnectionFactory redisConnectionFactory() { return mock(RedisConnectionFactory.class); }
     }
 
+    // Deliberately NOT annotated @Configuration: LocalFixtureApplication component-scans test-classes in the
+    // local-cluster, and these test-only classes must never be picked up there.
     /** The production STOMP configuration, minus the Redis subscription container (needs a live Redis). */
-    @Configuration
     static class NoRedisSlotWebSocket extends SlotWebSocket {
         NoRedisSlotWebSocket() { super(new String[] {"http://localhost:3000"}); }
 
