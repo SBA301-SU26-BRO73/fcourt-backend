@@ -95,4 +95,18 @@ class RevenueReportTest {
         assertThat(lines.get(8)).endsWith("Đã hủy");
         assertThat(lines.get(9)).isEqualTo("Doanh thu ròng (2 đơn),,,,,,,250000.00,");
     }
+
+    @Test
+    void csvNeutralizesFormulaCellsAfterLeadingWhitespaceAndControls() {
+        assertThat(RevenueReport.escapeCsvCell("=1+1")).isEqualTo("'=1+1");
+        assertThat(RevenueReport.escapeCsvCell(" -cmd")).isEqualTo("' -cmd");
+        assertThat(RevenueReport.escapeCsvCell("\t+SUM(1,1)")).isEqualTo("\"'\t+SUM(1,1)\"");
+        assertThat(RevenueReport.escapeCsvCell("\r\n@SUM(1,1)"))
+                .isEqualTo("\"'\r\n@SUM(1,1)\"");
+        assertThat(RevenueReport.escapeCsvCell("\u0000\u00A0=cmd"))
+                .isEqualTo("'\u0000\u00A0=cmd");
+        assertThat(RevenueReport.escapeCsvCell("\uFEFF+SUM(1,1)"))
+                .isEqualTo("\"'\uFEFF+SUM(1,1)\"");
+        assertThat(RevenueReport.escapeCsvCell("Court A")).isEqualTo("Court A");
+    }
 }

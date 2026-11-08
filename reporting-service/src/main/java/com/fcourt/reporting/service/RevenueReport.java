@@ -80,6 +80,31 @@ public final class RevenueReport {
         return new CsvSink(header, output);
     }
 
+    static String escapeCsvCell(String cell) {
+        String safe = neutralizeFormula(cell);
+        if (safe.indexOf(',') < 0 && safe.indexOf('"') < 0 && safe.indexOf('\n') < 0 && safe.indexOf('\r') < 0) {
+            return safe;
+        }
+        return '"' + safe.replace("\"", "\"\"") + '"';
+    }
+
+    private static String neutralizeFormula(String cell) {
+        int firstMeaningful = 0;
+        while (firstMeaningful < cell.length()) {
+            char current = cell.charAt(firstMeaningful);
+            int category = Character.getType(current);
+            if (!(Character.isWhitespace(current) || Character.isSpaceChar(current)
+                    || Character.isISOControl(current) || category == Character.FORMAT)) {
+                break;
+            }
+            firstMeaningful++;
+        }
+        if (firstMeaningful < cell.length() && "=+-@".indexOf(cell.charAt(firstMeaningful)) >= 0) {
+            return "'" + cell;
+        }
+        return cell;
+    }
+
     private static final class XlsxSink implements Sink {
         private final Header header;
         private final SXSSFWorkbook workbook = new SXSSFWorkbook(100);
@@ -219,19 +244,12 @@ public final class RevenueReport {
             try {
                 for (int i = 0; i < cells.length; i++) {
                     if (i > 0) out.write(',');
-                    out.write(escape(cells[i]));
+                    out.write(escapeCsvCell(cells[i]));
                 }
                 out.write(EOL);
             } catch (IOException error) {
                 throw new UncheckedIOException(error);
             }
-        }
-
-        static String escape(String cell) {
-            if (cell.indexOf(',') < 0 && cell.indexOf('"') < 0 && cell.indexOf('\n') < 0 && cell.indexOf('\r') < 0) {
-                return cell;
-            }
-            return '"' + cell.replace("\"", "\"\"") + '"';
         }
 
         @Override
