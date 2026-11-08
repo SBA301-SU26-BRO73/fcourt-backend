@@ -89,3 +89,22 @@ Chỉ dùng fixture giả khi đã hiểu các giới hạn trong README của s
 - `kafka-init` tạo các topic/partition cục bộ theo `tools/system_tests` trước các consumer; job kết thúc nhưng Compose container vẫn tồn tại.
 - Staff và POS không có `mvnw`/`.mvn` trong worktree được đọc; Dockerfile dùng Maven 3.9.11 đã cài trong build image cho hai service này và dùng wrapper của service cho các service còn lại.
 - Không thể xác nhận `docker compose config`, build image, health URL, migration, login hay socket ở môi trường này vì không có Docker/network; xem lệnh xác nhận trong `CHECKLIST.md`.
+
+## Bản tối thiểu đã kiểm chứng (máy 16 GB, có emulator)
+
+Đã chạy thật: PostgreSQL, Redis, Kafka (+ `kafka-init`), `auth-service`, `facility-service`, `discovery-service` và gateway. Đủ cho đăng nhập, tìm sân, xem chi nhánh, hồ sơ và quản lý sân. Các service còn lại (booking, slot-hold, payment, subscription, reporting, voucher, staff) chưa được build/chạy: gateway trả 502 cho các đường dẫn của chúng.
+
+```powershell
+$C = "docker compose -f tools/local_stack/compose.yml --env-file tools/local_stack/.env"
+iex "$C build auth-service facility-service discovery-service"   # từng image một, mỗi image cần RAM trống ~2 GB
+iex "$C up -d --no-deps postgres redis kafka"
+iex "$C up -d --no-deps kafka-init auth-service facility-service discovery-service gateway"
+```
+
+- `discovery-service` **cần Kafka** (consumer của read model); không có Kafka nó thoát rồi khởi động lại liên tục. `auth` và `facility` thì không cần.
+- Nginx phân giải upstream theo từng yêu cầu (`resolver 127.0.0.11`), nên gateway khởi động được khi chỉ một phần stack chạy.
+- Số đo: tổng RAM container khoảng 1,3 GB khi chạy bản tối thiểu (auth ~240 MB, facility ~220 MB, discovery ~200 MB, Postgres ~130 MB, Kafka ~500 MB), thấp hơn nhiều so với trần.
+- Build image dùng Maven trong Docker và có đỉnh RAM; đừng build khi emulator đang chạy. Trên máy chỉ còn ~1 GB trống sau khi bật emulator (tiến trình emulator chiếm khoảng 3,5 GB dù cấu hình 1,5 GB RAM).
+- Docker Desktop trên máy này từng tự mất kết nối (`no route to host 192.168.65.7:2375`) sau khoảng 30 phút rảnh; `docker desktop restart` khắc phục.
+
+Tài khoản demo trong `auth-service` (migration V2/V4) dùng chung một hash mà repo không ghi mật khẩu. Để thử cục bộ, đặt mật khẩu riêng trong CSDL cục bộ (không đụng dữ liệu thật), ví dụ `UPDATE users SET password_hash = '<bcrypt>' WHERE email = 'customer01@demo.com';`. Không dùng mật khẩu thử này ở bất kỳ môi trường nào khác.
