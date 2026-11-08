@@ -125,6 +125,30 @@ class HoldIntegrationTest {
         assertThat(store.sweepExpired()).isZero();
     }
 
+    @Test
+    void burstLargerThanOneBatchIsFullyDrained() {
+        var index = redis.<String>getScoredSortedSet("fcourt:hold-expiry", StringCodec.INSTANCE);
+        long past = System.currentTimeMillis() - 1000;
+        for (int court = 1; court <= 1200; court++) index.add(past, court + "|2030-01-02|fcourt:hold-token:t" + court);
+        index.add(System.currentTimeMillis() + 60_000, "9999|2030-01-02|fcourt:hold-token:live");
+        assertThat(store.sweepExpired()).isEqualTo(1200);
+        assertThat(index.size()).isEqualTo(1); // the live hold stays indexed
+        assertThat(store.sweepExpired()).isZero();
+    }
+
+    @Test
+    void malformedIndexMembersAreDroppedWithoutPublishing() throws Exception {
+        var queue = new java.util.concurrent.LinkedBlockingQueue<String>();
+        var topic = redis.getTopic("fcourt:slot-changes", StringCodec.INSTANCE);
+        int listener = topic.addListener(String.class, (channel, message) -> queue.add(message));
+        try {
+            var index = redis.<String>getScoredSortedSet("fcourt:hold-expiry", StringCodec.INSTANCE);
+            index.add(System.currentTimeMillis() - 1000, "not-a-member");
+            assertThat(store.sweepExpired()).isEqualTo(1);
+            assertThat(queue.poll(200, java.util.concurrent.TimeUnit.MILLISECONDS)).isNull();
+        } finally { topic.removeListener(listener); }
+    }
+
     static RedissonClient client() {
         var config = new Config();
         config.useSingleServer().setAddress("redis://" + REDIS.getHost() + ":" + REDIS.getMappedPort(6379));
