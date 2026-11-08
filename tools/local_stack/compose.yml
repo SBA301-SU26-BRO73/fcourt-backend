@@ -1,0 +1,306 @@
+name: fcourt-local
+x-java: &java
+  restart: unless-stopped
+  mem_limit: 320m
+  networks: [backend]
+  healthcheck:
+    test: [CMD, sh, -c, 'curl -fsS http://127.0.0.1:$${SERVER_PORT}/actuator/health | grep -q UP']
+    interval: 20s
+    timeout: 5s
+    retries: 15
+    start_period: 60s
+x-common-env: &common-env
+  KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  REDIS_HOST: redis
+  REDIS_PORT: '6379'
+  REDIS_ADDRESS: redis://redis:6379
+  REDIS_PASSWORD: ${REDIS_PASSWORD}
+  SPRING_DATA_REDIS_HOST: redis
+  SPRING_DATA_REDIS_PORT: '6379'
+  SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
+  AUTH_URL: http://auth-service:8081
+  AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER}
+  AUTH_JWT_AUDIENCE: fcourt
+  AUTH_JWK_SET_URI: http://auth-service:8081/.well-known/jwks.json
+  FACILITY_URL: http://facility-service:8083
+  SUBSCRIPTION_BASE_URL: http://subscription-service:8082
+  DISCOVERY_URL: http://discovery-service:8085
+  DISCOVERY_BASE_URL: http://discovery-service:8085
+  BOOKING_URL: http://booking-service:8088
+  HOLD_URL: http://slot-hold-engine:8087
+  STAFF_URL: http://staff-operations-service:8090
+  HOLD_GRPC_TARGET: slot-hold-engine:9087
+  BOOKING_GRPC_TARGET: booking-service:9088
+  STAFF_GRPC_PLAINTEXT: 'true'
+  POS_URL: http://pos-retail-service:8091
+  BOOKING_HOLD_SERVICE_TOKEN: ${BOOKING_HOLD_SERVICE_TOKEN}
+  BOOKING_INTEGRATION_TOKEN: ${BOOKING_INTEGRATION_TOKEN}
+  PAYMENT_BOOKING_SERVICE_TOKEN: ${PAYMENT_BOOKING_SERVICE_TOKEN}
+  FACILITY_RESERVATION_TOKEN: ${FACILITY_RESERVATION_TOKEN}
+  DISCOVERY_INTERNAL_SLOT_TOKEN: ${DISCOVERY_INTERNAL_SLOT_TOKEN}
+  STAFF_BOOKING_SERVICE_TOKEN: ${STAFF_BOOKING_SERVICE_TOKEN}
+  POS_BOOKING_SERVICE_TOKEN: ${POS_BOOKING_SERVICE_TOKEN}
+  POS_SETTLEMENT_SERVICE_TOKEN: ${POS_SETTLEMENT_SERVICE_TOKEN}
+  VOUCHER_GRPC_TOKEN: ${VOUCHER_GRPC_TOKEN}
+  MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: never
+# Database environment variable names mirror each service's application.yml (for example
+# auth-service:13-17, facility-service:12-16, booking-service:6-9); they are not uniform.
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD}
+      SUBSCRIPTION_DB_PASSWORD: ${SUBSCRIPTION_DB_PASSWORD}
+      FACILITY_DB_PASSWORD: ${FACILITY_DB_PASSWORD}
+      REPORTING_DB_PASSWORD: ${REPORTING_DB_PASSWORD}
+      DISCOVERY_DB_PASSWORD: ${DISCOVERY_DB_PASSWORD}
+      VOUCHER_DB_PASSWORD: ${VOUCHER_DB_PASSWORD}
+      BOOKING_DB_PASSWORD: ${BOOKING_DB_PASSWORD}
+      PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD}
+      STAFF_DB_PASSWORD: ${STAFF_DB_PASSWORD}
+      POS_DB_PASSWORD: ${POS_DB_PASSWORD}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-databases.sh:/docker-entrypoint-initdb.d/01-databases.sh:ro
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          psql -U postgres -d postgres -Atqc "SELECT
+          (SELECT count(*) FROM pg_roles WHERE rolname IN
+          ('auth','subscription','facility','reporting','discovery','voucher','booking','payment','staff','pos','notification')) = 11
+          AND
+          (SELECT count(*) FROM pg_database WHERE datname IN
+          ('auth_db','subscription_db','facility_db','reporting_db','discovery_db','voucher_db','booking_db','payment_db','staff_db','pos_retail_db','notification_db')) = 11" | grep -q t
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [backend]
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    mem_limit: 192m
+    command: [redis-server, --appendonly, 'yes', --requirepass, "${REDIS_PASSWORD}", --maxmemory, 96mb, --maxmemory-policy, noeviction]
+    volumes: [redis-data:/data]
+    healthcheck:
+      test: [CMD, redis-cli, -a, "${REDIS_PASSWORD}", ping]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [backend]
+  kafka:
+    image: apache/kafka:3.9.1
+    restart: unless-stopped
+    mem_limit: 768m
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      KAFKA_HEAP_OPTS: -Xms512m -Xmx512m
+      KAFKA_JVM_PERFORMANCE_OPTS: -XX:+UseSerialGC -Xss512k -XX:TieredStopAtLevel=1
+    volumes: [kafka-data:/var/lib/kafka/data]
+    healthcheck:
+      test: [CMD, /opt/kafka/bin/kafka-broker-api-versions.sh, --bootstrap-server, localhost:9092]
+      interval: 15s
+      timeout: 10s
+      retries: 12
+      start_period: 45s
+    networks: [backend]
+  kafka-init:
+    image: apache/kafka:3.9.1
+    restart: "no"
+    mem_limit: 128m
+    entrypoint: [/bin/sh, -c]
+    command: ["sh /opt/fcourt/init-kafka-topics.sh"]
+    environment:
+      KAFKA_HEAP_OPTS: -Xms32m -Xmx96m
+      KAFKA_JVM_PERFORMANCE_OPTS: -XX:+UseSerialGC -Xss512k -XX:TieredStopAtLevel=1
+    volumes: [./init-kafka-topics.sh:/opt/fcourt/init-kafka-topics.sh:ro]
+    depends_on: {kafka: {condition: service_healthy}}
+    networks: [backend]
+  auth-service:
+    <<: *java
+    build: {context: ../../auth-service, dockerfile: ../tools/local_stack/Service.Dockerfile, args: {SERVICE: auth-service}}
+    environment:
+      <<: *common-env
+      SERVER_PORT: '8081'
+      AUTH_DATABASE_URL: jdbc:postgresql://postgres:5432/auth_db
+      AUTH_DATABASE_USER: auth
+      AUTH_DATABASE_PASSWORD: ${AUTH_DB_PASSWORD}
+      AUTH_JWT_PRIVATE_KEY: ${AUTH_JWT_PRIVATE_KEY}
+      AUTH_JWT_KEY_ID: ${AUTH_JWT_KEY_ID}
+    depends_on: {postgres: {condition: service_healthy}, redis: {condition: service_healthy}, kafka: {condition: service_healthy}, kafka-init: {condition: service_completed_successfully}}
+  subscription-service:
+    <<: *java
+    build: {context: ../../subscription-service, dockerfile: ../tools/local_stack/Service.Dockerfile, args: {SERVICE: subscription-service}}
+    ports: ['8082:8082']
+    env_file:
+      - ./.env
+      - path: ../../subscription-service/.env
+        required: false
+    environment:
+      <<: *common-env
+      SERVER_PORT: '8082'
+      SUBSCRIPTION_DATABASE_URL: jdbc:postgresql://postgres:5432/subscription_db
+      SUBSCRIPTION_DATABASE_USER: subscription
+      SUBSCRIPTION_DATABASE_PASSWORD: ${SUBSCRIPTION_DB_PASSWORD}
+    depends_on: {postgres: {condition: service_healthy}, redis: {condition: service_healthy}, kafka: {condition: service_healthy}, kafka-init: {condition: service_completed_successfully}}
+  facility-service:
+    <<: *java
+    build: {context: ../../facility-service, dockerfile: ../tools/local_stack/Service.Dockerfile, args: {SERVICE: facility-service}}
+    ports: ['8083:8083']
+    environment:
+      <<: *common-env
+      SERVER_PORT: '8083'
+      FACILITY_DB_URL: jdbc:postgresql://postgres:5432/facility_db
+      FACILITY_DB_USER: facility
+      FACILITY_DB_PASSWORD: ${FACILITY_DB_PASSWORD}
+    depends_on: {postgres: {condition: service_healthy}, redis: {condition: service_healthy}, kafka: {condition: service_healthy}, kafka-init: {condition: service_completed_successfully}}
+  reporting-service:
+    <<: *java
+    build: {context: ../../reporting-service, dockerfile: ../tools/local_stack/Service.Dockerfile, args: {SERVICE: reporting-service}}
+    ports: ['8084:8084']
+    environment:
+      <<: *common-env
+      SERVER_PORT: '8084'
+      REPORTING_DB_URL: jdbc:postgresql://postgres:5432/reporting_db
+      REPORTING_DB_USER: reporting
+      REPORTING_DB_PASSWORD: ${REPORTING_DB_PASSWORD}
+    depends_on: {postgres: {condition: service_healthy}, redis: {condition: service_healthy}, kafka: {condition: service_healthy}, kafka-init: {condition: service_completed_successfully}}
+  discovery-service:
+    <<: *java
+    build: {context: ../../discovery-service, dockerfile: ../tools/local_stack/Service.Dockerfile, args: {SERVICE: discovery-service}}
+    ports: ['8085:8085']
+    environment:
+      <<: *common-env
+      SERVER_PORT: '8085'
+      DISCOVERY_DB_URL: jdbc:postgresql://postgres:5432/discovery_db
+      DISCOVERY_DB_USER: discovery
+      DISCOVERY_DB_PASSWORD: ${DISCOVERY_DB_PASSWORD}
+    depends_on: {postgres: {condition: service_healthy}, redis: {condition: service_healthy}, kafka: {condition: service_healthy}, kafka-init: {condition: service_completed_successfully}}
+  voucher-service:
+    <<: *java
+    build: {context: ../../voucher-service, dockerfile: ../tools/local_stack/Service.Dockerfile, args: {SERVICE: voucher-service}}
+    environment:
+      <<: *common-env
+      SERVER_PORT: '8086'
+      DATABASE_URL: jdbc:postgresql://postgres:5432/voucher_db
+      DATABASE_USER: voucher
+      DATABASE_PASSWORD: ${VOUCHER_DB_PASSWORD}
+    depends_on: {postgres: {condition: service_healthy}, redis: {condition: service_healthy}, kafka: {condition: service_healthy}, kafka-init: {condition: service_completed_successfully}}
+  slot-hold-engine:
+    <<: *java
+    build: {context: ../../slot-hold-engine, dockerfile: ../tools/local_stack/Service.Dockerfile, args: {SERVICE: slot-hold-engine}}
+    environment:
+      <<: *common-env
+      SERVER_PORT: '8087'
+      DISCOVERY_URL: http://discovery-service:8085
+    depends_on: {redis: {condition: service_healthy}, discovery-service: {condition: service_healthy}}
+  booking-service:
+    <<: *java
+    build: {context: ../../booking-service, dockerfile: ../tools/local_stack/Service.Dockerfile, args: {SERVICE: booking-service}}
+    environment:
+      <<: *common-env
+      SERVER_PORT: '8088'
+      DATABASE_URL: jdbc:postgresql://postgres:5432/booking_db
+      DATABASE_USER: booking
+      DATABASE_PASSWORD: ${BOOKING_DB_PASSWORD}
+      BOOKING_HOLD_SERVICE_TOKEN: ${BOOKING_HOLD_SERVICE_TOKEN}
+      PAYMENT_URL: http://payment-service:8089
+      BOOKING_CANCEL_CUTOFF_HOURS: '0'
+    depends_on: {postgres: {condition: service_healthy}, redis: {condition: service_healthy}, kafka: {condition: service_healthy}, kafka-init: {condition: service_completed_successfully}, auth-service: {condition: service_healthy}, facility-service: {condition: service_healthy}, slot-hold-engine: {condition: service_healthy}}
+  payment-service:
+    <<: *java
+    build: {context: ../../payment-service, dockerfile: ../tools/local_stack/Service.Dockerfile, args: {SERVICE: payment-service}}
+    environment:
+      <<: *common-env
+      SERVER_PORT: '8089'
+      DATABASE_URL: jdbc:postgresql://postgres:5432/payment_db
+      DATABASE_USER: payment
+      DATABASE_PASSWORD: ${PAYMENT_DB_PASSWORD}
+      BOOKING_URL: http://booking-service:8088
+      CLOUDINARY_URL: ${CLOUDINARY_URL}
+    depends_on: {postgres: {condition: service_healthy}, redis: {condition: service_healthy}, kafka: {condition: service_healthy}, kafka-init: {condition: service_completed_successfully}, booking-service: {condition: service_healthy}}
+  staff-operations-service:
+    <<: *java
+    build: {context: ../../staff-operations-service, dockerfile: ../tools/local_stack/Service.Dockerfile, args: {SERVICE: staff-operations-service}}
+    environment:
+      <<: *common-env
+      SERVER_PORT: '8090'
+      STAFF_DATABASE_URL: jdbc:postgresql://postgres:5432/staff_db
+      STAFF_DATABASE_USER: staff
+      STAFF_DATABASE_PASSWORD: ${STAFF_DB_PASSWORD}
+      BOOKING_URL: http://booking-service:8088
+      STAFF_BOOKING_SERVICE_TOKEN: ${STAFF_BOOKING_SERVICE_TOKEN}
+      STAFF_OFFLINE_SIGNING_KEY: ${STAFF_OFFLINE_SIGNING_KEY}
+    depends_on: {postgres: {condition: service_healthy}, redis: {condition: service_healthy}, kafka: {condition: service_healthy}, kafka-init: {condition: service_completed_successfully}, booking-service: {condition: service_healthy}}
+  pos-retail-service:
+    <<: *java
+    profiles: [pos]
+    build: {context: ../../pos-retail-service, dockerfile: ../tools/local_stack/Service.Dockerfile, args: {SERVICE: pos-retail-service}}
+    environment:
+      <<: *common-env
+      SERVER_PORT: '8091'
+      POS_DATABASE_URL: jdbc:postgresql://postgres:5432/pos_retail_db
+      POS_DATABASE_USER: pos
+      POS_DATABASE_PASSWORD: ${POS_DB_PASSWORD}
+    depends_on: {postgres: {condition: service_healthy}, redis: {condition: service_healthy}, kafka: {condition: service_healthy}, kafka-init: {condition: service_completed_successfully}, booking-service: {condition: service_healthy}}
+  notification-service:
+    <<: *java
+    profiles: [notifications]
+    build: {context: ../../notification-service, dockerfile: ../tools/local_stack/Service.Dockerfile, args: {SERVICE: notification-service}}
+    environment:
+      <<: *common-env
+      SERVER_PORT: '8092'
+      NOTIFICATION_DATABASE_URL: jdbc:postgresql://postgres:5432/notification_db
+      NOTIFICATION_DATABASE_USER: notification
+      NOTIFICATION_DATABASE_PASSWORD: ${NOTIFICATION_DB_PASSWORD}
+      NOTIFICATION_SMTP_HOST: ${NOTIFICATION_SMTP_HOST}
+      NOTIFICATION_SMTP_PORT: ${NOTIFICATION_SMTP_PORT}
+      NOTIFICATION_SMTP_USER: ${NOTIFICATION_SMTP_USER}
+      NOTIFICATION_SMTP_PASSWORD: ${NOTIFICATION_SMTP_PASSWORD}
+      NOTIFICATION_MAIL_FROM: ${NOTIFICATION_MAIL_FROM}
+      NOTIFICATION_RESET_PASSWORD_URL: ${NOTIFICATION_RESET_PASSWORD_URL}
+    depends_on: {postgres: {condition: service_healthy}, redis: {condition: service_healthy}, kafka: {condition: service_healthy}, kafka-init: {condition: service_completed_successfully}}
+  gateway:
+    image: nginx:1.28-alpine
+    restart: unless-stopped
+    mem_limit: 64m
+    ports: ['8080:8080', '8088:8088']
+    volumes: [./nginx.conf:/etc/nginx/conf.d/default.conf:ro]
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8080/_gateway_health]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      auth-service: {condition: service_healthy}
+      subscription-service: {condition: service_healthy}
+      facility-service: {condition: service_healthy}
+      reporting-service: {condition: service_healthy}
+      discovery-service: {condition: service_healthy}
+      voucher-service: {condition: service_healthy}
+      booking-service: {condition: service_healthy}
+      payment-service: {condition: service_healthy}
+      staff-operations-service: {condition: service_healthy}
+    networks: [backend]
+volumes:
+  postgres-data:
+  redis-data:
+  kafka-data:
+networks:
+  backend:
