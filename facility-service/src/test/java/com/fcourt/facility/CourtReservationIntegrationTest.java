@@ -335,6 +335,23 @@ class CourtReservationIntegrationTest {
                 .isZero();
     }
 
+
+    @Test
+    void relockReservesOverBookingsTheCallerAlreadyOwnsButNeverOverOtherLocks() throws Exception {
+        Venue venue = venue(9407, "Relock");
+        Mockito.when(availability.conflicts(venue.courtA(), venue.monday())).thenReturn(List.of(
+                new SlotAvailabilityClient.SlotConflict(1L, java.time.LocalTime.of(8, 0), java.time.LocalTime.of(8, 30), "BOOKED")));
+        UUID plain = UUID.randomUUID();
+        call("POST", "/api/internal/court-reservations", body(plain, venue, "08:00", "09:00", venue.courtA()))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("BOOKING_CONFLICT"));
+        UUID repair = UUID.randomUUID();
+        String relock = body(repair, venue, "08:00", "09:00", venue.courtA()).replace("\"publicReason\"", "\"relock\":true,\"publicReason\"");
+        call("POST", "/api/internal/court-reservations", relock).andExpect(status().isCreated());
+        call("POST", "/api/internal/court-reservations/" + repair + "/commit", null).andExpect(status().isOk());
+        call("POST", "/api/internal/court-reservations", body(UUID.randomUUID(), venue, "08:00", "09:00", venue.courtA())
+                .replace("\"publicReason\"", "\"relock\":true,\"publicReason\"")).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("LOCK_OVERLAP"));
+    }
     @Test
     void endpointsRequireTheServiceToken() throws Exception {
         Venue venue = venue(9406, "Auth");

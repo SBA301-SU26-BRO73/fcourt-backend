@@ -180,6 +180,19 @@ class ReservationServiceTest {
     }
 
     @Test
+    void relockSkipsTheOccupancyCheckButStillRefusesOverlapAndChangesTheFingerprint() {
+        when(store.find(ID)).thenReturn(Optional.empty(), Optional.empty(), Optional.of(row(State.RESERVED, "x", false)));
+        var relock = new ReserveRequest(ID, BRANCH, ADMIN, List.of(1L), START, END, null, null, true);
+
+        service.reserve(relock);
+
+        verify(locks, never()).requireNoBookings(anyList(), any(), any());
+        verify(locks).requireNoLockOverlap(List.of(1L), START, END);
+        assertThat(ReservationService.fingerprint(relock, List.of(1L)))
+                .isNotEqualTo(ReservationService.fingerprint(request(List.of(1L)), List.of(1L)));
+    }
+
+    @Test
     void overlapWithAnotherLockOrBookingPropagatesAndStoresNothing() {
         when(store.find(ID)).thenReturn(Optional.empty());
         var conflict = new ErrorResponseException(HttpStatus.CONFLICT);

@@ -97,7 +97,7 @@ public class ReservationService {
         Reservation existing = reservations.find(request.reservationId()).orElse(null);
         if (existing != null) return replay(existing, fingerprint);
         // Existing bookings/holds: outside the transaction (HTTP), advisory; see class comment.
-        locks.requireNoBookings(courtIds, request.startAt(), request.endAt());
+        if (!request.relocking()) locks.requireNoBookings(courtIds, request.startAt(), request.endAt());
 
         int ttl = request.ttlSeconds() == null ? com.fcourt.facility.api.ReservationDtos.DEFAULT_TTL_SECONDS
                 : request.ttlSeconds();
@@ -255,7 +255,7 @@ public class ReservationService {
     /** Stable digest of everything that defines what is held; ttl and public text are deliberately excluded. */
     static String fingerprint(ReserveRequest request, List<Long> sortedCourtIds) {
         String canonical = request.branchId() + "|" + request.adminId() + "|" + sortedCourtIds + "|"
-                + request.startAt() + "|" + request.endAt();
+                + request.startAt() + "|" + request.endAt() + "|" + request.relocking();
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                     .digest(canonical.getBytes(StandardCharsets.UTF_8)));
