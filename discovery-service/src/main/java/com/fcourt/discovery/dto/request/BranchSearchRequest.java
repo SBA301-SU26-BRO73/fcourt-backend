@@ -13,7 +13,27 @@ public record BranchSearchRequest(
         @DecimalMin("-90") @DecimalMax("90") Double latitude,
         @DecimalMin("-180") @DecimalMax("180") Double longitude,
         @Min(0) @Max(1000000) Integer page,
-        @Min(1) @Max(100) Integer size) {
+        @Min(1) @Max(100) Integer size,
+        Boolean hasAvailableSlotsToday,
+        @Pattern(regexp = "(?:[01][0-9]|2[0-3]):[0-5][0-9] *- *(?:[01][0-9]|2[0-3]):[0-5][0-9]",
+                message = "timeSlot must use HH:mm - HH:mm") String timeSlot) {
+    public BranchSearchRequest(String query, String city, String district, Long courtTypeId,
+            BigDecimal minPrice, BigDecimal maxPrice, Double latitude, Double longitude,
+            Integer page, Integer size) {
+        this(query, city, district, courtTypeId, minPrice, maxPrice, latitude, longitude,
+                page, size, null, null);
+    }
+
+    public boolean requiresAvailability() {
+        return Boolean.TRUE.equals(hasAvailableSlotsToday) || timeSlot != null;
+    }
+
+    @AssertTrue(message = "timeSlot start must be before end; overnight ranges are unsupported")
+    public boolean isTimeSlotOrdered() {
+        if (timeSlot == null || !timeSlot.matches("(?:[01][0-9]|2[0-3]):[0-5][0-9] *- *(?:[01][0-9]|2[0-3]):[0-5][0-9]")) return true;
+        String[] parts = timeSlot.split(" *- *");
+        return parts[0].compareTo(parts[1]) < 0;
+    }
     public int pageNumber() { return page == null ? 0 : page; }
     public int pageSize() { return size == null ? 20 : size; }
 

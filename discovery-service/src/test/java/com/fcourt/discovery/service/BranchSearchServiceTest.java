@@ -20,7 +20,7 @@ class BranchSearchServiceTest {
         var repository = mock(BranchSearchRepository.class);
         var response = new BranchSearchResponse(List.of(), 0, 20, 0, 0);
         when(repository.search(request)).thenThrow(new IllegalStateException("database unavailable")).thenReturn(response);
-        var service = new BranchSearchService(repository, 5);
+        var service = new BranchSearchService(repository, mock(CourtSlotService.class), java.time.Clock.systemUTC(), 5);
         assertThatThrownBy(() -> service.search(request)).isInstanceOf(IllegalStateException.class);
         assertThat(service.search(request)).isEqualTo(response);
         assertThat(service.search(request)).isEqualTo(response);
@@ -39,7 +39,7 @@ class BranchSearchServiceTest {
             if (!release.await(5, TimeUnit.SECONDS)) throw new IllegalStateException("read timed out");
             return oldResult;
         }).thenReturn(newResult);
-        var service = new BranchSearchService(repository, 5);
+        var service = new BranchSearchService(repository, mock(CourtSlotService.class), java.time.Clock.systemUTC(), 5);
         try (var executor = Executors.newSingleThreadExecutor()) {
             var inflight = executor.submit(() -> service.search(request));
             assertThat(started.await(5, TimeUnit.SECONDS)).isTrue();

@@ -61,8 +61,28 @@ Import `examples/discovery.postman_collection.json` into Postman; the collection
 | `minPrice`, `maxPrice` | Inclusive overlap with one court's published price range; nonnegative, up to 2 decimal places |
 | `latitude`, `longitude` | Optional coordinate pair, ranges -90..90 and -180..180 |
 | `page`, `size` | Zero-based page, default 0; size 1..100, default 20 |
+| `hasAvailableSlotsToday` | Optional boolean, default false; require at least one actual available slot today |
+| `timeSlot` | Optional `HH:mm - HH:mm` (spaces around hyphen optional); require continuous availability on one court for the entire interval today; implies availability even if the flag is false |
 
 Type and price filters must match the **same court**. Summaries always show the whole branch's active court count and overall min/max price. A court without pricing still counts, but does not match a price filter. Price ranges summarize active slot templates, not real-time availability or a guaranteed booking quote.
+
+### Advanced availability filters (SCRUM-57 / Flutter SCRUM-58)
+
+With either availability parameter, `minPrice` and `maxPrice` instead apply inclusively to each actual available slot's price. Every slot covering the requested interval must meet these bounds on the same court of the selected type. Template prices do not establish availability and do not exclude a court whose actual slot price qualifies. Branch summaries retain their existing template-based price aggregates.
+
+Today uses `Asia/Ho_Chi_Minh`. Start must precede end; overnight intervals, seconds, empty and malformed ranges return HTTP 400. A range may start/end within a 30-minute slot, but all covering slots must be available with no gaps. Without `timeSlot`, one qualifying slot is enough. HOLD, BOOKED, OUT_OF_SERVICE and EXPIRED slots are excluded through the existing SCRUM-22 service (facility schedule, booking occupancy, Redis holds).
+
+Availability queries bypass the search cache and return `Cache-Control: no-store`. Filtering happens before SQL ranking, pagination and counting; `totalElements`/`totalPages` reflect qualifying branches, including when the requested page is empty. Basic searches preserve their cache and existing contract. Dependency errors propagate rather than returning false availability; a stale projected court missing from the facility source can return HTTP 404, while unavailable/invalid sources or Redis return HTTP 503.
+
+Example (URL-encode the time range in clients):
+
+```text
+GET /api/public/branches?city=ho%20chi%20minh&district=quan%201&courtTypeId=1&minPrice=50000&maxPrice=150000&hasAvailableSlotsToday=true&timeSlot=18%3A00%20-%2020%3A00&page=0&size=20
+```
+
+Flutter should omit unset filters; resetting availability means removing `timeSlot` and removing/setting `hasAvailableSlotsToday=false`. Prices are per 30-minute slot, not the sum for the interval. No new upper price bound is imposed. Availability is a live observation, not a reservation; the hold/booking flow must still recheck.
+
+The current upstream APIs operate per court. Search scans candidate branches in batches of 100 and queries matching courts live before final pagination. Cost grows with the candidate set; source requests retain their existing timeouts. A future bulk availability API is needed for large-scale discovery. No cross-service database access or schema migration is introduced.
 
 Response fields: `content`, `page`, `size`, `totalElements`, `totalPages`. Each item includes `id`, `name`, `address`, `city`, `district`, `latitude`, `longitude`, `minPrice`, `maxPrice`, `courtCount`, `distanceKm`. Empty branches have count 0 and null prices. Missing GPS yields null distance.
 
