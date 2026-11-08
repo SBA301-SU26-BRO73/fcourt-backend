@@ -10,7 +10,9 @@ import java.util.regex.Pattern;
  * name field is never published; control and zero-width characters are removed first.
  */
 public final class ReviewerNames {
-    private static final Pattern INVISIBLE = Pattern.compile("[\\p{Cc}\\p{Cf}]");
+    /** Control characters (tab, newline...) separate words; invisible format characters (zero-width, bidi) vanish. */
+    private static final Pattern CONTROL = Pattern.compile("\\p{Cc}");
+    private static final Pattern FORMAT = Pattern.compile("\\p{Cf}");
     private static final Pattern SEPARATORS = Pattern.compile("[\\p{Z}\\s]+");
     private static final Pattern NAME_WORD = Pattern.compile("[\\p{L}\\p{M}'’.-]+");
     private static final int MAX_GIVEN = 30;
