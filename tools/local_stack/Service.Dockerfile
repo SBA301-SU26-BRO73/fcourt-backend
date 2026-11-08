@@ -4,9 +4,10 @@ FROM maven:3.9.11-eclipse-temurin-21 AS build
 ARG SERVICE
 WORKDIR /workspace/service
 COPY . .
+# Use the Maven that ships in the build image. The checked-out mvnw can have CRLF line endings on Windows,
+# which makes its shebang fail inside Linux ("./mvnw: not found"), and it would download Maven again anyway.
 RUN --mount=type=cache,target=/root/.m2 \
-    if [ -f ./mvnw ]; then chmod +x ./mvnw && ./mvnw -B -ntp -DskipTests package; \
-    else mvn -B -ntp -f pom.xml -DskipTests package; fi \
+    mvn -B -ntp -f pom.xml -DskipTests package \
  && find target -maxdepth 1 -type f -name '*.jar' ! -name '*sources*' ! -name '*tests*' -exec cp {} /workspace/service.jar \;
 
 FROM eclipse-temurin:21-jre
