@@ -287,4 +287,29 @@ class VoucherApplyTest {
         assertThat(applications.booking(1,false).orElseThrow().status()).isEqualTo("RESERVED");
         assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isEqualTo(10);
     }
+
+    @Test void paidUsageStoresCustomerSnapshotAndNormalizedPhone() throws Exception {
+        voucher("SAVE",10);var application=apply(1,10);
+        var event=applied(application,UUID.randomUUID());
+        ((ObjectNode)event.path("voucher")).put("customerName","  Nguyen Van A\n").put("customerPhone","+84 912 345 678").put("bookingCode","FC00000001");
+        events.accept(event.toString());
+        var usage=jdbc.queryForMap("SELECT * FROM voucher_usages");
+        assertThat(usage.get("customer_name")).isEqualTo("Nguyen Van A");
+        assertThat(usage.get("customer_phone")).isEqualTo("+84 912 345 678");
+        assertThat(usage.get("customer_phone_digits")).isEqualTo("0912345678");
+        assertThat(usage.get("booking_code")).isEqualTo("FC00000001");
+    }
+
+    @Test void legacyEventsWithoutSnapshotAndMalformedSnapshotStillRecordUsage() throws Exception {
+        voucher("SAVE",10);
+        var legacy=apply(1,10);events.accept(applied(legacy,UUID.randomUUID()).toString());
+        var other=apply(2,20);
+        var malformed=applied(other,UUID.randomUUID());
+        ((ObjectNode)malformed.path("voucher")).put("customerName",123).put("customerPhone","x".repeat(40)).put("bookingCode","TOO-LONG-CODE");
+        events.accept(malformed.toString());
+        var rows=jdbc.queryForList("SELECT customer_name,customer_phone,customer_phone_digits,booking_code FROM voucher_usages");
+        assertThat(rows).hasSize(2);
+        assertThat(rows).allSatisfy(row->assertThat(row.values()).containsOnlyNulls());
+        assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isEqualTo(2);
+    }
 }
