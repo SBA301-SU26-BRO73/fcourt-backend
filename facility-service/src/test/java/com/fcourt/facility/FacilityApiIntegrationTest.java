@@ -151,6 +151,77 @@ class FacilityApiIntegrationTest {
     }
 
     @Test
+    void publicBranchCourtsListsOnlyActiveLiveCourtsInNameOrderWithoutInternalFields() throws Exception {
+        long owner = 9181;
+        long branchId = id(postJson("/api/admin/branches", branchBody("Public courts", "06:00", "22:00"), owner)
+                .andExpect(status().isCreated()));
+        long zulu = id(postJson("/api/admin/branches/" + branchId + "/courts", courtBody("Zulu", "140000"), owner)
+                .andExpect(status().isCreated()));
+        long alpha = id(postJson("/api/admin/branches/" + branchId + "/courts", courtBody("Alpha", "100000"), owner)
+                .andExpect(status().isCreated()));
+        long inactive = id(postJson("/api/admin/branches/" + branchId + "/courts", courtBody("Inactive", "120000"), owner)
+                .andExpect(status().isCreated()));
+        long deleted = id(postJson("/api/admin/branches/" + branchId + "/courts", courtBody("Deleted", "130000"), owner)
+                .andExpect(status().isCreated()));
+        long otherOwner = 9183;
+        long otherBranch = id(postJson("/api/admin/branches", branchBody("Other branch", "06:00", "22:00"), otherOwner)
+                .andExpect(status().isCreated()));
+        postJson("/api/admin/branches/" + otherBranch + "/courts", courtBody("Aardvark", "90000"), otherOwner)
+                .andExpect(status().isCreated());
+
+        mvc.perform(patch("/api/admin/courts/{id}/status", inactive).with(as(owner, "ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"INACTIVE\"}"))
+                .andExpect(status().isOk());
+        mvc.perform(delete("/api/admin/courts/{id}", deleted).with(as(owner, "ADMIN")))
+                .andExpect(status().isNoContent());
+
+        mvc.perform(get("/api/public/branches/{id}/courts", branchId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].id").value(alpha))
+                .andExpect(jsonPath("$[0].name").value("Alpha"))
+                .andExpect(jsonPath("$[0].courtTypeId").value(6))
+                .andExpect(jsonPath("$[0].defaultPricePerHour").value(100000))
+                .andExpect(jsonPath("$[1].id").value(zulu))
+                .andExpect(jsonPath("$[1].name").value("Zulu"))
+                .andExpect(jsonPath("$[0].branchId").doesNotExist())
+                .andExpect(jsonPath("$[0].adminId").doesNotExist())
+                .andExpect(jsonPath("$[0].status").doesNotExist())
+                .andExpect(jsonPath("$[0].description").doesNotExist())
+                .andExpect(jsonPath("$[0].imageUrl").doesNotExist())
+                .andExpect(jsonPath("$[0].createdAt").doesNotExist())
+                .andExpect(jsonPath("$[0].updatedAt").doesNotExist());
+    }
+
+    @Test
+    void publicBranchCourtsReturnsEmptyForActiveBranchWithoutActiveCourtsAndNotFoundOtherwise() throws Exception {
+        long owner = 9182;
+        long emptyBranch = id(postJson("/api/admin/branches", branchBody("Empty public branch", "06:00", "22:00"), owner)
+                .andExpect(status().isCreated()));
+        mvc.perform(get("/api/public/branches/{id}/courts", emptyBranch))
+                .andExpect(status().isOk()).andExpect(content().json("[]"));
+
+        long inactiveBranch = id(postJson("/api/admin/branches", branchBody("Inactive public branch", "06:00", "22:00"), owner)
+                .andExpect(status().isCreated()));
+        mvc.perform(put("/api/admin/branches/{id}", inactiveBranch).with(as(owner, "ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(branchBody("Inactive public branch", "06:00", "22:00")
+                                .replace("\"bankName\"", "\"status\":\"INACTIVE\",\"bankName\"")))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/public/branches/{id}/courts", inactiveBranch))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value("Branch not found"));
+
+        long deletedBranch = id(postJson("/api/admin/branches", branchBody("Deleted public branch", "06:00", "22:00"), owner)
+                .andExpect(status().isCreated()));
+        mvc.perform(delete("/api/admin/branches/{id}", deletedBranch).with(as(owner, "ADMIN")))
+                .andExpect(status().isNoContent());
+        mvc.perform(get("/api/public/branches/{id}/courts", deletedBranch)).andExpect(status().isNotFound());
+        mvc.perform(get("/api/public/branches/{id}/courts", Long.MAX_VALUE)).andExpect(status().isNotFound());
+    }
+
+    @Test
     void bookingContextContainsOnlyAvailableVenueMetadata() throws Exception {
         long owner=9918;
         long branch=id(postJson("/api/admin/branches",branchBody("Booking fixture","06:00","22:00"),owner).andExpect(status().isCreated()));

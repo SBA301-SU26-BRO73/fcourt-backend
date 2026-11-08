@@ -66,6 +66,7 @@ Times are `"HH:mm"` (requests also accept `"HH:mm:ss"`); money is a JSON number 
 - `POST /api/admin/branches` → 201; **403** when the subscription branch limit is reached
 - `GET|PUT|DELETE /api/admin/branches/{id}` (DELETE = soft delete, 204)
 - `GET /api/public/branches/{id}` → `{id,name,address,city,bankName,bankBin,bankAccountNumber,bankAccountName,status}`
+- `GET /api/public/branches/{branchId}/courts` → `[{id,name,courtTypeId,defaultPricePerHour}]`; anonymous, active and non-deleted branch/courts only, ordered by court name then id; **404** for unknown, inactive, or deleted branch, `[]` when no active courts remain
 - `GET /api/staff/branches/{id}` → `{id,status}`
 
 Request: `name*, address*, ward, district, city*, latitude, longitude (pair), phone, openTime*,
@@ -82,6 +83,9 @@ closeTime* (> openTime, else 400), slotDurationMinutes (30|60, default 30), bank
 Request: `name*, courtTypeId*, description, imageUrl, defaultPricePerHour* (> 0), status
 (ACTIVE|MAINTENANCE|INACTIVE)`. A duplicate name in the same branch (case-insensitive, trimmed)
 or a price ≤ 0 is **400**. Courts seeded by SQL have `defaultPricePerHour = null`.
+
+The public court listing exposes only the four listed fields. `defaultPricePerHour` comes from
+`courts.default_price_per_hour`; it is null for legacy SQL-seeded courts whose price was not set.
 
 **Time slot templates (SCRUM-18)** — day of week `0 = Sunday … 6 = Saturday`.
 
