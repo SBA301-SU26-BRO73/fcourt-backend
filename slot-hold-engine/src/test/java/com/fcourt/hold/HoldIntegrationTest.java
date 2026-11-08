@@ -59,6 +59,27 @@ class HoldIntegrationTest {
                 .build();
     }
 
+    @Test
+    void holdAndReleasePublishOnlyPublicInvalidations() throws Exception {
+        var queue = new java.util.concurrent.LinkedBlockingQueue<String>();
+        var topic = redis.getTopic("fcourt:slot-changes", StringCodec.INSTANCE);
+        int listener = topic.addListener(String.class, (channel, message) -> queue.add(message));
+        try {
+            var request = new HoldRequest(21L, LocalDate.of(2030, 1, 2), List.of(1L), "0912345678");
+            assertThat(store.acquire(request, "private-token")).isNotNull();
+            var event = MAPPER.readTree(queue.poll(3, java.util.concurrent.TimeUnit.SECONDS));
+            assertThat(event.size()).isEqualTo(2);
+            assertThat(event.path("courtId").asLong()).isEqualTo(21);
+            assertThat(event.path("date").asText()).isEqualTo("2030-01-02");
+            assertThat(store.acquire(request, "conflicting-token")).isNull();
+            assertThat(queue.poll(100, java.util.concurrent.TimeUnit.MILLISECONDS)).isNull();
+            store.release("private-token");
+            assertThat(MAPPER.readTree(queue.poll(3, java.util.concurrent.TimeUnit.SECONDS))).isEqualTo(event);
+            store.release("private-token");
+            assertThat(queue.poll(100, java.util.concurrent.TimeUnit.MILLISECONDS)).isNull();
+        } finally { topic.removeListener(listener); }
+    }
+
     static RedissonClient client() {
         var config = new Config();
         config.useSingleServer().setAddress("redis://" + REDIS.getHost() + ":" + REDIS.getMappedPort(6379));
