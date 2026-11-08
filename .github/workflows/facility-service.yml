@@ -1,13 +1,13 @@
 name: facility-service
 on:
   pull_request:
-    branches: [dev, 'feature/**']
-    paths: ["facility-service/**", ".github/workflows/facility-service.yml"]
-  push:
-    branches: ["feature/**"]
+    branches: [dev, "feature/**", "feat/**"]
     paths: ["facility-service/**", ".github/workflows/facility-service.yml"]
 permissions:
   contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
