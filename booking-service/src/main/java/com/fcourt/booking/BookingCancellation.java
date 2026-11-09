@@ -59,6 +59,28 @@ class BookingCancellation {
         applyCancellation(b,reason,policy);
         return queries.detail(id,jwt,null);
     }
+    record GuestResult(String bookingCode,String status,BigDecimal refundAmount,String currency) {}
+    /**
+     * Guest cancellation (no account): booking code + the phone used at booking, same policy as the owner path
+     * (cancellable status, cut-off hours, refund percent). Every mismatch is an identical 404 so codes cannot be probed.
+     */
+    @Transactional
+    GuestResult cancelAsGuest(String bookingCode,String phone,String reason) {
+        String code=bookingCode.strip().toUpperCase(Locale.ROOT).replace("-","");
+        var rows=jdbc.queryForList("SELECT * FROM bookings WHERE booking_code=? AND customer_id IS NULL FOR UPDATE",code);
+        String stored=rows.isEmpty()?null:(String)rows.getFirst().get("guest_phone");
+        boolean same=com.fcourt.booking.service.GuestBookingLookupService.phoneEquals(stored==null?"0000000000":stored,phone);
+        if(rows.isEmpty()||stored==null||!same) throw BookingQueries.missing();
+        var b=rows.getFirst();
+        String why=reason==null||reason.isBlank()?"Khách hủy qua trang tra cứu":reason.strip();
+        if(why.length()>500) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Cancellation reason must be at most 500 characters");
+        if("CANCELLED".equals(b.get("status")))
+            return new GuestResult(code,"CANCELLED",(BigDecimal)b.get("refund_amount"),"VND");
+        var policy=policy(b);
+        if(!policy.allowed()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,policy.reason());
+        applyCancellation(b,why,policy);
+        return new GuestResult(code,"CANCELLED",policy.refundAmount(),"VND");
+    }
     /** Policy of one booking row, for package cancellation (SCRUM-242) which applies the same rules per member. */
     Policy policyFor(Map<String,Object> b) {return policy(b);}
     /** Cancels one booking row: status, released slots and the BookingCancelledEvent outbox row (payment refunds follow it). */

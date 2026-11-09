@@ -64,7 +64,7 @@ public class GuestBookingLookupService {
         return digits.startsWith("84") && digits.length() == 11 ? "0" + digits.substring(2) : digits;
     }
 
-    static boolean phoneEquals(String stored, String given) {
+    public static boolean phoneEquals(String stored, String given) {
         return MessageDigest.isEqual(
                 canonicalPhone(stored).getBytes(StandardCharsets.US_ASCII),
                 canonicalPhone(given).getBytes(StandardCharsets.US_ASCII));

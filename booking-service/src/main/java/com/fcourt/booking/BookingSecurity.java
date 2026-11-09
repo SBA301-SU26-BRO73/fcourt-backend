@@ -59,7 +59,7 @@ class BookingSecurity {
                                         .requestMatchers("/actuator/health", "/api/bookings/{id}", "/ws-fcourt")
                                         .permitAll()
                                         .requestMatchers(org.springframework.http.HttpMethod.POST,
-                                                "/api/public/bookings/lookup", "/api/bookings")
+                                                "/api/public/bookings/lookup", "/api/public/bookings/cancel", "/api/bookings")
                                         .permitAll()
                                         .requestMatchers(org.springframework.http.HttpMethod.GET,
                                                 "/api/internal/bookings/*/voucher-snapshot").permitAll()
