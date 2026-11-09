@@ -1,0 +1,173 @@
+server:
+  port: ${SERVER_PORT:8080}
+spring:
+  application:
+    name: gateway-service
+  cloud:
+    gateway:
+      server:
+        webflux:
+          httpclient:
+            connect-timeout: ${GATEWAY_CONNECT_TIMEOUT_MS:3000}
+            response-timeout: ${GATEWAY_RESPONSE_TIMEOUT:30s}
+          default-filters:
+            # Reserved for service-to-service calls: a client must never be able to supply it.
+            - RemoveRequestHeader=X-Internal-Service-Token
+          # Routes are matched by order (lower first), then by position. Specific paths come before the
+          # broad ones that contain them. /api/internal/** and /actuator/** have no route on purpose
+          # (BlockedPathsFilter answers 403). The Authorization header is forwarded unchanged.
+          routes:
+            - id: slot-hold-engine
+              uri: lb://slot-hold-engine
+              order: 10
+              predicates:
+                - Path=/api/bookings/hold-slots/**
+            - id: booking-service-public
+              uri: lb://booking-service
+              order: 10
+              predicates:
+                # Guest booking lookup (public, no token).
+                - Path=/api/public/bookings/**
+            - id: discovery-service-branches
+              uri: lb://discovery-service
+              order: 10
+              predicates:
+                # Exact list path, and the reviews of one branch. Both sit inside facility's /api/public/branches/**.
+                - Path=/api/public/branches,/api/public/branches/,/api/public/branches/*/reviews,/api/public/branches/*/reviews/**
+            - id: discovery-service
+              uri: lb://discovery-service
+              order: 20
+              predicates:
+                - Path=/api/public/courts/**,/api/reviews/**,/api/admin/reviews/**
+            - id: auth-service
+              uri: lb://auth-service
+              order: 20
+              predicates:
+                - Path=/api/auth/**,/api/super-admin/court-admins/**,/api/super-admin/users/**,/api/super-admin/stats/accounts/**,/api/super-admin/stats/owner-names/**
+            - id: subscription-service
+              uri: lb://subscription-service
+              order: 20
+              predicates:
+                - Path=/api/subscriptions/**,/api/subscription-plans/**,/api/court-types/**,/api/super-admin/stats/saas-revenue/**
+            - id: facility-service
+              uri: lb://facility-service
+              order: 20
+              predicates:
+                - Path=/api/public/branches/**,/api/admin/branches/**,/api/admin/courts/**,/api/admin/time-slot-templates/**,/api/staff/branches/**,/api/staff/courts/**
+            - id: reporting-service
+              uri: lb://reporting-service
+              order: 20
+              predicates:
+                - Path=/api/admin/dashboard/**,/api/super-admin/dashboard/**
+            - id: voucher-service
+              uri: lb://voucher-service
+              order: 20
+              predicates:
+                - Path=/api/vouchers/**,/api/admin/vouchers/**
+            - id: booking-service
+              uri: lb://booking-service
+              order: 20
+              predicates:
+                - Path=/api/bookings/**,/api/admin/bookings/**
+            - id: booking-service-ws
+              uri: lb:ws://booking-service
+              order: 20
+              predicates:
+                # STOMP over WebSocket (lb:ws:// = load-balanced, ws scheme).
+                - Path=/ws-fcourt/**
+            - id: payment-service
+              uri: lb://payment-service
+              order: 20
+              predicates:
+                - Path=/api/payments/**,/api/refunds/**,/api/admin/payments/**,/api/admin/refunds/**
+            - id: staff-operations-service
+              uri: lb://staff-operations-service
+              order: 20
+              predicates:
+                - Path=/api/staff/schedule/**,/api/staff/check-in/**,/api/staff/offline/**,/api/staff/me/**,/api/staff/walk-in/**,/api/staff/bookings/**,/api/admin/staff/**
+            - id: notification-service
+              uri: lb://notification-service
+              order: 20
+              predicates:
+                - Path=/devices/**
+            - id: pos-retail-service
+              uri: lb://pos-retail-service
+              order: 20
+              predicates:
+                - Path=/api/staff/pos/**,/api/admin/pos/**
+
+eureka:
+  client:
+    enabled: ${EUREKA_ENABLED:true}
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+    registry-fetch-interval-seconds: ${EUREKA_FETCH_INTERVAL_SECONDS:10}
+  instance:
+    prefer-ip-address: true
+
+fcourt:
+  gateway:
+    jwt:
+      jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+      issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
+      audience: ${AUTH_JWT_AUDIENCE:fcourt}
+    cors:
+      # Comma separated origins. Empty (default): no CORS handling, clients are same-origin through nginx.
+      allowed-origins: ${GATEWAY_ALLOWED_ORIGINS:}
+    swagger:
+      enabled: ${GATEWAY_SWAGGER_ENABLED:true}
+      # Services listed in the aggregated Swagger UI (each must expose /v3/api-docs). Override with
+      # GATEWAY_SWAGGER_SERVICES=booking-service,voucher-service
+      services: ${GATEWAY_SWAGGER_SERVICES:auth-service,subscription-service,facility-service,reporting-service,discovery-service,voucher-service,slot-hold-engine,booking-service,payment-service,staff-operations-service,pos-retail-service,notification-service}
+    security:
+      # Taken from each service's own security config. "METHOD /pattern", METHOD may be ANY.
+      # Everything not listed here needs a valid token.
+      authenticated-paths:
+        # Carve-outs inside broader public patterns below (checked first).
+        - ANY /api/bookings/my
+        - ANY /api/payments/my-transactions
+        - ANY /api/payments/*/confirm-free
+        - ANY /api/refunds/**
+      public-paths:
+        # auth-service
+        - ANY /api/auth/register/**
+        - ANY /api/auth/login
+        - ANY /api/auth/google
+        - ANY /api/auth/refresh
+        - ANY /api/auth/logout
+        - ANY /api/auth/password/forgot
+        - ANY /api/auth/password/reset
+        # facility-service, discovery-service: public reads
+        - GET /api/public/**
+        # subscription-service: catalogue reads and the PayOS webhook (authenticated by its signature)
+        - GET /api/court-types
+        - GET /api/court-types/*
+        - GET /api/subscription-plans/all
+        - POST /api/subscriptions/payment-webhook
+        # slot-hold-engine: guest hold and release
+        - ANY /api/bookings/hold-slots/**
+        - ANY /api/public/bookings/**
+        # booking-service: guest booking view (X-Hold-Token) and the realtime slot socket
+        - GET /api/bookings/*
+        - ANY /ws-fcourt/**
+        # payment-service: customer and guest authorization is delegated to booking per request
+        - ANY /api/payments/**
+        # aggregated Swagger UI
+        - GET /swagger-ui.html
+        - GET /swagger-ui/**
+        - GET /webjars/**
+        - GET /v3/api-docs/**
+        - GET /docs/**
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: ${GATEWAY_SWAGGER_ENABLED:true}
+  api-docs:
+    enabled: ${GATEWAY_SWAGGER_ENABLED:true}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
