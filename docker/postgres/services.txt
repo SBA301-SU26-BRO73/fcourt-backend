@@ -1,5 +1,5 @@
 # <thu-muc-service> <ten-database>
-# Them service moi: tao thu muc service, them mot dong o day, va (neu co) dat script vao <service>/database/
+# Them service moi: tao thu muc service, them mot dong o day. Schema do Flyway cua service tao.
 auth-service auth_db
 subscription-service subscription_db
 facility-service facility_db
