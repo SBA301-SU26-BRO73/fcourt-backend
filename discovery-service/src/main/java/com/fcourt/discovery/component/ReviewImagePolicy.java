@@ -6,7 +6,7 @@ import java.util.UUID;
 
 /**
  * Decides which image URLs a review may store, independent of the storage provider: the URL must start with the
- * configured public HTTPS base, and its key part must be {@code reviews/{callerId}/...}, so only files this service
+ * configured public base (HTTPS; plain HTTP only on localhost for LocalStack), and its key part must be {@code reviews/{callerId}/...}, so only files this service
  * uploaded for that user are accepted. Existing rows are never re-validated.
  */
 public final class ReviewImagePolicy {
@@ -21,7 +21,7 @@ public final class ReviewImagePolicy {
             try {
                 String text = publicBaseUrl.trim();
                 URI candidate = URI.create(text.endsWith("/") ? text : text + "/");
-                if ("https".equalsIgnoreCase(candidate.getScheme()) && candidate.getHost() != null && candidate.getPort() == -1
+                if (secureOrLoopback(candidate)
                         && candidate.getRawUserInfo() == null && candidate.getRawQuery() == null && candidate.getRawFragment() == null) {
                     parsed = candidate;
                 }
@@ -29,6 +29,13 @@ public final class ReviewImagePolicy {
         }
         this.base = parsed;
         this.keyPrefix = keyPrefix == null ? "" : keyPrefix;
+    }
+
+    /** HTTPS without a port, or plain HTTP on a loopback host (LocalStack in local development only). */
+    private static boolean secureOrLoopback(URI uri) {
+        if (uri.getHost() == null) return false;
+        if ("https".equalsIgnoreCase(uri.getScheme())) return uri.getPort() == -1;
+        return "http".equalsIgnoreCase(uri.getScheme()) && ("localhost".equalsIgnoreCase(uri.getHost()) || "127.0.0.1".equals(uri.getHost()));
     }
 
     public boolean configured() { return base != null; }
@@ -43,7 +50,7 @@ public final class ReviewImagePolicy {
         if (base == null || url == null) return false;
         URI uri;
         try { uri = URI.create(url); } catch (IllegalArgumentException error) { return false; }
-        if (!"https".equalsIgnoreCase(uri.getScheme()) || !base.getHost().equalsIgnoreCase(uri.getHost()) || uri.getPort() != -1
+        if (!base.getScheme().equalsIgnoreCase(uri.getScheme()) || !base.getHost().equalsIgnoreCase(uri.getHost()) || uri.getPort() != base.getPort()
                 || uri.getRawUserInfo() != null || uri.getRawQuery() != null || uri.getRawFragment() != null) return false;
         String path = uri.getRawPath();
         // No percent-encoding, dot segments or empty segments: nothing that could escape the expected key space.

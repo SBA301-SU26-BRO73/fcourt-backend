@@ -42,6 +42,8 @@ import org.testcontainers.junit.jupiter.*;
 @DirtiesContext
 class ReviewIntegrationTest {
     @Container static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>("postgres:16-alpine");
+    static final String BUCKET="fcourt-discovery-test";
+    @Container static final org.testcontainers.containers.MinIOContainer STORAGE = new org.testcontainers.containers.MinIOContainer(org.testcontainers.utility.DockerImageName.parse("cgr.dev/chainguard/minio:latest").asCompatibleSubstituteFor("minio/minio"));
     static final ObjectMapper JSON = new ObjectMapper().findAndRegisterModules();
     static final RSAKey KEY = signingKey();
     static final String ISSUER = "http://reviews-test/auth";
@@ -55,7 +57,7 @@ class ReviewIntegrationTest {
     static final AtomicReference<String> PROFILE = new AtomicReference<>();
     static final AtomicInteger PROFILE_STATUS = new AtomicInteger(200), UPLOADS = new AtomicInteger();
     static final String PROFILE_JSON = "{\"id\":10,\"email\":\"a@b.c\",\"fullName\":\"Nguyễn Văn An\",\"avatarUrl\":\"https://lh3.googleusercontent.com/a.jpg\"}";
-    static String photo(long user) { return "https://res.cloudinary.com/demo/image/upload/v1/fcourt/reviews/" + user + "/court.jpg"; }
+    static String photo(long user) { return "https://cdn.fcourt.test/reviews/" + user + "/court.jpg"; }
     static final HttpServer SOURCE = startSources();
 
     static RSAKey signingKey() {
@@ -94,14 +96,6 @@ class ReviewIntegrationTest {
                 exchange.getResponseHeaders().set("Content-Type","application/json");exchange.sendResponseHeaders(PROFILE_STATUS.get(),bytes.length);
                 try(var out=exchange.getResponseBody()){out.write(bytes);}
             });
-            server.createContext("/v1_1/demo/image/upload",exchange->{
-                String form=new String(exchange.getRequestBody().readAllBytes(),StandardCharsets.ISO_8859_1);
-                var folder=java.util.regex.Pattern.compile("name=\"folder\"[\\s\\S]*?\r\n\r\n([^\r]*)\r\n").matcher(form);
-                String path=folder.find()?folder.group(1):"missing";
-                byte[] bytes=("{\"secure_url\":\"https://res.cloudinary.com/demo/image/upload/v1/"+path+"/"+UPLOADS.incrementAndGet()+".jpg\"}").getBytes(StandardCharsets.UTF_8);
-                exchange.getResponseHeaders().set("Content-Type","application/json");exchange.sendResponseHeaders(200,bytes.length);
-                try(var out=exchange.getResponseBody()){out.write(bytes);}
-            });
             server.createContext("/.well-known/jwks.json",exchange->{
                 byte[] bytes=new JWKSet(KEY.toPublicJWK()).toString().getBytes(StandardCharsets.UTF_8);
                 exchange.getResponseHeaders().set("Content-Type","application/json");exchange.sendResponseHeaders(200,bytes.length);
@@ -111,6 +105,10 @@ class ReviewIntegrationTest {
         } catch(java.io.IOException error){throw new ExceptionInInitializerError(error);}
     }
     @DynamicPropertySource static void properties(DynamicPropertyRegistry registry) {
+        try(var admin=software.amazon.awssdk.services.s3.S3Client.builder().endpointOverride(java.net.URI.create(STORAGE.getS3URL())).region(software.amazon.awssdk.regions.Region.of("us-east-1")).forcePathStyle(true).credentialsProvider(software.amazon.awssdk.auth.credentials.StaticCredentialsProvider.create(software.amazon.awssdk.auth.credentials.AwsBasicCredentials.create(STORAGE.getUserName(),STORAGE.getPassword()))).build()){
+            admin.createBucket(b->b.bucket(BUCKET));
+        }
+        System.setProperty("aws.accessKeyId",STORAGE.getUserName());System.setProperty("aws.secretAccessKey",STORAGE.getPassword());
         registry.add("spring.datasource.url",DB::getJdbcUrl);registry.add("spring.datasource.username",DB::getUsername);
         registry.add("spring.datasource.password",DB::getPassword);
         registry.add("discovery.slots.booking-url",()->"http://127.0.0.1:"+SOURCE.getAddress().getPort());
@@ -118,10 +116,8 @@ class ReviewIntegrationTest {
         registry.add("discovery.auth.jwk-set-uri",()->"http://127.0.0.1:"+SOURCE.getAddress().getPort()+"/.well-known/jwks.json");
         registry.add("discovery.auth.issuer",()->ISSUER);
         registry.add("discovery.auth.base-url",()->"http://127.0.0.1:"+SOURCE.getAddress().getPort());
-        registry.add("storage.cloudinary.cloud-name",()->"demo");
-        registry.add("storage.cloudinary.api-key",()->"k");
-        registry.add("storage.cloudinary.api-secret",()->"s");
-        registry.add("storage.cloudinary.base-url",()->"http://127.0.0.1:"+SOURCE.getAddress().getPort());
+        registry.add("storage.s3.bucket",()->BUCKET);registry.add("storage.s3.region",()->"us-east-1");
+        registry.add("storage.s3.endpoint",()->java.net.URI.create(STORAGE.getS3URL()).toString());registry.add("storage.public-base-url",()->"https://cdn.fcourt.test");
     }
     @AfterAll static void stop(){SOURCE.stop(0);}
     @Autowired JdbcTemplate jdbc;
@@ -215,8 +211,8 @@ class ReviewIntegrationTest {
     }
 
     @Test void onlyUrlsFromOurUploaderAndTheCallersFolderAreAcceptedAndNothingRemoteIsCalledOtherwise() throws Exception {
-        for(String url:List.of("https://example.test/court.jpg",photo(11),"https://res.cloudinary.com/other/image/upload/v1/fcourt/reviews/10/a.jpg",
-                "https://res.cloudinary.com/demo/image/upload/v1/fcourt/reviews/10/../11/a.jpg")){
+        for(String url:List.of("https://example.test/court.jpg",photo(11),"https://other.example.test/reviews/10/a.jpg",
+                "https://cdn.fcourt.test/reviews/10/../11/a.jpg")){
             var input=JSON.createObjectNode().put("bookingId",1).put("rating",5);input.putArray("imageUrls").add(url);
             mvc.perform(post("/api/reviews").with(jwt().jwt(actor(10,"CUSTOMER"))).contentType("application/json").content(input.toString()))
                     .andExpect(status().isBadRequest());
@@ -232,7 +228,7 @@ class ReviewIntegrationTest {
                 .andExpect(status().isCreated()).andExpect(header().string("Cache-Control","no-store")).andReturn().getResponse().getContentAsString();
         var urls=json.readTree(result).path("urls");
         assertThat(urls).hasSize(2);
-        for(var url:urls) assertThat(url.asText()).startsWith("https://res.cloudinary.com/demo/image/upload/").contains("/fcourt/reviews/10/");
+        for(var url:urls) assertThat(url.asText()).startsWith("https://cdn.fcourt.test/reviews/10/");
         var review=JSON.createObjectNode().put("bookingId",1).put("rating",5);review.putArray("imageUrls").add(urls.get(0).asText()).add(urls.get(1).asText());
         mvc.perform(post("/api/reviews").with(jwt().jwt(actor(10,"CUSTOMER"))).contentType("application/json").content(review.toString()))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.imageUrls.length()").value(2));

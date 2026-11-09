@@ -16,16 +16,16 @@ import org.springframework.web.server.ResponseStatusException;
 class ReviewImageServiceTest {
     static final byte[] PNG = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0};
     final List<String> keys = new ArrayList<>();
-    static final String BASE = "https://res.cloudinary.com/demo/image/upload/";
+    static final String BASE = "https://cdn.fcourt.test/";
     static ImageStorage host(java.util.function.Function<String, String> urlOf, List<String> keys) {
         return new ImageStorage() {
             @Override public String upload(String key, String contentType, byte[] content) { keys.add(key); return urlOf.apply(key); }
             @Override public String publicBaseUrl() { return BASE; }
-            @Override public String keyPrefix() { return "fcourt/"; }
+            @Override public String keyPrefix() { return ""; }
         };
     }
-    static ReviewImagePolicy policy() { return new ReviewImagePolicy(BASE, "fcourt/"); }
-    final ImageStorage storage = host(key -> BASE + "v1/fcourt/" + key, keys);
+    static ReviewImagePolicy policy() { return new ReviewImagePolicy(BASE, ""); }
+    final ImageStorage storage = host(key -> BASE + key, keys);
     final ReviewImageService service = new ReviewImageService(new ReviewImageValidator(1024), storage, policy(), limiter(20));
 
     static Jwt jwt(String subject, String role) {
@@ -55,7 +55,7 @@ class ReviewImageServiceTest {
     @Test
     void customerUploadsLandInTheirOwnServerChosenFolder() {
         var urls = service.upload(jwt("10", "CUSTOMER"), List.of(png(), png()));
-        assertThat(urls).hasSize(2).allMatch(url -> url.contains("/fcourt/reviews/10/"));
+        assertThat(urls).hasSize(2).allMatch(url -> url.contains("/reviews/10/"));
         assertThat(keys).hasSize(2).allMatch(key -> key.matches("reviews/10/[0-9a-f-]{36}[.](png|jpg)"));
         assertThat(policy().allowsAll(urls, 10)).isTrue();
     }
