@@ -26,6 +26,7 @@ class DocumentStorageConfiguration {
     DocumentStorage documentStorage(@Value("${storage.s3.bucket:}") String bucket,
                                     @Value("${storage.s3.region:ap-southeast-1}") String region,
                                     @Value("${storage.s3.endpoint:}") String endpoint,
+                                    @Value("${storage.s3.presign-endpoint:}") String presignEndpoint,
                                     @Value("${storage.s3.path-style:false}") boolean pathStyle,
                                     @Value("${storage.s3.presign-ttl:10m}") Duration presignTtl,
                                     @Value("${storage.public-base-url:}") String publicBaseUrl) {
@@ -39,7 +40,7 @@ class DocumentStorageConfiguration {
                 .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(pathAccess).build());
         if (!endpoint.isBlank()) {
             s3.endpointOverride(URI.create(endpoint));
-            presigner.endpointOverride(URI.create(endpoint));
+            presigner.endpointOverride(URI.create(presignEndpoint.isBlank() ? endpoint : presignEndpoint));
         }
         String base = !publicBaseUrl.isBlank() ? publicBaseUrl
                 : !endpoint.isBlank() ? endpoint.replaceAll("/+$", "") + "/" + bucket
