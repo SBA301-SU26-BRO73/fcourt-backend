@@ -68,6 +68,10 @@ Dữ liệu mẫu là dữ liệu demo (tài khoản `@demo.com`, số tài kho�
 3. Nếu có script khởi tạo, đặt vào `<ten-service>/database/` với tên `V<số>__<mô-tả>.sql`.
 4. Cập nhật bảng danh sách service ở trên.
 
+## Gateway
+
+`gateway-service` (cổng 8080) là điểm vào duy nhất: web và app chỉ gọi gateway, gateway kiểm tra JWT và chuyển tiếp qua Eureka. Bảng route, danh sách path công khai, biến môi trường: xem [`docs/gateway.md`](docs/gateway.md).
+
 ## Quy ước làm việc
 
 - Nhánh: `main` (production), `dev` (tích hợp), `feature/<tên>-<mô-tả>`, `fix/<tên>-<mô-tả>`.
