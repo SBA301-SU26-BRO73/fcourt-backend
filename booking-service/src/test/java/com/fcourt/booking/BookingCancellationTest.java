@@ -15,7 +15,34 @@ class BookingCancellationTest extends BookingApiTest {
     Jwt user(long id){return Jwt.withTokenValue("test").header("alg","RS256").subject(""+id).build();}
     BookingCancellation at(Instant now){return new BookingCancellation(jdbc,new BookingQueries(jdbc,Clock.fixed(now,ZoneOffset.UTC)),json,Clock.fixed(now,ZoneOffset.UTC),12,BigDecimal.valueOf(100));}
     Instant cutoff(){return Instant.parse("2099-11-30T23:00:00Z");}
+    private static final String PAID="UPDATE bookings SET status='CONFIRMED',payment_status='CONFIRMED',payment_id=42 WHERE id=1";
+    @Test void unpaidBookingInsideCutoffCanBeCancelledWithoutRefund(){
+        var late=cutoff().plusSeconds(3600);
+        var q=at(late).quote(1,user(10));
+        assertThat(q.allowed()).isTrue();assertThat(q.refundAmount()).isEqualByComparingTo("0");
+        tx.execute(s->at(late).cancel(1,"Đổi ý",user(10)));
+        assertThat(jdbc.queryForObject("SELECT status FROM bookings WHERE id=1",String.class)).isEqualTo("CANCELLED");
+        assertThat(jdbc.queryForObject("SELECT active FROM booking_slots WHERE booking_id=1",Boolean.class)).isFalse();
+        assertThat(jdbc.queryForObject("SELECT refund_amount FROM bookings WHERE id=1",BigDecimal.class)).isEqualByComparingTo("0");
+        var event=jdbc.queryForObject("SELECT payload::text FROM booking_outbox",String.class);
+        assertThat(event).doesNotContain("\"refundAmount\": 100000");
+    }
+    @Test void paidBookingInsideCutoffIsRejected(){
+        jdbc.update(PAID);
+        assertThat(at(cutoff().plusNanos(1)).quote(1,user(10)).allowed()).isFalse();
+        assertThatThrownBy(()->tx.execute(s->at(cutoff().plusNanos(1)).cancel(1,"Đổi lịch",user(10)))).hasMessageContaining("400");
+    }
+    @Test void paidBookingOutsideCutoffRefunds(){
+        jdbc.update(PAID);
+        var q=at(cutoff()).quote(1,user(10));
+        assertThat(q.allowed()).isTrue();assertThat(q.refundAmount()).isEqualByComparingTo("100000");
+    }
+    @Test void awaitingConfirmationWithReceiptKeepsCutoff(){
+        jdbc.update("UPDATE bookings SET status='AWAITING_CONFIRMATION',receipt_image_url='http://r' WHERE id=1");
+        assertThat(at(cutoff().plusNanos(1)).quote(1,user(10)).allowed()).isFalse();
+    }
     @Test void exactCutoffAllowedButOneNanosecondLaterRejected(){
+        jdbc.update(PAID);
         assertThat(at(cutoff()).quote(1,user(10)).allowed()).isTrue();
         assertThat(at(cutoff().plusNanos(1)).quote(1,user(10)).allowed()).isFalse();
         assertThatThrownBy(()->tx.execute(s->at(cutoff().plusNanos(1)).cancel(1,"Đổi lịch",user(10)))).hasMessageContaining("400");
