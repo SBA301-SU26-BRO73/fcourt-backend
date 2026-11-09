@@ -1,5 +1,10 @@
 package com.fcourt.reporting.client;
 
+import com.fcourt.reporting.config.FacilityResilienceConfig;
+import com.fcourt.reporting.config.FeignClientsConfig;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
@@ -20,7 +25,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.web.server.ResponseStatusException;
 
 /** Once facility keeps failing the circuit opens and the fallback answers 503 without calling facility. */
-@SpringBootTest(classes = FacilityClientTestApp.class, webEnvironment = SpringBootTest.WebEnvironment.NONE,
+@SpringBootTest(classes = FacilityCircuitBreakerTest.App.class, webEnvironment = SpringBootTest.WebEnvironment.NONE,
         properties = {"reporting.facility.resilience.retry-max-attempts=2",
                 "reporting.facility.resilience.retry-wait=10ms",
                 "reporting.facility.resilience.sliding-window-size=4",
@@ -58,5 +63,20 @@ class FacilityCircuitBreakerTest {
                     assertThat(error.getReason()).isEqualTo("Facility service unavailable");
                 });
         facility.verify(0, getRequestedFor(urlEqualTo("/api/admin/branches")));
+    }
+
+    /** Nested so component scanning of the application never picks it up. Feign + Resilience4J + Jackson only. */
+    @Configuration
+    @EnableAutoConfiguration(excludeName = {
+            "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration",
+            "org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration",
+            "org.springframework.boot.autoconfigure.jdbc.JdbcTemplateAutoConfiguration",
+            "org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration",
+            "org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration",
+            "org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration",
+            "org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration",
+            "org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration"})
+    @Import({FeignClientsConfig.class, FacilityResilienceConfig.class, FacilityClient.class})
+    static class App {
     }
 }
