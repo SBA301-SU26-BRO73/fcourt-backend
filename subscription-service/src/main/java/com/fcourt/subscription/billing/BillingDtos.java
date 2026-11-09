@@ -25,7 +25,21 @@ public final class BillingDtos {
      */
     public record SubscriptionResponse(long id, long adminId, SubscriptionPlanResponse plan, int maxCourts,
                                        int maxBranches, LocalDate startDate, LocalDate endDate, boolean active,
-                                       boolean starter, List<UpcomingSubscription> upcoming) {
+                                       boolean starter, List<UpcomingSubscription> upcoming, Usage usage) {
+        public SubscriptionResponse(long id, long adminId, SubscriptionPlanResponse plan, int maxCourts,
+                                    int maxBranches, LocalDate startDate, LocalDate endDate, boolean active,
+                                    boolean starter, List<UpcomingSubscription> upcoming) {
+            this(id, adminId, plan, maxCourts, maxBranches, startDate, endDate, active, starter, upcoming, null);
+        }
+
+        public SubscriptionResponse withUsage(Usage usage) {
+            return new SubscriptionResponse(id, adminId, plan, maxCourts, maxBranches, startDate, endDate, active,
+                    starter, upcoming, usage);
+        }
+    }
+
+    /** Branches and courts (not deleted) the owner currently has, to compare with the plan limits. */
+    public record Usage(int branchesUsed, int courtsUsed) {
     }
 
     /** A paid period queued behind the current one. */
