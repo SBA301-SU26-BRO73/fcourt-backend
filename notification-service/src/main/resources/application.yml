@@ -47,6 +47,12 @@ spring:
 notification:
   enabled: ${NOTIFICATION_ENABLED:true}
   topics: ${NOTIFICATION_TOPICS:fcourt.auth.events,fcourt.payment.events,fcourt.booking.events}
+  jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+  jwt-issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
+  jwt-audience: ${AUTH_JWT_AUDIENCE:fcourt}
+  push:
+    region: ${PUSH_AWS_REGION:ap-southeast-1}
+    platform-application-arn: ${PUSH_SNS_PLATFORM_APPLICATION_ARN:}
   mail:
     from: ${NOTIFICATION_MAIL_FROM:FCOURT <no-reply@fcourt.example>}
   links:
