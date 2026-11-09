@@ -36,6 +36,10 @@ fcourt-backend/
 | `pos-retail-service` | `pos_retail_db` | `products`, `orders`, `order_items` | _chưa điền_ |
 | `notification-service` | `notification_db` | `processed_events` (Flyway trong service, xem `notification-service/README.md`) | _chưa điền_ |
 
+## Spring Cloud (Eureka, Gateway)
+
+`eureka-server` (cổng 8761) là service registry dùng chung, không phải service nghiệp vụ. Mô tả, biến môi trường: xem [`docs/spring-cloud.md`](docs/spring-cloud.md).
+
 ## Chạy database local
 
 Cần Docker.
