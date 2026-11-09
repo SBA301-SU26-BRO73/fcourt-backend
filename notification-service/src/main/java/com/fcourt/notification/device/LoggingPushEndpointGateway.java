@@ -16,7 +16,7 @@ class LoggingPushEndpointGateway {
     @Bean
     @ConditionalOnMissingBean(PushEndpointGateway.class)
     @ConditionalOnExpression("'${notification.push.platform-application-arn:}'.isEmpty()")
-    PushEndpointGateway loggingPushEndpointGateway() {
+    PushEndpointGateway localPushEndpointGateway() {
         return new PushEndpointGateway() {
             @Override
             public String register(String token, long userId) {

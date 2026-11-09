@@ -14,7 +14,7 @@ class LoggingPushSender {
     @Bean
     @ConditionalOnMissingBean(PushSender.class)
     @ConditionalOnExpression("'${notification.push.platform-application-arn:}'.isEmpty()")
-    PushSender loggingPushSender() {
+    PushSender localPushSender() {
         return (endpoint, message) -> log.info("Push send skipped because SNS is not configured (endpoint {})", endpoint);
     }
 }
