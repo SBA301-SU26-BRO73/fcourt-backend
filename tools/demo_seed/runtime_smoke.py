@@ -1,7 +1,7 @@
 """Disposable Backend API acceptance of seed data (Windows, Java 21, Docker).
 
 No user database, provider account or production endpoint is used. JWT signing
-and Cloudinary URLs are fixtures; booking/facility/payment apps and storage are real.
+and image URLs/S3 keys are fixtures; booking/facility/payment apps and storage are real.
 """
 import argparse
 from datetime import date, timedelta

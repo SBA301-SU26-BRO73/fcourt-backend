@@ -135,7 +135,7 @@ def main():
         config.update(scope="local_cluster",environment="local",baseUrl=f"http://127.0.0.1:{proxy.server_port}",legalDocumentFile=png.name)
         config["ownerRegistration"]["emailDomain"]="fixture.invalid"
         config["branch"].update(address="Local fixture address",city="HCM",ward="Fixture",bankName="Fixture bank",bankBin="000000",bankAccountNumber="000000000001",bankAccountName="FIXTURE")
-        config["court"]["imageUrl"]="https://res.cloudinary.com/local-fixture/image/upload/court.png"
+        config["court"]["imageUrl"]="https://cdn.example.test/local-fixture/court.png"
         config["verifyReporting"]=True
         config["routes"].update(fullCourtQuote={"method":"POST","path":"/api/admin/bookings/full-court/quote"},fullCourt={"method":"POST","path":"/api/admin/bookings/full-court"},
                                 fullCourtCancel={"method":"POST","path":"/api/admin/bookings/full-court/{packageId}/cancel"})

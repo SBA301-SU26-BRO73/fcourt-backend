@@ -62,7 +62,7 @@ declared consistently rather than hiding it with a larger poll timeout.
 ## Boundaries of the evidence
 
 - Document/receipt storage is replaced by test-classpath beans; no external
-  Cloudinary or bank transfer occurs. Other business services and JWT signing
+  S3 or bank transfer occurs. Other business services and JWT signing
   are real. Local venue entitlement uses the existing facility sandbox defaults.
 - A loopback reverse proxy forwards the actual gateway API routes; it does not
   establish deployed Nginx/TLS/CORS acceptance.
