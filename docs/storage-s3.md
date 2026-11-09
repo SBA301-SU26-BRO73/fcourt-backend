@@ -82,7 +82,7 @@ Lưu ý khi chạy local:
 - LocalStack không ép Block Public Access, nên URL public trỏ thẳng vào LocalStack đọc được không cần ký. Presigned URL vẫn được tạo và dùng được.
 - Ảnh đại diện lưu vào review snapshot bị bỏ nếu không phải HTTPS (`ReviewerProfileClient`), nên local sẽ không thấy avatar trong review.
 
-Test tự động dùng Testcontainers LocalStack (`org.testcontainers:localstack`), không cần tài khoản AWS. Có Docker là chạy được `mvn -f <service>/pom.xml verify`.
+Test tự động dùng Testcontainers với MinIO (S3 tương thích, `org.testcontainers:minio`, image `cgr.dev/chainguard/minio`), không cần tài khoản AWS. Adapter chỉ dùng API S3 chuẩn nên chạy giống nhau trên LocalStack, MinIO và S3 thật. Có Docker là chạy được `mvn -f <service>/pom.xml verify`.
 
 ## 6. Hạ tầng cần chuẩn bị
 
