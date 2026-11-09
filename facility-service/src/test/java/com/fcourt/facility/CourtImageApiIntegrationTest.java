@@ -63,9 +63,9 @@ class CourtImageApiIntegrationTest {
         @Override
         public Stored store(String folder, Upload upload) {
             if (failUpload) throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Image storage request failed");
-            String publicId = folder + "/img" + counter.incrementAndGet();
+            String publicId = folder + "/img" + counter.incrementAndGet() + ".png"; // like S3: the key keeps its extension
             live.add(publicId);
-            return new Stored("https://cdn.example.com/" + publicId + ".png", publicId);
+            return new Stored("https://cdn.example.com/" + publicId, publicId);
         }
 
         @Override
@@ -150,7 +150,7 @@ class CourtImageApiIntegrationTest {
         String expected = "https://cdn.example.com/branches/" + ids[0] + "/courts/" + ids[1] + "/img1.png";
         upload(ids[1], owner, "ADMIN", png()).andExpect(status().isOk())
                 .andExpect(jsonPath("$.imageUrl").value(expected));
-        assertThat(storage.live).containsExactly("branches/" + ids[0] + "/courts/" + ids[1] + "/img1");
+        assertThat(storage.live).containsExactly("branches/" + ids[0] + "/courts/" + ids[1] + "/img1.png");
         assertThat(outboxCount()).isGreaterThan(events);
         mvc.perform(get("/api/admin/courts/{id}", ids[1]).with(as(owner, "ADMIN")))
                 .andExpect(jsonPath("$.imageUrl").value(expected));
@@ -163,7 +163,7 @@ class CourtImageApiIntegrationTest {
         upload(ids[1], owner, "ADMIN", png()).andExpect(status().isOk());
         upload(ids[1], owner, "ADMIN", png()).andExpect(status().isOk())
                 .andExpect(jsonPath("$.imageUrl").value(org.hamcrest.Matchers.endsWith("/img2.png")));
-        assertThat(storage.live).containsExactly("branches/" + ids[0] + "/courts/" + ids[1] + "/img2");
+        assertThat(storage.live).containsExactly("branches/" + ids[0] + "/courts/" + ids[1] + "/img2.png");
 
         long[] other = court(owner, "Court img C", "https://cdn.example.com/branches/1/img9.png");
         upload(other[1], owner, "ADMIN", png()).andExpect(status().isOk());
