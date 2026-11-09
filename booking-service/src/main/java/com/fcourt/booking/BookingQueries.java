@@ -56,6 +56,12 @@ class BookingQueries {
         if(!owner && !guest) throw missing();
         return withSlots(jdbc.query("SELECT * FROM bookings WHERE id=?",this::row,id)).getFirst();
     }
+    /** Booking view không kiểm quyền: chỉ gọi sau khi caller đã được xác thực quyền (vd admin chi nhánh). */
+    BookingView view(long id) {
+        var rows=withSlots(jdbc.query("SELECT * FROM bookings WHERE id=?",this::row,id));
+        if(rows.isEmpty()) throw missing();
+        return rows.getFirst();
+    }
     static String hash(String token) {
         try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8))); }
         catch(NoSuchAlgorithmException e) { throw new IllegalStateException(e); }
