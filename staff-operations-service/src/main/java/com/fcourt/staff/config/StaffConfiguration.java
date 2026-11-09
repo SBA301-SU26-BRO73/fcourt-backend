@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.http.converter.json.AbstractJackson2HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.client.RestClient;
 
@@ -30,7 +31,7 @@ class StaffConfiguration {
         var factory = new JdkClientHttpRequestFactory(client);
         factory.setReadTimeout(Duration.ofSeconds(3));
         return RestClient.builder().requestFactory(factory).messageConverters(converters -> {
-            converters.removeIf(MappingJackson2HttpMessageConverter.class::isInstance);
+            converters.removeIf(AbstractJackson2HttpMessageConverter.class::isInstance);
             converters.add(new MappingJackson2HttpMessageConverter(json));
         });
     }
