@@ -25,6 +25,12 @@ class BookingVoucherController {
         bridge.authenticate(token);
         return bridge.attach(id, jwt, request);
     }
+    @DeleteMapping("/voucher")
+    BookingVoucherBridge.Snapshot detach(@PathVariable long id, @AuthenticationPrincipal Jwt jwt,
+            @RequestHeader(value="X-Service-Token",required=false) String token) {
+        bridge.authenticate(token);
+        return bridge.detach(id, jwt);
+    }
     @PostMapping("/payment-freeze")
     BookingVoucherBridge.Snapshot freeze(@PathVariable long id, @AuthenticationPrincipal Jwt jwt,
             @RequestHeader(value="X-Service-Token",required=false) String token,

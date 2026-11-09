@@ -59,6 +59,23 @@ class BookingVoucherBridge {
         return snapshot(row(id, false));
     }
 
+    /** Undo attach for the owner: clear the voucher columns and restore total_price to original_amount. Idempotent. */
+    @Transactional
+    public Snapshot detach(long id, Jwt jwt) {
+        long customer = BookingQueries.actor(jwt);
+        var row = row(id, true);
+        if (!(row.get("customer_id") instanceof Number owner) || owner.longValue() != customer) throw BookingQueries.missing();
+        if (row.get("voucher_application_id") == null) return snapshot(row);
+        requirePending(row);
+        if (Boolean.TRUE.equals(row.get("payment_frozen"))) throw conflict();
+        var original = row.get("original_amount") instanceof BigDecimal value ? value : (BigDecimal) row.get("total_price");
+        jdbc.update("""
+                UPDATE bookings SET voucher_application_id=NULL,voucher_id=NULL,original_amount=NULL,discount_amount=NULL,
+                    total_price=?,updated_at=now() WHERE id=?
+                """, original, id);
+        return snapshot(row(id, false));
+    }
+
     @Transactional
     public Snapshot freeze(long id, Jwt jwt, String holdToken, BigDecimal expectedAmount) {
         queries.detail(id, jwt, holdToken);
