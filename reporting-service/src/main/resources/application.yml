@@ -14,6 +14,18 @@ spring:
     hikari:
       maximum-pool-size: 10
       connection-timeout: 3000
+  # OpenFeign client to facility-service (client/FacilityFeignClient). Timeouts are the former RestClient ones.
+  cloud:
+    openfeign:
+      client:
+        config:
+          facility-service:
+            connect-timeout: 1000
+            read-timeout: 2000
+    circuitbreaker:
+      resilience4j:
+        # The breaker runs on the calling thread; the HTTP timeouts above bound each attempt.
+        disable-time-limiter: true
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
