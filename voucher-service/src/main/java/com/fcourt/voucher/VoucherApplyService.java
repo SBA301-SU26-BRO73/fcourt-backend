@@ -41,6 +41,61 @@ class VoucherApplyService {
         return application;
     }
 
+    /** Read-only preview: never writes, never calls booking's attach, never increments usage. */
+    Validation validate(VoucherValidateRequest request, Jwt jwt) {
+        long customer = customer(jwt);
+        var order = booking.owned(request.bookingId(), jwt);
+        var gross = order.gross();
+        var voucher = vouchers.byCode(request.code());
+        var existing = applications.booking(order.id(), false);
+        if (existing.isPresent() && "RESERVED".equals(existing.get().status())) {
+            var previous = existing.get();
+            if (voucher.isPresent() && voucher.get().id() == previous.voucherId() && previous.customerId() == customer)
+                return new Validation(true, "ALREADY_APPLIED", request.bookingId(), previous.originalAmount(),
+                        previous.discountAmount(), previous.finalAmount());
+            return Validation.invalid("BOOKING_HAS_VOUCHER", request.bookingId(), gross);
+        }
+        if (!"PENDING_PAYMENT".equals(order.status()) || order.paymentFrozen())
+            return Validation.invalid("BOOKING_LOCKED", request.bookingId(), gross);
+        if (voucher.isEmpty()) return Validation.invalid("NOT_FOUND", request.bookingId(), gross);
+        var quote = VoucherPricing.calculate(voucher.get(), order.branchId(), gross, clock.instant());
+        if (!quote.valid()) return Validation.invalid(quote.reason(), request.bookingId(), gross);
+        if (voucher.get().usedCount() + applications.reserved(voucher.get().id()) >= voucher.get().usageLimit())
+            return Validation.invalid("USAGE_LIMIT_REACHED", request.bookingId(), gross);
+        if (applications.alreadyUsed(voucher.get().id(), customer)) return Validation.invalid("ALREADY_USED", request.bookingId(), gross);
+        return new Validation(true, "VALID", request.bookingId(), gross, quote.discountAmount(), quote.finalAmount());
+    }
+
+    /**
+     * Undo an applied voucher while the booking is still pending and unfrozen. Booking is detached first (restores
+     * total_price to the original amount); only then is the local reservation deleted, so a failed call keeps the
+     * quota reserved and a retry converges. Calling it again after success is a no-op (removed=false).
+     */
+    Removal remove(long bookingId, Jwt jwt) {
+        long customer = customer(jwt);
+        var order = booking.owned(bookingId, jwt);
+        var found = applications.booking(bookingId, false);
+        if (found.isEmpty() || "RELEASED".equals(found.get().status())) return new Removal(bookingId, false, order.gross());
+        var application = found.get();
+        if (application.customerId() != customer) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        if ("APPLIED".equals(application.status()))
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Voucher đã được thanh toán, không thể gỡ");
+        if (!"PENDING_PAYMENT".equals(order.status()) || order.paymentFrozen())
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Đơn đặt sân đã khóa thanh toán, không thể gỡ voucher");
+        if (application.applicationId().equals(order.voucherApplicationId())) booking.detach(application, jwt);
+        tx.executeWithoutResult(ignored -> {
+            applications.lockVoucher(application.voucherId()); applications.removeReserved(bookingId);
+        });
+        return new Removal(bookingId, true, application.originalAmount());
+    }
+    record Validation(boolean valid, String reason, long bookingId, java.math.BigDecimal originalAmount,
+            java.math.BigDecimal discountAmount, java.math.BigDecimal finalAmount) {
+        static Validation invalid(String reason, long bookingId, java.math.BigDecimal gross) {
+            return new Validation(false, reason, bookingId, gross, java.math.BigDecimal.ZERO.setScale(2), gross);
+        }
+    }
+    record Removal(long bookingId, boolean removed, java.math.BigDecimal totalAmount) {}
+
     private VoucherRedemption reserve(VoucherApplyRequest request, VoucherBookingClient.Snapshot order, long customer) {
         var voucher = vouchers.lockByCode(request.code()).orElseThrow(() -> bad("Mã khuyến mãi không tồn tại"));
         var existing = applications.booking(order.id(), true);

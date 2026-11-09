@@ -2,6 +2,7 @@ package com.fcourt.voucher;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import com.fasterxml.jackson.databind.*;
@@ -55,6 +56,11 @@ class VoucherApplyTest {
                 if (internal && !"integration".equals(exchange.getRequestHeaders().getFirst("X-Service-Token"))) status=403;
                 if (order != null && (!internal || path.endsWith("/voucher"))
                         && !("Bearer customer-"+order.path("customerId").asLong()).equals(exchange.getRequestHeaders().getFirst("Authorization"))) status=404;
+                if (status==200 && exchange.getRequestMethod().equals("DELETE")) {
+                    order.putNull("voucherApplicationId");order.putNull("voucherId");
+                    order.set("totalPrice",order.path("originalAmount"));
+                    order.putNull("originalAmount");order.putNull("discountAmount");
+                }
                 if (status==200 && exchange.getRequestMethod().equals("POST")) {
                     var body=JSON.readTree(exchange.getRequestBody());
                     order.put("voucherApplicationId",body.path("applicationId").asText());
@@ -133,6 +139,55 @@ class VoucherApplyTest {
                 .content("{\"code\":\" save \",\"bookingId\":1,\"totalAmount\":100000}"))
                 .andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-store"))
                 .andExpect(jsonPath("$.customerId").doesNotExist()).andExpect(jsonPath("$.finalAmount").value(80000));
+    }
+
+    String validateBody(long booking){return "{\"code\":\" save \",\"bookingId\":"+booking+"}";}
+
+    @Test void validateQuotesDiscountWithoutWritingAnything() throws Exception {
+        voucher("SAVE",10);
+        mvc.perform(post("/api/vouchers/validate").with(jwt().jwt(customer(10))).contentType("application/json").content(validateBody(1)))
+                .andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-store"))
+                .andExpect(jsonPath("$.valid").value(true)).andExpect(jsonPath("$.reason").value("VALID"))
+                .andExpect(jsonPath("$.originalAmount").value(100000)).andExpect(jsonPath("$.discountAmount").value(20000))
+                .andExpect(jsonPath("$.finalAmount").value(80000));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM voucher_redemptions",Long.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isZero();
+        assertThat(ORDERS.get(1L).path("totalPrice").asInt()).isEqualTo(100000);
+        mvc.perform(post("/api/vouchers/validate").with(jwt().jwt(customer(10))).contentType("application/json").content(validateBody(4)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.valid").value(false)).andExpect(jsonPath("$.reason").value("WRONG_BRANCH"))
+                .andExpect(jsonPath("$.finalAmount").value(100000));
+        mvc.perform(post("/api/vouchers/validate").with(jwt().jwt(customer(10))).contentType("application/json")
+                .content("{\"code\":\"NOPE\",\"bookingId\":1}")).andExpect(jsonPath("$.reason").value("NOT_FOUND"));
+        mvc.perform(post("/api/vouchers/validate").with(jwt().jwt(customer(20))).contentType("application/json").content(validateBody(1)))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/api/vouchers/validate").contentType("application/json").content(validateBody(1))).andExpect(status().isUnauthorized());
+    }
+
+    @Test void removeRestoresBookingReleasesReservationAndIsIdempotent() throws Exception {
+        voucher("SAVE",1);apply(1,10);
+        assertThat(ORDERS.get(1L).path("totalPrice").asInt()).isEqualTo(80000);
+        mvc.perform(delete("/api/vouchers/apply/1").with(jwt().jwt(customer(20)))).andExpect(status().isNotFound());
+        assertThat(applications.booking(1,false)).isPresent();
+        mvc.perform(delete("/api/vouchers/apply/1").with(jwt().jwt(customer(10)))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.removed").value(true)).andExpect(jsonPath("$.totalAmount").value(100000));
+        assertThat(ORDERS.get(1L).path("totalPrice").asInt()).isEqualTo(100000);
+        assertThat(applications.booking(1,false)).isEmpty();
+        mvc.perform(delete("/api/vouchers/apply/1").with(jwt().jwt(customer(10)))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.removed").value(false)).andExpect(jsonPath("$.totalAmount").value(100000));
+        assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isZero();
+        assertThat(apply(2,20).status()).isEqualTo("RESERVED");
+        assertThat(apply(1,10).discountAmount()).isEqualByComparingTo("20000");
+    }
+
+    @Test void removeIsRefusedWhenPaidOrPaymentFrozen() throws Exception {
+        voucher("SAVE",10);var application=apply(1,10);
+        ORDERS.get(1L).put("paymentFrozen",true);
+        mvc.perform(delete("/api/vouchers/apply/1").with(jwt().jwt(customer(10)))).andExpect(status().isConflict());
+        assertThat(applications.booking(1,false).orElseThrow().status()).isEqualTo("RESERVED");
+        ORDERS.get(1L).put("paymentFrozen",false);
+        events.accept(applied(application,UUID.randomUUID()).toString());
+        mvc.perform(delete("/api/vouchers/apply/1").with(jwt().jwt(customer(10)))).andExpect(status().isConflict());
+        assertThat(jdbc.queryForObject("SELECT used_count FROM vouchers",Integer.class)).isEqualTo(1);
     }
 
     @Test void sixValidationStepsReturnVietnameseReasons() throws Exception {

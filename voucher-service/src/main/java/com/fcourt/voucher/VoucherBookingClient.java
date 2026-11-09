@@ -54,6 +54,22 @@ class VoucherBookingClient {
         } catch (HttpClientErrorException error) { throw denied(error); }
         catch (RestClientException error) { throw unavailable(); }
     }
+    /** Undo attach: booking must clear the voucher columns and restore total_price to original_amount (idempotent). */
+    Snapshot detach(VoucherRedemption application, Jwt jwt) {
+        requireToken();
+        try {
+            var result = checked(booking.delete().uri("/api/internal/bookings/{id}/voucher", application.bookingId())
+                    .header("X-Service-Token", token).header(HttpHeaders.AUTHORIZATION, "Bearer " + jwt.getTokenValue())
+                    .retrieve().body(Snapshot.class), application.bookingId());
+            if (result.voucherApplicationId() != null || result.totalPrice().compareTo(application.originalAmount()) != 0) throw unavailable();
+            return result;
+        } catch (HttpClientErrorException error) {
+            int status = error.getStatusCode().value();
+            if (status == 404 || status == 405) throw unavailable();
+            throw denied(error);
+        }
+        catch (RestClientException error) { throw unavailable(); }
+    }
     private void requireToken() { if (token.isBlank()) throw unavailable(); }
     private Snapshot checked(Snapshot value, long id) {
         if (value == null || value.id() == null || value.id() != id || value.branchId() == null || value.branchId() <= 0
