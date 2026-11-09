@@ -25,6 +25,13 @@ Chỉ dùng một base URL: `http://<gateway>:8080` (trong cluster: ALB/nginx tr
 | `GATEWAY_SWAGGER_ENABLED` | `true` | Bật Swagger UI gộp |
 | `GATEWAY_SWAGGER_SERVICES` | cả 12 service | Service nào hiện trong Swagger UI |
 | `GATEWAY_CONNECT_TIMEOUT_MS` / `GATEWAY_RESPONSE_TIMEOUT` | `3000` / `30s` | Timeout tới service |
+| `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` | `localhost` / `6387` / rỗng | Redis dùng chung của nền tảng (chỉ để giới hạn tốc độ) |
+| `RATE_LIMIT_ENABLED` | `true` | Tắt/bật giới hạn tốc độ |
+| `RATE_LIMIT_TRUST_FORWARDED_FOR` | `false` | `true` khi sau ALB: lấy IP client từ hop đầu của `X-Forwarded-For` |
+| `RATE_LIMIT_REDIS_TIMEOUT_MS` | `300` | Redis chậm hơn mức này coi như sự cố (cho request đi qua) |
+| `RATE_LIMIT_{GENERAL,LOOKUP,AUTH}_REQUESTS` | `50` / `5` / `10` | Số request cho phép trong một cửa sổ |
+| `RATE_LIMIT_{GENERAL,LOOKUP,AUTH}_WINDOW_SECONDS` | `1` / `60` / `60` | Độ dài cửa sổ (giây) |
+| `RATE_LIMIT_{GENERAL,LOOKUP,AUTH}_BURST` | `100` / `5` / `10` | Số request tối đa dồn cùng lúc |
 
 Token hợp lệ: chữ ký RS256 theo JWKS, đúng issuer, audience `fcourt`, `sub` là số dương, còn hạn (cùng luật với các service).
 
@@ -72,6 +79,23 @@ Lấy từ cấu hình bảo mật của từng service (`fcourt.gateway.securit
 | `/actuator/health` | gateway |
 
 Ngoại lệ vẫn cần token (`authenticated-paths`, kiểm tra trước): `/api/bookings/my`, `/api/payments/my-transactions`, `/api/payments/*/confirm-free`, `/api/refunds/**`. `PUT/DELETE /devices` (đăng ký thiết bị) cần token như mặc định.
+
+## Giới hạn tốc độ (rate limiting)
+
+Dùng `RequestRateLimiter` của Spring Cloud Gateway với token bucket trên Redis (reactive). Mỗi chính sách là "N request mỗi W giây, tối đa B request cùng lúc"; cài trên Redis dưới dạng: nạp N token/giây, mỗi request tốn W token, dung lượng B x W.
+
+| Chính sách | Áp dụng cho | Khóa | Mặc định |
+|---|---|---|---|
+| `guest-lookup` | `POST /api/public/bookings/lookup` | IP client | 5 request/phút |
+| `auth` | `POST /api/auth/login`, `/api/auth/password/forgot`, `/api/auth/register/**` (dùng chung một xô) | IP client | 10 request/phút |
+| `general` | mọi route (cả hai route trên cũng tính thêm) | `sub` của JWT nếu đã đăng nhập, ngược lại IP | 50 request/giây, burst 100 |
+
+- Chính sách chặt nằm ở hai route riêng `order: 5` (`booking-guest-lookup-limited`, `auth-service-sensitive-limited`); `OPTIONS` và các method khác không bị tính.
+- `general` đặt rộng để chỉ chặn client lạm dụng/vòng lặp lỗi, không ảnh hưởng người dùng bình thường (một người dùng thật hiếm khi vượt 50 request/giây). `RATE_LIMIT_GENERAL_REQUESTS` đặt lớn nếu muốn gần như tắt.
+- Khóa IP: mặc định là địa chỉ socket. Chỉ khi `RATE_LIMIT_TRUST_FORWARDED_FOR=true` (sau ALB, ALB luôn ghi `X-Forwarded-For`) mới lấy hop đầu của `X-Forwarded-For`. Không bật khi gateway lộ trực tiếp ra Internet, vì client có thể giả header.
+- Bị chặn: `429 Too Many Requests`, `Content-Type: application/problem+json` (cùng dạng `title/status/detail` như 401/403 của gateway) và header `Retry-After` (giây, làm tròn lên của W/N, ví dụ 12 với 5/phút).
+- Fail open: nếu Redis lỗi hoặc không trả lời trong `RATE_LIMIT_REDIS_TIMEOUT_MS`, request vẫn được chuyển tiếp và gateway ghi log `WARN`. Redis health indicator tắt (`management.health.redis.enabled=false`) để sự cố Redis không làm `/actuator/health` báo DOWN.
+- Khi chạy local không có Redis, giới hạn không có tác dụng (fail open); đặt `RATE_LIMIT_ENABLED=false` để khỏi log cảnh báo.
 
 ## Swagger gộp
 
