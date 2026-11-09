@@ -164,7 +164,7 @@ class VoucherApplyTest {
     }
 
     @Test void removeRestoresBookingReleasesReservationAndIsIdempotent() throws Exception {
-        voucher("SAVE",1);apply(1,10);
+        voucher("SAVE",2);apply(1,10);
         assertThat(ORDERS.get(1L).path("totalPrice").asInt()).isEqualTo(80000);
         mvc.perform(delete("/api/vouchers/apply/1").with(jwt().jwt(customer(20)))).andExpect(status().isNotFound());
         assertThat(applications.booking(1,false)).isPresent();
