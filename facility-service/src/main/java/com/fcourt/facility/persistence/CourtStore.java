@@ -29,12 +29,13 @@ public class CourtStore {
     /** Customer-safe projection of active, live courts for a branch. */
     public List<PublicCourtResponse> listActivePublicByBranch(long branchId) {
         return jdbc.query("""
-                SELECT id, name, court_type_id, default_price_per_hour
+                SELECT id, name, court_type_id, default_price_per_hour, image_url, description
                 FROM courts
                 WHERE branch_id = ? AND status = 'ACTIVE' AND deleted_at IS NULL
                 ORDER BY name, id
                 """, (rs, n) -> new PublicCourtResponse(rs.getLong("id"), rs.getString("name"),
-                rs.getLong("court_type_id"), rs.getBigDecimal("default_price_per_hour")), branchId);
+                rs.getLong("court_type_id"), rs.getBigDecimal("default_price_per_hour"),
+                rs.getString("image_url"), rs.getString("description")), branchId);
     }
 
     public Optional<OwnedCourt> find(long courtId) {

@@ -23,23 +23,25 @@ public class BranchProjection {
         var accepted = jdbc.queryForList("""
                 INSERT INTO branch_read_model
                     (id, version, name, address, city, district, search_text,
-                     city_key, district_key, latitude, longitude, active)
+                     city_key, district_key, latitude, longitude, active, image_url, open_time, close_time)
                 VALUES (?, ?, ?, ?, ?, ?, lower(unaccent(?)), lower(unaccent(?)),
-                        lower(unaccent(?)), ?, ?, ?)
+                        lower(unaccent(?)), ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (id) DO UPDATE SET
                     version = EXCLUDED.version, name = EXCLUDED.name,
                     address = EXCLUDED.address, city = EXCLUDED.city,
                     district = EXCLUDED.district, search_text = EXCLUDED.search_text,
                     city_key = EXCLUDED.city_key, district_key = EXCLUDED.district_key,
                     latitude = EXCLUDED.latitude, longitude = EXCLUDED.longitude,
-                    active = EXCLUDED.active
+                    active = EXCLUDED.active, image_url = EXCLUDED.image_url,
+                    open_time = EXCLUDED.open_time, close_time = EXCLUDED.close_time
                 WHERE branch_read_model.version < EXCLUDED.version
                 RETURNING id
                 """, event.branchId(), event.version(), event.name(), event.address(),
                 event.city().trim(), event.district() == null ? null : event.district().trim(),
                 searchText(event), event.city().trim(),
                 event.district() == null ? null : event.district().trim(),
-                event.latitude(), event.longitude(), event.active() && !event.deleted());
+                event.latitude(), event.longitude(), event.active() && !event.deleted(),
+                event.imageUrl(), event.openTime(), event.closeTime());
         if (accepted.isEmpty()) {
             return;
         }

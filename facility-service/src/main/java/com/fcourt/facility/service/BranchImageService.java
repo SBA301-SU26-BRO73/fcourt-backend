@@ -1,6 +1,7 @@
 package com.fcourt.facility.service;
 
 import com.fcourt.facility.api.BranchImageResponse;
+import com.fcourt.facility.events.BranchEventWriter;
 import com.fcourt.facility.persistence.BranchImageStore;
 import com.fcourt.facility.persistence.BranchStore;
 import java.util.ArrayList;
@@ -27,16 +28,18 @@ public class BranchImageService {
     private final ImageStorage storage;
     private final ImageUploadValidator validator;
     private final TransactionTemplate tx;
+    private final BranchEventWriter events;
     private final int maxPerBranch;
 
     public BranchImageService(BranchStore branches, BranchImageStore images, ImageStorage storage,
-                              ImageUploadValidator validator, TransactionTemplate tx,
+                              ImageUploadValidator validator, TransactionTemplate tx, BranchEventWriter events,
                               @Value("${facility.images.max-per-branch:10}") int maxPerBranch) {
         this.branches = branches;
         this.images = images;
         this.storage = storage;
         this.validator = validator;
         this.tx = tx;
+        this.events = events;
         this.maxPerBranch = maxPerBranch;
     }
 
@@ -61,7 +64,9 @@ public class BranchImageService {
             return tx.execute(status -> {
                 if (!branches.lockOwned(branchId, adminId)) throw BranchService.notFound();
                 requireCapacity(branchId, stored.size());
-                return stored.stream().map(item -> images.insert(branchId, item.url(), item.publicId())).toList();
+                var inserted = stored.stream().map(item -> images.insert(branchId, item.url(), item.publicId())).toList();
+                events.branchChanged(branchId); // list cards show the cover photo
+                return inserted;
             });
         } catch (RuntimeException failure) {
             for (var item : stored) removeQuietly(item.publicId(), failure);
@@ -74,7 +79,10 @@ public class BranchImageService {
         branches.findOwned(found.image().branchId(), adminId).orElseThrow(BranchImageService::notFound);
         // Remote first: if the host fails the row stays, so the admin can retry and no orphan file is left behind.
         storage.delete(found.publicId());
-        images.delete(imageId);
+        tx.executeWithoutResult(status -> {
+            images.delete(imageId);
+            events.branchChanged(found.image().branchId());
+        });
     }
 
     private void requireCapacity(long branchId, int adding) {
