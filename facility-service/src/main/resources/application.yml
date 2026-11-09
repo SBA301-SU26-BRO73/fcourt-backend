@@ -101,3 +101,12 @@ storage:
     path-style: ${STORAGE_S3_PATH_STYLE:false}
   # Base of every issued image URL (CloudFront). Default: endpoint/bucket or the bucket host.
   public-base-url: ${STORAGE_PUBLIC_BASE_URL:}
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
+    path: /swagger-ui.html
+  paths-to-exclude: /api/internal/**,/error
