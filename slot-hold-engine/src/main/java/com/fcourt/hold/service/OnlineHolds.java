@@ -1,8 +1,10 @@
-package com.fcourt.hold;
+package com.fcourt.hold.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
+import com.fcourt.hold.dto.request.HoldRequest;
+import com.fcourt.hold.dto.request.OnlineHoldClaimRequest;
+import com.fcourt.hold.dto.response.OnlineHoldLease;
+import com.fcourt.hold.dto.response.OnlineHoldReleaseInfo;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.*;
@@ -12,17 +14,16 @@ import org.redisson.client.codec.StringCodec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 /** A public hold is a bearer capability; only booking may seal or release it. */
 @Service
-class OnlineHolds {
+public class OnlineHolds {
   private final RedissonClient redis;
   private final ObjectMapper json;
   private final byte[] credential;
 
-  OnlineHolds(
+  public OnlineHolds(
       RedissonClient redis,
       ObjectMapper json,
       @Value("${BOOKING_HOLD_SERVICE_TOKEN:}") String credential) {
@@ -31,14 +32,14 @@ class OnlineHolds {
     this.credential = credential.getBytes(StandardCharsets.UTF_8);
   }
 
-  void authorize(String supplied) {
+  public void authorize(String supplied) {
     if (credential.length < 32) throw error(503, "Online hold authority is not configured");
     if (supplied == null
         || !MessageDigest.isEqual(credential, supplied.getBytes(StandardCharsets.UTF_8)))
       throw error(403, "Booking service credential required");
   }
 
-  Lease claim(String supplied, Claim request) {
+  public OnlineHoldLease claim(String supplied, OnlineHoldClaimRequest request) {
     authorize(supplied);
     if (request.slotIds().size() != new HashSet<>(request.slotIds()).size())
       throw error(400, "Duplicate slots");
@@ -61,7 +62,7 @@ class OnlineHolds {
       keys.add(tokenKey);
       keys.add(sealKey);
       String identity = request.actorId() + ":" + request.commandKey();
-      String release = json.writeValueAsString(new ReleaseInfo(token, hold));
+      String release = json.writeValueAsString(new OnlineHoldReleaseInfo(token, hold));
       Number expiry =
           redis
               .getScript(StringCodec.INSTANCE)
@@ -88,7 +89,7 @@ local t=redis.call('time');return t[1]*1000+math.floor(t[2]/1000)+ttl
                   release);
       if (expiry == null || expiry.longValue() <= 0)
         throw error(409, "Hold expired, changed or claimed");
-      return new Lease(
+      return new OnlineHoldLease(
           hash,
           Instant.ofEpochMilli(expiry.longValue()),
           hold.courtId(),
@@ -102,14 +103,14 @@ local t=redis.call('time');return t[1]*1000+math.floor(t[2]/1000)+ttl
     }
   }
 
-  void release(String supplied, String hash) {
+  public void release(String supplied, String hash) {
     authorize(supplied);
     if (hash == null || !hash.matches("[0-9a-f]{64}")) throw error(400, "Invalid hold reference");
     try {
       String releaseKey = "fcourt:online-release:" + hash;
       String raw = redis.<String>getBucket(releaseKey, StringCodec.INSTANCE).get();
       if (raw == null) return;
-      var info = json.readValue(raw, ReleaseInfo.class);
+      var info = json.readValue(raw, OnlineHoldReleaseInfo.class);
       var keys = new ArrayList<Object>();
       for (long slot : info.hold().slotIds())
         keys.add(CounterHolds.slotKey(info.hold().courtId(), info.hold().date(), slot));
@@ -134,7 +135,7 @@ redis.call('del',KEYS[#KEYS-2],KEYS[#KEYS-1],KEYS[#KEYS]);return 1
     }
   }
 
-  static String hash(String token) {
+  public static String hash(String token) {
     try {
       return HexFormat.of()
           .formatHex(
@@ -146,56 +147,5 @@ redis.call('del',KEYS[#KEYS-2],KEYS[#KEYS-1],KEYS[#KEYS]);return 1
 
   static ResponseStatusException error(int code, String message) {
     return new ResponseStatusException(HttpStatus.valueOf(code), message);
-  }
-
-  record Claim(
-      @NotNull UUID holdToken,
-      @Positive long actorId,
-      @NotNull UUID commandKey,
-      @Positive Long courtId,
-      @NotNull LocalDate date,
-      @NotEmpty @Size(max = 48) List<@NotNull @Positive Long> slotIds) {
-    @Override
-    public String toString() {
-      return "OnlineHoldClaim[REDACTED]";
-    }
-  }
-
-  record Lease(
-      String holdHash,
-      Instant expiresAt,
-      long courtId,
-      LocalDate date,
-      List<Long> slotIds,
-      String guestPhone) {}
-
-  record ReleaseInfo(String token, HoldRequest hold) {}
-
-  record Release(@NotBlank String holdHash) {}
-}
-
-@RestController
-class OnlineHoldController {
-  private final OnlineHolds holds;
-
-  OnlineHoldController(OnlineHolds holds) {
-    this.holds = holds;
-  }
-
-  @PostMapping("/api/internal/online-holds/claim")
-  ResponseEntity<OnlineHolds.Lease> claim(
-      @RequestHeader(value = "X-Booking-Service-Token", required = false) String secret,
-      @Valid @RequestBody OnlineHolds.Claim request) {
-    return ResponseEntity.ok()
-        .cacheControl(CacheControl.noStore())
-        .body(holds.claim(secret, request));
-  }
-
-  @PostMapping("/api/internal/online-holds/release")
-  ResponseEntity<Void> release(
-      @RequestHeader(value = "X-Booking-Service-Token", required = false) String secret,
-      @Valid @RequestBody OnlineHolds.Release request) {
-    holds.release(secret, request.holdHash());
-    return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
   }
 }

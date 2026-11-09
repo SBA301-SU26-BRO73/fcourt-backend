@@ -1,16 +1,16 @@
-package com.fcourt.hold;
+package com.fcourt.hold.service;
+
+import com.fcourt.hold.client.HoldStaffIdentity;
+import com.fcourt.hold.dto.request.CounterHoldRequest;
+import com.fcourt.hold.dto.response.CounterHoldLease;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
 
 import org.redisson.api.*;
 import org.redisson.client.codec.StringCodec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.charset.StandardCharsets;
@@ -19,13 +19,13 @@ import java.time.*;
 import java.util.*;
 
 @Service
-class CounterHolds {
+public class CounterHolds {
     private final RedissonClient redis;
     private final ObjectMapper json;
     private final HoldStaffIdentity identity;
     private final byte[] credential;
 
-    CounterHolds(
+    public CounterHolds(
             RedissonClient redis,
             ObjectMapper json,
             HoldStaffIdentity identity,
@@ -48,11 +48,11 @@ class CounterHolds {
         }
     }
 
-    static String slotKey(long court, LocalDate date, long slot) {
+    public static String slotKey(long court, LocalDate date, long slot) {
         return "fcourt:hold:" + court + ":" + date + ":" + slot;
     }
 
-    Lease reserve(String bearer, String serviceToken, Request request) {
+    public CounterHoldLease reserve(String bearer, String serviceToken, CounterHoldRequest request) {
         if (credential.length < 32) throw HoldStaffIdentity.unavailable();
         if (serviceToken == null
                 || !MessageDigest.isEqual(
@@ -101,7 +101,7 @@ return expiry
             if (expiry == null || expiry.longValue() <= 0)
                 throw new ResponseStatusException(
                         HttpStatus.CONFLICT, "Selected slot is held or command changed");
-            return new Lease(
+            return new CounterHoldLease(
                     token,
                     Instant.ofEpochMilli(expiry.longValue()),
                     request.courtId(),
@@ -115,7 +115,7 @@ return expiry
         }
     }
 
-    List<Long> busy(long court, LocalDate date, List<Long> slots, String command) {
+    public List<Long> busy(long court, LocalDate date, List<Long> slots, String command) {
         try {
             List<Object> keys =
                     slots.stream().map(id -> (Object) slotKey(court, date, id)).toList();
@@ -136,35 +136,5 @@ return expiry
             throw new ResponseStatusException(
                     HttpStatus.SERVICE_UNAVAILABLE, "Hold authority unavailable");
         }
-    }
-
-    record Request(
-            @Positive long branchId,
-            @Positive long actorId,
-            @Positive long courtId,
-            @NotNull LocalDate date,
-            @NotEmpty @Size(max = 48) List<@NotNull @Positive Long> slotIds,
-            @NotBlank @Size(max = 128) String commandKey) {}
-
-    record Lease(
-            String token, Instant expiresAt, long courtId, LocalDate date, List<Long> slotIds) {}
-}
-
-@RestController
-class CounterHoldController {
-    private final CounterHolds holds;
-
-    CounterHoldController(CounterHolds holds) {
-        this.holds = holds;
-    }
-
-    @PostMapping("/api/internal/counter-holds")
-    ResponseEntity<CounterHolds.Lease> reserve(
-            @RequestHeader(HttpHeaders.AUTHORIZATION) String bearer,
-            @RequestHeader(value = "X-Booking-Service-Token", required = false) String credential,
-            @Valid @RequestBody CounterHolds.Request request) {
-        return ResponseEntity.ok()
-                .cacheControl(CacheControl.noStore())
-                .body(holds.reserve(bearer, credential, request));
     }
 }

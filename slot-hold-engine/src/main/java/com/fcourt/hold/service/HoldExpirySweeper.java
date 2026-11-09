@@ -1,4 +1,6 @@
-package com.fcourt.hold;
+package com.fcourt.hold.service;
+
+import com.fcourt.hold.repository.RedisHoldStore;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

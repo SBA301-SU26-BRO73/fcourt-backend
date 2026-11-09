@@ -1,4 +1,9 @@
-package com.fcourt.hold;
+package com.fcourt.hold.service;
+
+import com.fcourt.hold.client.DiscoveryGateway;
+import com.fcourt.hold.dto.request.HoldRequest;
+import com.fcourt.hold.dto.response.HoldResponse;
+import com.fcourt.hold.repository.RedisHoldStore;
 
 import java.time.Instant;
 import java.util.HashSet;
@@ -10,16 +15,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
-class HoldService {
+public class HoldService {
     private final DiscoveryGateway discovery;
     private final RedisHoldStore store;
 
-    HoldService(DiscoveryGateway discovery, RedisHoldStore store) {
+    public HoldService(DiscoveryGateway discovery, RedisHoldStore store) {
         this.discovery = discovery;
         this.store = store;
     }
 
-    void release(UUID token) {
+    public void release(UUID token) {
         try {
             store.release(token.toString());
         } catch (RedisException e) {
@@ -27,7 +32,7 @@ class HoldService {
         }
     }
 
-    HoldResponse hold(HoldRequest request) {
+    public HoldResponse hold(HoldRequest request) {
         if (new HashSet<>(request.slotIds()).size() != request.slotIds().size()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Duplicate slot IDs");
         }

@@ -1,4 +1,10 @@
-package com.fcourt.hold;
+package com.fcourt.hold.service;
+
+import com.fcourt.hold.client.HoldStaffIdentity;
+import com.fcourt.hold.controller.CounterSafetyServer;
+import com.fcourt.hold.dto.request.*;
+import com.fcourt.hold.dto.response.*;
+import com.fcourt.hold.repository.RedisHoldStore;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -59,7 +65,7 @@ class CounterHoldsTest {
         String token=UUID.randomUUID().toString();
         var selection=new HoldRequest(21L,day,List.of(1L,2L),"0901234567");
         assertThat(publicHolds.acquire(selection,token)).isNotNull();
-        var request=new OnlineHolds.Claim(UUID.fromString(token),200,UUID.randomUUID(),21L,day,List.of(2L,1L));
+        var request=new OnlineHoldClaimRequest(UUID.fromString(token),200,UUID.randomUUID(),21L,day,List.of(2L,1L));
         var lease=online.claim("fixture-booking-hold-secret-not-production",request);
         assertThat(lease.guestPhone()).isEqualTo("0901234567");
         assertThat(lease.holdHash()).isEqualTo(OnlineHolds.hash(token));
@@ -67,7 +73,7 @@ class CounterHoldsTest {
         publicHolds.release(token);
         assertThat(redis.getBucket(CounterHolds.slotKey(21,day,1)).isExists()).isTrue();
         assertThatThrownBy(() -> online.claim("fixture-booking-hold-secret-not-production",
-                new OnlineHolds.Claim(UUID.fromString(token),201,UUID.randomUUID(),21L,day,List.of(1L,2L))))
+                new OnlineHoldClaimRequest(UUID.fromString(token),201,UUID.randomUUID(),21L,day,List.of(1L,2L))))
                 .isInstanceOf(ResponseStatusException.class);
         redis.getBucket(CounterHolds.slotKey(21,day,2),org.redisson.client.codec.StringCodec.INSTANCE).set("another-owner");
         online.release("fixture-booking-hold-secret-not-production",lease.holdHash());
@@ -79,13 +85,13 @@ class CounterHoldsTest {
     @Test
     void onlineClaimRejectsMissingExpiredChangedOrUncredentialedHolds() {
         String token=UUID.randomUUID().toString();
-        var request=new OnlineHolds.Claim(UUID.fromString(token),200,UUID.randomUUID(),21L,day,List.of(1L));
+        var request=new OnlineHoldClaimRequest(UUID.fromString(token),200,UUID.randomUUID(),21L,day,List.of(1L));
         assertThatThrownBy(() -> online.claim(null,request)).isInstanceOf(ResponseStatusException.class);
         assertThatThrownBy(() -> online.claim("fixture-booking-hold-secret-not-production",request)).isInstanceOf(ResponseStatusException.class);
         publicHolds.acquire(new HoldRequest(21L,day,List.of(1L,2L),"0901234567"),token);
         assertThatThrownBy(() -> online.claim("fixture-booking-hold-secret-not-production",request)).isInstanceOf(ResponseStatusException.class);
         redis.getBucket("fcourt:hold-token:"+token).expire(java.time.Duration.ofSeconds(20));
-        var full=new OnlineHolds.Claim(UUID.fromString(token),200,UUID.randomUUID(),21L,day,List.of(1L,2L));
+        var full=new OnlineHoldClaimRequest(UUID.fromString(token),200,UUID.randomUUID(),21L,day,List.of(1L,2L));
         assertThatThrownBy(() -> online.claim("fixture-booking-hold-secret-not-production",full)).isInstanceOf(ResponseStatusException.class);
         assertThat(redis.getBucket("fcourt:online-seal:"+OnlineHolds.hash(token)).isExists()).isFalse();
     }
@@ -99,7 +105,7 @@ class CounterHoldsTest {
             var futures=new ArrayList<Future<Boolean>>();
             for(long actor:List.of(200L,201L)) futures.add(pool.submit(() -> {
                 gate.await();
-                try { online.claim("fixture-booking-hold-secret-not-production",new OnlineHolds.Claim(UUID.fromString(token),actor,UUID.randomUUID(),21L,day,List.of(1L))); return true; }
+                try { online.claim("fixture-booking-hold-secret-not-production",new OnlineHoldClaimRequest(UUID.fromString(token),actor,UUID.randomUUID(),21L,day,List.of(1L))); return true; }
                 catch(ResponseStatusException e){return false;}
             }));
             gate.countDown();
@@ -107,8 +113,8 @@ class CounterHoldsTest {
         }
     }
 
-    CounterHolds.Request request(String key) {
-        return new CounterHolds.Request(7, 100, 21, day, List.of(1L, 2L), key);
+    CounterHoldRequest request(String key) {
+        return new CounterHoldRequest(7, 100, 21, day, List.of(1L, 2L), key);
     }
 
     String key() {
@@ -148,7 +154,7 @@ class CounterHoldsTest {
         assertThatThrownBy(() -> holds.reserve("Bearer token", "wrong", request(key)))
                 .isInstanceOf(ResponseStatusException.class);
         holds.reserve("Bearer token", "fixture-booking-hold-secret-not-production", request(key));
-        var changed = new CounterHolds.Request(7, 100, 21, day, List.of(1L), key);
+        var changed = new CounterHoldRequest(7, 100, 21, day, List.of(1L), key);
         assertThatThrownBy(
                         () ->
                                 holds.reserve(
@@ -237,7 +243,7 @@ class CounterHoldsTest {
     @Test
     void counterRequestRejectsNullSlotId() {
         var invalid =
-                new CounterHolds.Request(7, 100, 21, day, Arrays.asList(1L, null), key());
+                new CounterHoldRequest(7, 100, 21, day, Arrays.asList(1L, null), key());
         try (var factory = jakarta.validation.Validation.buildDefaultValidatorFactory()) {
             assertThat(factory.getValidator().validate(invalid)).isNotEmpty();
         }

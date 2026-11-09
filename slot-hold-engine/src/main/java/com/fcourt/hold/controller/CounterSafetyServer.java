@@ -1,4 +1,7 @@
-package com.fcourt.hold;
+package com.fcourt.hold.controller;
+
+import com.fcourt.hold.client.HoldStaffIdentity;
+import com.fcourt.hold.service.CounterHolds;
 
 import com.fcourt.staff.grpc.*;
 
@@ -19,14 +22,14 @@ import java.util.HashSet;
 
 @Component
 @ConditionalOnProperty(name = "counter.grpc.enabled", havingValue = "true")
-class CounterSafetyServer implements SmartLifecycle {
+public class CounterSafetyServer implements SmartLifecycle {
     private static final Context.Key<String> BEARER = Context.key("counter-bearer");
     private final Server server;
     private volatile boolean running;
     private final HoldStaffIdentity identity;
     private final CounterHolds holds;
 
-    CounterSafetyServer(
+    public CounterSafetyServer(
             HoldStaffIdentity identity,
             CounterHolds holds,
             @Value("${counter.grpc.host:127.0.0.1}") String host,
@@ -137,7 +140,7 @@ class CounterSafetyServer implements SmartLifecycle {
         return running;
     }
 
-    int port() {
+    public int port() {
         return server.getPort();
     }
 }

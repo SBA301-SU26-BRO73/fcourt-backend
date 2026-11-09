@@ -1,4 +1,4 @@
-package com.fcourt.hold;
+package com.fcourt.hold.dto.response;
 
 import java.time.Instant;
 import java.util.List;

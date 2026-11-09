@@ -1,4 +1,8 @@
-package com.fcourt.hold;
+package com.fcourt.hold.controller;
+
+import com.fcourt.hold.dto.request.HoldRequest;
+import com.fcourt.hold.dto.response.HoldResponse;
+import com.fcourt.hold.service.HoldService;
 
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -11,10 +15,10 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-class HoldController {
+public class HoldController {
     private final HoldService service;
 
-    HoldController(HoldService service) { this.service = service; }
+    public HoldController(HoldService service) { this.service = service; }
 
     @PostMapping("/api/bookings/hold-slots")
     @ResponseStatus(HttpStatus.CREATED)

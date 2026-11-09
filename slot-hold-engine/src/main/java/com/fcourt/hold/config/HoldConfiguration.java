@@ -1,4 +1,4 @@
-package com.fcourt.hold;
+package com.fcourt.hold.config;
 
 import java.time.Clock;
 import java.time.Duration;

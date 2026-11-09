@@ -1,6 +1,6 @@
-package com.fcourt.hold;
+package com.fcourt.hold.client;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fcourt.hold.dto.response.StaffAssignment;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -15,11 +15,11 @@ import java.time.Duration;
 import java.util.Collection;
 
 @Component
-class HoldStaffIdentity {
+public class HoldStaffIdentity {
     private final JwtDecoder decoder;
     private final RestClient staff;
 
-    HoldStaffIdentity(
+    public HoldStaffIdentity(
             RestClient.Builder builder,
             @Value("${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}") String jwks,
             @Value("${AUTH_JWT_ISSUER:http://localhost:8081}") String issuer,
@@ -42,7 +42,7 @@ class HoldStaffIdentity {
         staff = builder.clone().requestFactory(factory).baseUrl(url).build();
     }
 
-    void require(String bearer, long branch, long actor) {
+    public void require(String bearer, long branch, long actor) {
         try {
             if (bearer == null || !bearer.startsWith("Bearer ")) throw denied();
             var jwt = decoder.decode(bearer.substring(7));
@@ -60,7 +60,7 @@ class HoldStaffIdentity {
                             .uri("/api/staff/me")
                             .header(HttpHeaders.AUTHORIZATION, bearer)
                             .retrieve()
-                            .body(Assignment.class);
+                            .body(StaffAssignment.class);
             if (assigned == null
                     || !assigned.active()
                     || assigned.userId() != actor
@@ -76,15 +76,12 @@ class HoldStaffIdentity {
         }
     }
 
-    static ResponseStatusException denied() {
+    public static ResponseStatusException denied() {
         return new ResponseStatusException(HttpStatus.FORBIDDEN, "Active branch staff required");
     }
 
-    static ResponseStatusException unavailable() {
+    public static ResponseStatusException unavailable() {
         return new ResponseStatusException(
                 HttpStatus.SERVICE_UNAVAILABLE, "Staff verification unavailable");
     }
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    record Assignment(long userId, long branchId, boolean active) {}
 }

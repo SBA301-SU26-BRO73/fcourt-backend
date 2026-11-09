@@ -1,4 +1,9 @@
-package com.fcourt.hold;
+package com.fcourt.hold.service;
+
+import com.fcourt.hold.client.DiscoveryGateway;
+import com.fcourt.hold.controller.HoldController;
+import com.fcourt.hold.dto.request.HoldRequest;
+import com.fcourt.hold.repository.RedisHoldStore;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;

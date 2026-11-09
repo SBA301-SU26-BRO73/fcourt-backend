@@ -1,4 +1,7 @@
-package com.fcourt.hold;
+package com.fcourt.hold.repository;
+
+import com.fcourt.hold.dto.request.HoldRequest;
+import com.fcourt.hold.service.OnlineHolds;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,8 +17,8 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 @Component
-class RedisHoldStore {
-    static final int TTL_SECONDS = 300;
+public class RedisHoldStore {
+    public static final int TTL_SECONDS = 300;
     private static final int SWEEP_BATCH = 500;
     private final RedissonClient redis;
     private final String acquireScript;
@@ -23,7 +26,7 @@ class RedisHoldStore {
     private final String sweepScript;
     private final ObjectMapper mapper;
 
-    RedisHoldStore(RedissonClient redis, ObjectMapper mapper) throws IOException {
+    public RedisHoldStore(RedissonClient redis, ObjectMapper mapper) throws IOException {
         this.redis = redis;
         this.mapper = mapper;
         this.acquireScript = new ClassPathResource("redis/acquire.lua").getContentAsString(StandardCharsets.UTF_8);
@@ -31,7 +34,7 @@ class RedisHoldStore {
         this.sweepScript = new ClassPathResource("redis/sweep.lua").getContentAsString(StandardCharsets.UTF_8);
     }
 
-    Instant acquire(HoldRequest request, String token) {
+    public Instant acquire(HoldRequest request, String token) {
         List<Object> keys = keysOf(request, token);
         String payload;
         try {
@@ -44,7 +47,7 @@ class RedisHoldStore {
         return expiry == null || expiry == 0 ? null : Instant.ofEpochMilli(expiry);
     }
 
-    void release(String token) {
+    public void release(String token) {
         String payload = redis.<String>getBucket(tokenKey(token), StringCodec.INSTANCE).get();
         if (payload == null) return;
         HoldRequest request;
@@ -59,7 +62,7 @@ class RedisHoldStore {
     }
 
     /** Announces holds whose TTL passed (HOLD_EXPIRED) and returns how many index entries were drained. */
-    long sweepExpired() {
+    public long sweepExpired() {
         long total = 0;
         // Each script call handles a bounded batch; keep draining so a burst is not announced minutes late.
         for (int batch = 0; batch < 20; batch++) {
