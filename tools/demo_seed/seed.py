@@ -75,9 +75,13 @@ def validate(manifest, allow_fixtures=False):
             raise SeedError("bankBin must be a six-digit string")
         if not re.fullmatch(r"[0-9]{6,20}", branch["bankAccountNumber"]):
             raise SeedError("Bank accounts must contain 6-20 digits, preserving leading zeros")
-    assets = manifest["courtImages"] + [manifest["receiptImageUrl"]] + [b["bankQrImageUrl"] for b in manifest["branches"]]
-    if any(not isinstance(url, str) or len(url) > 2000 or not re.fullmatch(r"https://res\.cloudinary\.com/[^/\s]+/image/upload/[^\s]+", url) for url in assets):
-        raise SeedError("Assets must be explicit HTTPS Cloudinary image delivery URLs")
+    public_assets = manifest["courtImages"] + [b["bankQrImageUrl"] for b in manifest["branches"]]
+    receipt = manifest["receiptImageUrl"]
+    assets = public_assets + [receipt]
+    # Public images are explicit HTTPS URLs (CloudFront or the S3 public base URL); the receipt is a private S3 key.
+    if any(not isinstance(url, str) or len(url) > 2000 or not re.fullmatch(r"https://[^\s/]+/[^\s]+", url) for url in public_assets) \
+            or not isinstance(receipt, str) or not re.fullmatch(r"receipts/[A-Za-z0-9._/-]{1,200}", receipt) or ".." in receipt:
+        raise SeedError("Court and bank QR images must be explicit HTTPS URLs and receiptImageUrl an S3 key under receipts/")
     if not manifest["demoOnly"] and any("/demo/" in url or "REPLACE" in url.upper() for url in assets):
         raise SeedError("Replace fixture assets before a live demo")
     if set(manifest["courtTypeIds"]) != {"badminton", "pickleball"} or any(type(v) is not int or v <= 0 for v in manifest["courtTypeIds"].values()):

@@ -13,5 +13,21 @@ services:
       - ./docker/postgres/init-databases.sh:/docker-entrypoint-initdb.d/01-init-databases.sh:ro
     restart: unless-stopped
 
+  # Local S3 for file/image storage (no AWS account). Start with `docker compose up -d localstack`.
+  # Run a service against it with STORAGE_S3_BUCKET=fcourt-local STORAGE_S3_ENDPOINT=http://localhost:4566
+  # AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test (LocalStack accepts any credentials).
+  localstack:
+    # Pinned: newer LocalStack images require an auth token.
+    image: localstack/localstack:3.8.1
+    container_name: fcourt_localstack
+    environment:
+      SERVICES: s3
+      STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET:-fcourt-local}
+    ports:
+      - "${LOCALSTACK_PORT:-4566}:4566"
+    volumes:
+      - ./docker/localstack/init-s3.sh:/etc/localstack/init/ready.d/01-init-s3.sh:ro
+    restart: unless-stopped
+
 volumes:
   fcourt_postgres_data:

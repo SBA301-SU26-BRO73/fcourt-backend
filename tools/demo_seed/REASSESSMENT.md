@@ -11,7 +11,7 @@ Owner decisions in this session:
 - "Bao sân" means one booking renting every slot of a day, not a new booking
   status or a maintenance feature. It is CONFIRMED on demoDate+1, court 1.
 - Vouchers remain available and unused; every payable amount matches slot sums.
-- Local fixture data may be generated for testing. No external bank/Cloudinary
+- Local fixture data may be generated for testing. No external bank/S3
   ownership or production acceptance is inferred from a local pass.
 
 The updated dataset contains 31 bookings, 82 booking slots and 31 corresponding
@@ -41,5 +41,5 @@ python tools/demo_seed/runtime_smoke.py --booking-jar booking-service/target/boo
 ```
 
 JWKS signing and image/bank assets are explicit fixtures. This test does not
-contact Cloudinary, transfer money or establish production readiness. Real venue
+contact S3, transfer money or establish production readiness. Real venue
 assets and on-device image acceptance remain external validation gates.

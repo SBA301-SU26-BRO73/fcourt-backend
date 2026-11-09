@@ -28,8 +28,8 @@ fixture does not depend on an unresolved weekday-number convention.
 ## Configure, preview, apply
 
 Copy manifest.example.json to manifest.local.json (ignored). Replace venue
-addresses, numeric bank accounts/QR images, 10 authorized Cloudinary court images,
-receipt asset and demoDate. Set demoOnly=false for your real-asset demo. The
+addresses, numeric bank accounts/QR images, 10 authorized court image URLs (HTTPS, public S3/CloudFront base),
+receipt S3 key (`receipts/...`) and demoDate. Set demoOnly=false for your real-asset demo. The
 example intentionally contains placeholders and is not real/verified venue data.
 Each branch also requires `bankBin`, the bank's six-digit identifier as a string.
 Leading zeros are preserved. Example `000000` is a format-only fixture, not a
@@ -65,7 +65,7 @@ python tools/demo_seed/seed.py --manifest tools/demo_seed/manifest.example.json 
 
 Applying fixtures also requires --allow-fixture-assets, --apply, --container and
 the bcrypt environment variable. Bank-account strings preserve leading zeros.
-The tool never contacts Cloudinary, generates bank transfers or proves photo
+The tool never contacts S3, generates bank transfers or proves photo
 quality/real ownership; output always says assetsVerified=false. Live image/venue
 acceptance must be checked with the supplied real data in the application.
 
@@ -131,5 +131,5 @@ actual apply/rerun against numeric(10,2), bankBin format/leading-zero persistenc
 with facility V3, and refusal of a missing bank schema before any seed writes.
 Docker absence fails tests rather than silently skipping database verification.
 
-**Actual venue/bank/Cloudinary acceptance is NOT RUN:** the owner has not supplied
+**Actual venue/bank/S3 acceptance is NOT RUN:** the owner has not supplied
 those inputs. Fixtures are not presented as real venue data or end-to-end proof.
