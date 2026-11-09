@@ -44,7 +44,7 @@ class S3ReceiptStorageContainerTest {
                 .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create(S3.getUserName(), S3.getPassword()))).build();
         admin.createBucket(b -> b.bucket(BUCKET));
         storage = new ReceiptStorageConfiguration().receiptStorage(BUCKET, REGION,
-                java.net.URI.create(S3.getS3URL()).toString(), false, Duration.ofMinutes(10));
+                java.net.URI.create(S3.getS3URL()).toString(), "", false, Duration.ofMinutes(10));
     }
 
     @AfterAll
