@@ -4,11 +4,11 @@ import com.fcourt.reporting.config.FacilityResilienceConfig;
 import com.fcourt.reporting.config.FeignClientsConfig;
 import com.fcourt.reporting.integration.FacilityClient;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Import;
 
-/** Minimal context for the facility client tests: Feign, Resilience4J and Jackson, no database, Kafka or security. */
-@Configuration
+/** Not component-scanned by the application (TestConfiguration). Minimal context for the facility client tests: Feign, Resilience4J and Jackson, no database, Kafka or security. */
+@TestConfiguration
 @EnableAutoConfiguration(excludeName = {
         "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration",
         "org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration",
