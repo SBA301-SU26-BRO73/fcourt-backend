@@ -41,15 +41,17 @@ import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 class BillingControllerTest {
     SubscriptionService subscriptions;
     PaymentService payments;
+    FacilityUsageClient usage;
     MockMvc mvc;
 
     @BeforeEach
     void setUp() {
         subscriptions = mock(SubscriptionService.class);
         payments = mock(PaymentService.class);
+        usage = mock(FacilityUsageClient.class);
         var validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
-        mvc = MockMvcBuilders.standaloneSetup(new BillingController(subscriptions, payments))
+        mvc = MockMvcBuilders.standaloneSetup(new BillingController(subscriptions, payments, usage))
                 .setControllerAdvice(new ApiExceptionHandler()).setValidator(validator)
                 // Same date format as the running service (Spring Boot writes ISO-8601, not timestamps).
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(Jackson2ObjectMapperBuilder.json()
@@ -63,6 +65,7 @@ class BillingControllerTest {
                 LocalDate.of(2026, 11, 1), LocalDate.of(2026, 12, 1), true, false,
                 java.util.List.of(new BillingDtos.UpcomingSubscription(2, plan(), 15, 3, LocalDate.of(2026, 12, 2),
                         LocalDate.of(2027, 1, 2)))));
+        when(usage.usageOf(7, "token")).thenReturn(new BillingDtos.Usage(2, 9));
 
         mvc.perform(get("/api/subscriptions/my-subscription").principal(token(7, "ROLE_ADMIN")))
                 .andExpect(status().isOk())
@@ -71,7 +74,21 @@ class BillingControllerTest {
                 .andExpect(jsonPath("$.endDate").value("2026-12-01"))
                 .andExpect(jsonPath("$.active").value(true))
                 .andExpect(jsonPath("$.starter").value(false))
-                .andExpect(jsonPath("$.upcoming[0].startDate").value("2026-12-02"));
+                .andExpect(jsonPath("$.upcoming[0].startDate").value("2026-12-02"))
+                .andExpect(jsonPath("$.usage.branchesUsed").value(2))
+                .andExpect(jsonPath("$.usage.courtsUsed").value(9));
+    }
+
+    @Test
+    void usageIsNullWhenFacilityIsUnavailable() throws Exception {
+        when(subscriptions.current(7)).thenReturn(new SubscriptionResponse(1, 7, plan(), 15, 3,
+                LocalDate.of(2026, 11, 1), LocalDate.of(2026, 12, 1), true, false, java.util.List.of()));
+        when(usage.usageOf(7, "token")).thenReturn(null);
+
+        mvc.perform(get("/api/subscriptions/my-subscription").principal(token(7, "ROLE_ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.maxBranches").value(3))
+                .andExpect(jsonPath("$.usage").doesNotExist());
     }
 
     @Test

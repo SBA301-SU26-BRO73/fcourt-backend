@@ -32,14 +32,21 @@ class BillingController {
     private final SubscriptionService subscriptions;
     private final PaymentService payments;
 
-    BillingController(SubscriptionService subscriptions, PaymentService payments) {
+    private final FacilityUsageClient usage;
+
+    BillingController(SubscriptionService subscriptions, PaymentService payments, FacilityUsageClient usage) {
+        this.usage = usage;
         this.subscriptions = subscriptions;
         this.payments = payments;
     }
 
     @GetMapping("/my-subscription")
     SubscriptionResponse mySubscription(Authentication authentication) {
-        return subscriptions.current(userId(authentication));
+        long adminId = userId(authentication);
+        var response = subscriptions.current(adminId);
+        // Usage is best effort: null when facility-service is unavailable.
+        var token = ((JwtAuthenticationToken) authentication).getToken().getTokenValue();
+        return response.withUsage(usage.usageOf(adminId, token));
     }
 
     @PostMapping("/checkout")
