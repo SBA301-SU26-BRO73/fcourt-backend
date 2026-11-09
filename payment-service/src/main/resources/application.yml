@@ -61,3 +61,12 @@ storage:
     endpoint: ${STORAGE_S3_ENDPOINT:}
     path-style: ${STORAGE_S3_PATH_STYLE:false}
     presign-ttl: ${STORAGE_S3_PRESIGN_TTL:10m}
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
+    path: /swagger-ui.html
+  paths-to-exclude: /api/internal/**,/error
