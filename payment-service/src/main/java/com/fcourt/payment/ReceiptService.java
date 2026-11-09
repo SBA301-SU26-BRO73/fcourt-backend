@@ -20,6 +20,8 @@ class ReceiptService {
         this.checkout=checkout; this.upstreams=upstreams; this.store=store;
         this.storage=storage; this.tx=tx; this.clock=clock;
     }
+    /** Same record with the receipt key replaced by a presigned URL, for responses only. */
+    PaymentRecord signed(PaymentRecord p) { return new ReceiptUrls(storage).view(p); }
     PaymentRecord status(long id, String auth, String hold) {
         authorize(id, auth, hold);
         var payment=store.find(id);

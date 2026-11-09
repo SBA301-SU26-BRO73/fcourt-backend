@@ -16,20 +16,21 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/admin/payments")
 class PaymentApprovalController {
     private final PaymentApprovalService service;
-    PaymentApprovalController(PaymentApprovalService service) { this.service=service; }
+    private final ReceiptUrls urls;
+    PaymentApprovalController(PaymentApprovalService service,ReceiptUrls urls) { this.service=service; this.urls=urls; }
     @GetMapping("/pending")
     ResponseEntity<List<PaymentRecord>> pending(@RequestParam @Positive long branchId,
             @RequestParam(defaultValue="0") @Min(0) int offset,@AuthenticationPrincipal Jwt jwt) {
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.pending(branchId,offset,jwt));
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.pending(branchId,offset,jwt).stream().map(urls::view).toList());
     }
     @PutMapping("/{paymentId}/confirm")
     ResponseEntity<PaymentRecord> confirm(@PathVariable @Positive long paymentId,@AuthenticationPrincipal Jwt jwt) {
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.decide(paymentId,true,null,jwt));
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(urls.view(service.decide(paymentId,true,null,jwt)));
     }
     @PutMapping("/{paymentId}/reject")
     ResponseEntity<PaymentRecord> reject(@PathVariable @Positive long paymentId,@Valid @RequestBody Rejection body,
             @AuthenticationPrincipal Jwt jwt) {
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.decide(paymentId,false,body.reason(),jwt));
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(urls.view(service.decide(paymentId,false,body.reason(),jwt)));
     }
     record Rejection(@NotBlank @Size(max=500) String reason) { }
 }

@@ -19,14 +19,14 @@ class ReceiptController {
         Long customer=customers.identity(auth);
         var payment=service.upload(bookingId,auth,hold,file,customer);
         return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
-                .body(ReceiptStatus.of(payment));
+                .body(ReceiptStatus.of(service.signed(payment)));
     }
     @GetMapping(value="/api/payments/{bookingId}/status",params="!compact")
     ResponseEntity<ReceiptStatus> status(@PathVariable @Positive long bookingId,
             @RequestHeader(value=HttpHeaders.AUTHORIZATION,required=false) String auth,
             @RequestHeader(value="X-Hold-Token",required=false) String hold) {
         return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
-                .body(ReceiptStatus.of(service.status(bookingId,auth,hold)));
+                .body(ReceiptStatus.of(service.signed(service.status(bookingId,auth,hold))));
     }
     record ReceiptStatus(long id,long bookingId,String status,String receiptImageUrl,
                          java.time.Instant submittedAt,String rejectionReason) {

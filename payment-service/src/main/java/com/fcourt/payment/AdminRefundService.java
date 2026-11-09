@@ -34,12 +34,9 @@ class AdminRefundService {
         if(Set.of("COMPLETED","REJECTED").contains(initial))throw new ResponseStatusException(HttpStatus.CONFLICT,"Refund decision already final");
         if(action.equals("REJECTED")&&(note==null||note.isBlank()||note.strip().length()>500))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Rejection reason required (1-500 characters)");
         if(action.equals("COMPLETED") && proof==null)throw ReceiptValidator.invalid();
-        String proofUrl=action.equals("COMPLETED")?storage.upload(ReceiptValidator.read(proof)):null;
-        if(proofUrl!=null){
-            var uri=java.net.URI.create(proofUrl);
-            if(!"https".equals(uri.getScheme())||!"res.cloudinary.com".equals(uri.getHost())||uri.getUserInfo()!=null||uri.getPort()!=-1)
-                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"Invalid proof storage response");
-        }
+        String proofUrl=action.equals("COMPLETED")?storage.uploadRefundProof(ReceiptValidator.read(proof)):null;
+        if(proofUrl!=null&&!proofUrl.startsWith(S3ReceiptStorage.REFUND_PROOFS))
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"Invalid proof storage response");
         long booking=((Number)first.get("booking_id")).longValue();
         RefundView saved;
         try{saved=tx.execute(s->{

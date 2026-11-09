@@ -112,13 +112,13 @@ the full Spring application, applies Flyway and verifies decimal persistence.
 
 `POST /api/payments/{bookingId}/upload-receipt`, multipart part `file`, accepts decoded JPEG/PNG up to 5 MiB / 25 megapixels. Supply `Authorization: Bearer ...` or `X-Hold-Token` in headers. The booking authority must authorize the caller before any existing payment is disclosed. A retry returns the existing payment and does not replace the receipt. `GET /api/payments/{bookingId}/status` uses the same authorization and returns `id`, `bookingId`, `status` (`PENDING`, `CONFIRMED`, `REJECTED`), `receiptImageUrl`, `submittedAt`, `rejectionReason`, and the server checkout snapshot. All responses use `Cache-Control: no-store`.
 
-Set `CLOUDINARY_URL` through the environment (signed SDK credentials); missing storage configuration returns 503. Credentials and caller tokens are never saved in the database or emitted in events. The SDK validates HTTPS Cloudinary delivery URLs. Receipt images use unguessable public IDs; configure the storage account's access and retention policy before production use. Images from failed, expired or lost-race submissions are deleted best-effort; a storage retention job should still sweep leftovers after a crash.
+Receipts and refund proofs live in a private S3 bucket (AWS SDK v2, default credential chain: EKS Pod Identity in the cluster, an AWS profile locally; no access key is ever configured). Settings: `STORAGE_S3_BUCKET`, `STORAGE_S3_REGION` (default `ap-southeast-1`), `STORAGE_S3_ENDPOINT` + `STORAGE_S3_PATH_STYLE` (LocalStack/MinIO), `STORAGE_S3_PRESIGN_TTL` (default `10m`); a blank bucket returns 503 on upload. The database and events keep the object key (`receipts/{uuid}.{png|jpg}`, `refund-proofs/{uuid}.{png|jpg}`); every API field named `receiptImageUrl` or `transferProofUrl` is a presigned GET URL generated per response (field names and types are unchanged), and rows that still hold an absolute Cloudinary URL are returned as they are and never deleted remotely. Images from failed, expired or lost-race submissions are deleted best-effort; configure an S3 lifecycle rule on `receipts/` and `refund-proofs/` for crash leftovers.
 
 Submission commits the payment and `PaymentSubmittedEvent` to `payment_outbox` in one PostgreSQL transaction. The relay publishes to `fcourt.payment.events`, keyed by booking ID, with `eventId`, `type`, and `payment`. `KAFKA_BOOTSTRAP_SERVERS` defaults to localhost:9092. Acknowledged events are marked published; broker failure preserves pending rows. At-least-once delivery requires consumers to deduplicate `eventId`. One advisory lock preserves publication order across instances. Disable only the relay in tests with `PAYMENT_EVENTS_ENABLED=false`.
 
 **Integration contract:** booking-service consumes `PaymentSubmittedEvent` and atomically changes an eligible `PENDING_PAYMENT` booking to `AWAITING_CONFIRMATION`, retaining occupied slots. This consumer and the actual booking/facility APIs are not implemented on `dev`; payment-service never writes their databases. Receipt persistence alone does not establish this cross-service acceptance condition. Coordinate booking expiry against receipt submission at this boundary before enabling customer traffic.
 
-Validation: Java 21 `mvn -f payment-service/pom.xml clean verify` (18 tests, PostgreSQL 16 Testcontainer); mocks isolate Cloudinary/upstream HTTP and Kafka acknowledgement/failure. Real Cloudinary credentials and live booking/facility/Kafka acceptance remain external checks. SDK references: [Cloudinary Java](https://cloudinary.com/documentation/java_integration), [Spring Kafka sending](https://docs.spring.io/spring-kafka/reference/kafka/sending-messages.html).
+Validation: Java 21 `mvn -f payment-service/pom.xml clean verify` (18 tests, PostgreSQL 16 Testcontainer); mocks isolate upstream HTTP and Kafka acknowledgement/failure; a LocalStack S3 container covers the storage adapter. Real AWS credentials and live booking/facility/Kafka acceptance remain external checks. SDK references: [AWS SDK for Java v2 S3](https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/examples-s3.html), [Spring Kafka sending](https://docs.spring.io/spring-kafka/reference/kafka/sending-messages.html).
 
 ## Admin approval — SCRUM-36
 
@@ -264,7 +264,7 @@ All `/api/admin/refunds/**` endpoints require verified ADMIN + authoritative bra
 ownership. GET `/pending?branchId=&page=0&size=20` returns pending/approved oldest first.
 PUT `/{id}/approve` records reception; PUT `/{id}/reject` requires `{reason}`. PUT
 `/{id}/complete` requires multipart `file`: actual JPEG/PNG up to 5MB/25MP, uploaded
-server-side to Cloudinary. A client URL alone is never accepted as transfer proof.
+server-side to S3 (`refund-proofs/`). A client URL alone is never accepted as transfer proof.
 
 Decisions lock the booking/payment domain and refund row, recheck confirmed payment /
 amount, save actor/timestamps and cannot overwrite a final state or completed proof.
@@ -277,7 +277,7 @@ transferProofUrl}; beneficiary banking details are intentionally omitted.
 
 This is an admin attestation of a manual transfer, not a banking API. External transfer
 execution is outside this service. If DB commit loses a race/fails after proof upload,
-a Cloudinary orphan can remain and should be cleaned by the storage retention process;
+an orphaned S3 object can remain and is cleaned by the bucket lifecycle rule;
 financial state/event still roll back together. Legacy refunds without branch ownership
 metadata fail closed pending reconciliation.
 

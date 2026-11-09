@@ -4,7 +4,10 @@
   <groupId>com.fcourt</groupId>
   <artifactId>payment-service</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <properties><java.version>21</java.version><testcontainers.version>1.21.4</testcontainers.version></properties>
+  <properties><java.version>21</java.version><testcontainers.version>1.21.4</testcontainers.version><awssdk.version>2.57.5</awssdk.version></properties>
+  <dependencyManagement><dependencies>
+    <dependency><groupId>software.amazon.awssdk</groupId><artifactId>bom</artifactId><version>${awssdk.version}</version><type>pom</type><scope>import</scope></dependency>
+  </dependencies></dependencyManagement>
   <dependencies>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-data-redis</artifactId></dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
@@ -17,8 +20,11 @@
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
     <dependency><groupId>org.testcontainers</groupId><artifactId>junit-jupiter</artifactId><scope>test</scope></dependency>
     <dependency><groupId>org.testcontainers</groupId><artifactId>postgresql</artifactId><scope>test</scope></dependency>
+    <dependency><groupId>org.testcontainers</groupId><artifactId>minio</artifactId><scope>test</scope></dependency>
     <dependency><groupId>org.springframework.kafka</groupId><artifactId>spring-kafka</artifactId></dependency>
-    <dependency><groupId>com.cloudinary</groupId><artifactId>cloudinary-http5</artifactId><version>2.3.0</version></dependency>
+    <dependency><groupId>software.amazon.awssdk</groupId><artifactId>s3</artifactId>
+      <exclusions><exclusion><groupId>software.amazon.awssdk</groupId><artifactId>netty-nio-client</artifactId></exclusion></exclusions>
+    </dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-oauth2-resource-server</artifactId></dependency>
     <dependency><groupId>org.springframework.security</groupId><artifactId>spring-security-test</artifactId><scope>test</scope></dependency>
     <dependency><groupId>com.google.zxing</groupId><artifactId>core</artifactId><version>3.5.3</version></dependency>
