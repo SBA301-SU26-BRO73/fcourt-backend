@@ -47,6 +47,19 @@ spring:
 notification:
   enabled: ${NOTIFICATION_ENABLED:true}
   topics: ${NOTIFICATION_TOPICS:fcourt.auth.events,fcourt.payment.events,fcourt.booking.events}
+  jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+  jwt-issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
+  jwt-audience: ${AUTH_JWT_AUDIENCE:fcourt}
+  push:
+    region: ${PUSH_AWS_REGION:ap-southeast-1}
+    platform-application-arn: ${PUSH_SNS_PLATFORM_APPLICATION_ARN:}
+    reminder:
+      enabled: ${PUSH_REMINDER_ENABLED:false}
+      queue-url: ${PUSH_REMINDER_QUEUE_URL:}
+      queue-arn: ${PUSH_REMINDER_QUEUE_ARN:}
+      scheduler-group: ${PUSH_REMINDER_SCHEDULER_GROUP:fcourt-reminders}
+      role-arn: ${PUSH_REMINDER_ROLE_ARN:}
+      visibility-timeout-seconds: ${PUSH_REMINDER_VISIBILITY_TIMEOUT_SECONDS:120}
   mail:
     from: ${NOTIFICATION_MAIL_FROM:FCOURT <no-reply@fcourt.example>}
   links:

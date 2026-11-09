@@ -31,7 +31,7 @@ public class ReminderProjection {
         long id = bookingId(payment.path("bookingId"));
         JsonNode recipient = event.root().path("recipient");
         String email = recipient.path("email").asText("").strip();
-        if (!validAddress(email)) return;
+        String mailRecipient = validAddress(email) ? email : null;
         JsonNode checkout = payment.path("checkout");
         JsonNode slots = checkout.path("slots");
         if (!slots.isArray() || slots.isEmpty()) throw new PoisonEventException("Confirmed booking has no slots");
@@ -46,14 +46,15 @@ public class ReminderProjection {
             if (ticket.isBlank()) throw new PoisonEventException("Confirmed booking has no check-in code");
             jdbc.update("""
                     INSERT INTO booking_reminders(booking_id, recipient_email, recipient_name, booking_code,
-                        branch_name, court_name, starts_at, ticket_code)
-                    SELECT ?, ?, ?, ?, ?, ?, ?, ?
+                        branch_name, court_name, starts_at, ticket_code, customer_id)
+                    SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?
                     WHERE NOT EXISTS (SELECT 1 FROM cancelled_booking_reminders WHERE booking_id = ?)
                     ON CONFLICT (booking_id) DO NOTHING
-                    """, id, email, recipient.path("fullName").asText("Quý khách"),
+                    """, id, mailRecipient, recipient.path("fullName").asText("Quý khách"),
                     checkout.path("bookingCode").asText("#" + id),
                     checkout.path("branchName").asText(""), checkout.path("courtName").asText(""),
-                    java.sql.Timestamp.from(date.atTime(first).atZone(VIETNAM).toInstant()), ticket, id);
+                    java.sql.Timestamp.from(date.atTime(first).atZone(VIETNAM).toInstant()), ticket,
+                    payment.path("customerId").canConvertToLong() ? payment.path("customerId").asLong() : null, id);
         } catch (java.time.DateTimeException error) {
             throw new PoisonEventException("Confirmed booking has malformed date or time");
         }

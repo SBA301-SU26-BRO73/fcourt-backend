@@ -4,7 +4,7 @@ Tài liệu thiết kế cho SCRUM-100, không phải xác nhận đã triển k
 
 ## 1. Hiện trạng
 
-Port HTTP là mặc định của cấu hình dịch vụ; Compose draft ghi đè notification thành `8092` vì POS dùng `8091` (`deploy/compose.yml` trên nhánh `feature/minh-scrum-100-production-deployment`, dòng 177–205 và phần notification ở dòng 228–246). Cấu hình notification mặc định cũng đang là `8091` (`notification-service/src/main/resources/application.yml:1-3`), cần sửa/ghi đè nhất quán trong mọi môi trường.
+Port HTTP là mặc định của cấu hình dịch vụ. POS mặc định chạy ở `8092`; notification giữ mặc định `8091` (`pos-retail-service/src/main/resources/application.yml:1-3`, `notification-service/src/main/resources/application.yml:1-3`). Compose draft trên nhánh `feature/minh-scrum-100-production-deployment` ghi đè port notification theo cấu hình triển khai riêng.
 
 Memory là **ước tính khởi điểm**, không phải số đo: Spring Boot/JVM, Kafka clients và mỗi service có datasource/client; Compose giới hạn Hikari ở 5 kết nối (`deploy/compose.yml` trên nhánh draft, ví dụ dòng 97–100, 145–148, 198–205). Tạm đặt 512 MiB cho workload nhỏ và 768 MiB–1 GiB cho dịch vụ nhiều tích hợp/consumer; chạy soak test rồi chỉnh theo heap, RSS, GC và tải thực. Hãy đặt heap tối đa khoảng 60–70% giới hạn container để còn chỗ cho metaspace, thread và native memory.
 
@@ -20,8 +20,8 @@ Memory là **ước tính khởi điểm**, không phải số đo: Spring Boot/
 | booking | 8088; gRPC 9088 | `booking_db`; Redis khi realtime bật | auth/JWKS, hold engine, facility, POS; có luồng booking/payment | Kafka event/outbox; Redis Pub/Sub/STOMP | Có (DB, outbox; kết nối WebSocket dài hạn) | 1 GiB |
 | payment | 8089 | `payment_db`, Redis cache | booking, facility, auth; PayOS callback/provider | Kafka `fcourt.payment.events` | Có (DB; Redis cache có thể tái tạo) | 768 MiB |
 | staff-operations | 8090 | `staff_db` | auth, facility, discovery, booking; gRPC hold/booking | Kafka `fcourt.staff.events` | Có (DB/outbox) | 768 MiB |
-| pos-retail | 8091 | `pos_retail_db` | auth, staff, facility, booking | Kafka `fcourt.pos.events` | Có (DB) | 512 MiB |
-| notification | 8092 trong draft (mặc định code 8091) | `notification_db` | SMTP/email | Kafka auth/payment/booking events, DLT | Có (DB/idempotency) | 512 MiB |
+| pos-retail | 8092 | `pos_retail_db` | auth, staff, facility, booking | Kafka `fcourt.pos.events` | Có (DB) | 512 MiB |
+| notification | 8091 mặc định (draft triển khai có thể ghi đè) | `notification_db` | SMTP/email | Kafka auth/payment/booking events, DLT | Có (DB/idempotency) | 512 MiB |
 
 Hiện trạng là **11 PostgreSQL databases cho 11 service có datasource**; slot-hold-engine giữ hold trong Redis và không khai báo datasource tại `slot-hold-engine/src/main/resources/application.yml:1-17`. Ví dụ datasource: `auth-service/src/main/resources/application.yml:13-19`, `booking-service/src/main/resources/application.yml:6-9`; Compose draft tạo role riêng (`deploy/compose.yml` trên nhánh draft, dòng 37–45 và cấu hình từng ứng dụng). Topic reporting thấy tại `reporting-service/src/main/resources/application.yml:46-50`; luồng HTTP chính được cấu hình ở `discovery-service/src/main/resources/application.yml:65-85`, `payment-service/src/main/resources/application.yml:40-48`, `pos-retail-service/src/main/resources/application.yml:31-42` và `staff-operations-service/src/main/resources/application.yml:37-50`.
 
@@ -40,8 +40,8 @@ flowchart LR
   Nginx --> Book[booking :8088 + STOMP]
   Nginx --> Pay[payment :8089]
   Nginx --> Staff[staff-operations :8090]
-  Nginx --> Pos[POS :8091]
-  Nginx --> Notif[notification :8092]
+  Nginx --> Pos[POS :8092]
+  Nginx --> Notif[notification :8091]
   Auth --> PG
   Sub --> PG
   Fac --> PG
@@ -142,7 +142,7 @@ GitHub Actions hiện có workflow verify riêng cho từng module, ví dụ `.g
 - **Flyway và triển khai song song:** từng app tự migrate DB khi khởi động; một deployment đồng loạt có thể đua migration nếu chạy nhiều replica. Deploy theo thứ tự hoặc có migration job/lock; migration tương thích ngược với image trước đó. Facility còn baseline-on-migrate tại V2, các service khác tắt baseline (`facility-service/src/main/resources/application.yml:17-21`, `auth-service/src/main/resources/application.yml:27-28`). Xác nhận DB init từ SQL legacy hay DB rỗng; không để init script và Flyway cùng sở hữu schema không thống nhất.
 - **DB roles / pool:** mỗi database có role/password riêng; không cấp role `postgres` cho app. Hikari max 10 ở YAML, draft giới hạn 5: tính tổng pool của 12 services/replicas cộng migration/admin connections so với giới hạn RDS. Dùng Secrets Manager và rotation có kiểm thử, không nhúng password vào task definition/image.
 - **Tokens nội bộ:** mọi môi trường phải provision đúng các cặp token/chủ thể cho `X-Internal-Service-Token`, `X-Service-Token`/POS và reservation token; reservation secret tối thiểu 32 ký tự, thiếu thì đóng an toàn (503) (`facility-service/src/main/java/com/fcourt/facility/api/ReservationController.java:24-35`; `facility-service/src/main/resources/application.yml:72-76`; `booking-service/src/main/java/com/fcourt/booking/BookingVoucherController.java:17-30`; `pos-retail-service/src/main/resources/application.yml:39-40`). Bổ sung cả hold token giữa booking/hold engine, token staff/payment/POS trong cấu hình Compose draft (`deploy/compose.yml` trên nhánh draft, dòng 177–205). Dùng secret riêng theo môi trường, đưa đúng consumer, rotate có kế hoạch; không log header/token.
-- **Port / release gate:** notification source mặc định port trùng POS, draft override thành 8092; cần integration config check cho tất cả port/target (`notification-service/src/main/resources/application.yml:1-3`, `pos-retail-service/src/main/resources/application.yml:1-3`). Draft README cũng nêu gRPC counter TLS là release gate (`deploy/README.md` trên nhánh draft, mục “gRPC counter operations”).
+- **Port / release gate:** POS mặc định dùng `8092` và notification mặc định dùng `8091`; các triển khai có thể ghi đè qua `SERVER_PORT`. Cần integration config check cho tất cả port/target (`notification-service/src/main/resources/application.yml:1-3`, `pos-retail-service/src/main/resources/application.yml:1-3`). Draft README cũng nêu gRPC counter TLS là release gate (`deploy/README.md` trên nhánh draft, mục “gRPC counter operations”).
 - **Storage / provider:** Cloudinary đang được dùng cho ảnh; chuyển S3 cần adapter, IAM least privilege, bucket private, URL signed/CDN và migrate ảnh, không chỉ thêm bucket (`discovery-service/src/main/resources/application.yml:52-63`). PayOS, email/SMTP và auth JWT signing key/JWKS đều cần cấu hình/rotation; key JWT phải ổn định qua restart (`auth-service/src/main/resources/application.yml:45-54`, `subscription-service/src/main/resources/application.yml:34-44`).
 
 ## 6. Lộ trình SCRUM-100 (Jira-ready)

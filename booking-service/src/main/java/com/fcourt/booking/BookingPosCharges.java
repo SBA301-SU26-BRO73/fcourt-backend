@@ -40,7 +40,7 @@ class BookingPosCharges {
             org.springframework.transaction.PlatformTransactionManager manager,
             @Value("${POS_BOOKING_SERVICE_TOKEN:}") String credential,
             @Value("${POS_SETTLEMENT_SERVICE_TOKEN:}") String settlement,
-            @Value("${POS_URL:http://localhost:8091}") String url,
+            @Value("${POS_URL:http://localhost:8092}") String url,
             @Value("${booking.pos-dispatch-enabled:true}") boolean enabled) {
         this.jdbc = jdbc;
         this.json = json;
