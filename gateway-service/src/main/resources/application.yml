@@ -3,6 +3,13 @@ server:
 spring:
   application:
     name: gateway-service
+  data:
+    redis:
+      # Rate limiting only. If Redis is unreachable the gateway allows requests (fail open).
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6387}
+      password: ${REDIS_PASSWORD:}
+      timeout: ${REDIS_TIMEOUT_MS:300}ms
   cloud:
     gateway:
       server:
@@ -13,10 +20,39 @@ spring:
           default-filters:
             # Reserved for service-to-service calls: a client must never be able to supply it.
             - RemoveRequestHeader=X-Internal-Service-Token
+            - name: RequestRateLimiter
+              args:
+                # Generous per-user (token sub) or per-IP limit on every route; see gateway.rate-limit.general.
+                rate-limiter: "#{@generalRateLimiter}"
+                key-resolver: "#{@generalKeyResolver}"
           # Routes are matched by order (lower first), then by position. Specific paths come before the
           # broad ones that contain them. /api/internal/** and /actuator/** have no route on purpose
           # (BlockedPathsFilter answers 403). The Authorization header is forwarded unchanged.
           routes:
+            # Strict, per-IP policies. Order 5 so they win over the broad routes below; the general
+            # limit from default-filters still applies on top.
+            - id: booking-guest-lookup-limited
+              uri: lb://booking-service
+              order: 5
+              predicates:
+                - Path=/api/public/bookings/lookup
+                - Method=POST
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    rate-limiter: "#{@guestLookupRateLimiter}"
+                    key-resolver: "#{@guestLookupKeyResolver}"
+            - id: auth-service-sensitive-limited
+              uri: lb://auth-service
+              order: 5
+              predicates:
+                - Path=/api/auth/login,/api/auth/password/forgot,/api/auth/register/**
+                - Method=POST
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    rate-limiter: "#{@authRateLimiter}"
+                    key-resolver: "#{@authKeyResolver}"
             - id: slot-hold-engine
               uri: lb://slot-hold-engine
               order: 10
@@ -171,3 +207,27 @@ management:
     web:
       exposure:
         include: health
+  health:
+    redis:
+      # Redis only backs rate limiting and fails open: its outage must not mark the gateway DOWN.
+      enabled: false
+
+gateway:
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    # true only behind the ALB, which sets X-Forwarded-For; the first hop is then the client IP.
+    trust-forwarded-for: ${RATE_LIMIT_TRUST_FORWARDED_FOR:false}
+    redis-timeout-ms: ${RATE_LIMIT_REDIS_TIMEOUT_MS:300}
+    # requests per window-seconds, burst = most requests at once.
+    general:
+      requests: ${RATE_LIMIT_GENERAL_REQUESTS:50}
+      window-seconds: ${RATE_LIMIT_GENERAL_WINDOW_SECONDS:1}
+      burst: ${RATE_LIMIT_GENERAL_BURST:100}
+    guest-lookup:
+      requests: ${RATE_LIMIT_LOOKUP_REQUESTS:5}
+      window-seconds: ${RATE_LIMIT_LOOKUP_WINDOW_SECONDS:60}
+      burst: ${RATE_LIMIT_LOOKUP_BURST:5}
+    auth:
+      requests: ${RATE_LIMIT_AUTH_REQUESTS:10}
+      window-seconds: ${RATE_LIMIT_AUTH_WINDOW_SECONDS:60}
+      burst: ${RATE_LIMIT_AUTH_BURST:10}
