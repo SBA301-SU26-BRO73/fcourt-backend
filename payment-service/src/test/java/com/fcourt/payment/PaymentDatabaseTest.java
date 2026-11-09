@@ -462,6 +462,20 @@ class PaymentDatabaseTest {
         assertThat(jdbc.queryForObject("SELECT count(*) FROM payment_customer_sync",Long.class)).isZero();
     }
 
+    @Test
+    void guestBookingPhoneFromBookingServiceLandsOnThePaymentAndFeedsTheLedgerFilter() throws Exception {
+        receipts(fixed(),b -> "https://res.cloudinary.com/demo/bill.png","PENDING_PAYMENT\",\"customerPhone\":\"0901234567").upload(42,null,"guest",image());
+        assertThat(jdbc.queryForObject("SELECT customer_phone FROM payments WHERE booking_id=42",String.class)).isEqualTo("0901234567");
+        ownBranch();
+        assertThat(ledger.history(7,null,null,"ALL","090123",0,20,admin()).total()).isEqualTo(1);
+    }
+
+    @Test
+    void missingOrMalformedBookingPhoneLeavesCustomerPhoneEmpty() throws Exception {
+        submitted();
+        assertThat(jdbc.queryForObject("SELECT customer_phone FROM payments WHERE booking_id=42",String.class)).isNull();
+    }
+
     @Autowired BranchLedger ledger;
     void ledgerSeed() throws Exception {
         submitted();
