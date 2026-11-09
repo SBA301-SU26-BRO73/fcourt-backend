@@ -115,6 +115,7 @@ class RouteTableTests {
                 // pos-retail-service
                 Arguments.of("/api/staff/pos/orders", "pos-retail-service"),
                 Arguments.of("/api/admin/pos/products", "pos-retail-service"),
+                Arguments.of("/api/super-admin/pos/products", "pos-retail-service"),
                 // WebSocket
                 Arguments.of("/ws-fcourt", "ws://booking-service"),
                 Arguments.of("/ws-fcourt/info", "ws://booking-service"));

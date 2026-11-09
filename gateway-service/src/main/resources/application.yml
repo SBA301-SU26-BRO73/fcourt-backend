@@ -130,7 +130,7 @@ spring:
               uri: lb://pos-retail-service
               order: 20
               predicates:
-                - Path=/api/staff/pos/**,/api/admin/pos/**
+                - Path=/api/staff/pos/**,/api/admin/pos/**,/api/super-admin/pos/**
 
 eureka:
   client:
