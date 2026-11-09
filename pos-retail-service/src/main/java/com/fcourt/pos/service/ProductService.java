@@ -2,6 +2,7 @@ package com.fcourt.pos.service;
 
 import com.fcourt.pos.api.PosRequests;
 import com.fcourt.pos.api.PosViews;
+import com.fcourt.pos.dto.response.ProductPageResponse;
 import com.fcourt.pos.integration.PosUpstreams;
 import com.fcourt.pos.persistence.PosStore;
 import java.util.List;
@@ -28,6 +29,12 @@ public class ProductService {
     }
     public List<PosViews.Product> catalog(Jwt jwt, String query, String category, int limit, int offset) {
         return store.catalog(access.staffBranch(jwt), query, category, limit, offset);
+    }
+    public ProductPageResponse adminList(Jwt jwt, long branch, String query, Boolean active, int page, int size) {
+        access.adminBranch(jwt, branch);
+        String q = query == null ? "" : query.strip();
+        return transaction.execute(status -> new ProductPageResponse(store.adminProducts(branch, q, active, size, page * size),
+                page, size, store.adminProductCount(branch, q, active)));
     }
     public PosViews.Product create(Jwt jwt, UUID key, PosRequests.Product request) {
         long actor = Long.parseLong(jwt.getSubject());

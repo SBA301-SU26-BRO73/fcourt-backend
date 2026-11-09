@@ -1,5 +1,6 @@
 package com.fcourt.pos.api;
 
+import com.fcourt.pos.dto.response.ProductPageResponse;
 import com.fcourt.pos.service.ProductService;
 import com.fcourt.pos.service.SalesService;
 import com.fcourt.pos.service.SettlementService;
@@ -31,6 +32,14 @@ class PosController {
             @RequestParam(defaultValue = "50") @Min(1) @Max(100) int limit,
             @RequestParam(defaultValue = "0") @Min(0) @Max(100000) int offset) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(products.catalog(jwt, query, category, limit, offset));
+    }
+    @GetMapping("/api/admin/pos/products")
+    ResponseEntity<ProductPageResponse> adminProducts(@AuthenticationPrincipal Jwt jwt,
+            @RequestParam @Positive long branchId, @RequestParam(required = false) Boolean active,
+            @RequestParam(defaultValue = "") @Size(max = 100) String query,
+            @RequestParam(defaultValue = "0") @Min(0) @Max(100000) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(products.adminList(jwt, branchId, query, active, page, size));
     }
     @PostMapping("/api/admin/pos/products")
     ResponseEntity<PosViews.Product> createProduct(@AuthenticationPrincipal Jwt jwt, @RequestHeader("Idempotency-Key") UUID key,
