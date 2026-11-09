@@ -167,6 +167,61 @@ class SuperAdminServiceTest {
         verify(users, never()).logAction(eq(999L), anyLong(), anyString(), any(), anyString(), any(), any());
     }
 
+    @Test
+    void listUsersMapsFiltersAndPaging() {
+        when(users.countSearch("CUSTOMER", "ACTIVE", "%50\\_%")).thenReturn(45L);
+        when(users.search("CUSTOMER", "ACTIVE", "%50\\_%", 20, 20L))
+                .thenReturn(List.of(user(6, "CUSTOMER", "ACTIVE")));
+
+        var page = service.listUsers(ACTOR, "customer", " active ", " 50_ ", 1, 20);
+
+        assertThat(page.number()).isEqualTo(1);
+        assertThat(page.size()).isEqualTo(20);
+        assertThat(page.totalElements()).isEqualTo(45);
+        assertThat(page.totalPages()).isEqualTo(3);
+        assertThat(page.content()).singleElement().satisfies(item -> {
+            assertThat(item.id()).isEqualTo(6);
+            assertThat(item.email()).isEqualTo("user6@demo.com");
+            assertThat(item.role()).isEqualTo("CUSTOMER");
+        });
+    }
+
+    @Test
+    void listUsersWithoutFiltersPassesNulls() {
+        when(users.countSearch(null, null, null)).thenReturn(0L);
+        when(users.search(null, null, null, 20, 0L)).thenReturn(List.of());
+
+        var page = service.listUsers(ACTOR, null, " ", null, 0, 20);
+
+        assertThat(page.content()).isEmpty();
+        assertThat(page.totalPages()).isZero();
+    }
+
+    @Test
+    void listUsersRejectsBadInputWithoutQuerying() {
+        assertBadRequest(() -> service.listUsers(ACTOR, "SUPER_ADMIN", null, null, 0, 20));
+        assertBadRequest(() -> service.listUsers(ACTOR, "OWNER", null, null, 0, 20));
+        assertBadRequest(() -> service.listUsers(ACTOR, null, "DELETED", null, 0, 20));
+        assertBadRequest(() -> service.listUsers(ACTOR, null, null, "x".repeat(101), 0, 20));
+        assertBadRequest(() -> service.listUsers(ACTOR, null, null, null, -1, 20));
+        assertBadRequest(() -> service.listUsers(ACTOR, null, null, null, 0, 101));
+        assertBadRequest(() -> service.listUsers(ACTOR, null, null, null, 0, 0));
+        verify(users, never()).search(any(), any(), any(), anyInt(), anyLong());
+    }
+
+    @Test
+    void listUsersRequiresActiveSuperAdmin() {
+        when(users.find(ACTOR)).thenReturn(Optional.of(user(ACTOR, "SUPER_ADMIN", "LOCKED")));
+
+        assertThatThrownBy(() -> service.listUsers(ACTOR, null, null, null, 0, 20))
+                .isInstanceOfSatisfying(ApiException.class, e -> assertThat(e.status()).isEqualTo(HttpStatus.FORBIDDEN));
+    }
+
+    private static void assertBadRequest(org.assertj.core.api.ThrowableAssert.ThrowingCallable call) {
+        assertThatThrownBy(call)
+                .isInstanceOfSatisfying(ApiException.class, e -> assertThat(e.status()).isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
     static UserRecord user(long id, String role, String status) {
         return new UserRecord(id, "user" + id + "@demo.com", "User " + id, "09000000" + id, role, status,
                 OffsetDateTime.parse("2026-10-20T08:00:00Z"));

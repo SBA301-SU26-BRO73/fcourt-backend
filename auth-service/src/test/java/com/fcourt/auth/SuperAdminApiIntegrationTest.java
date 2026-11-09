@@ -139,6 +139,56 @@ class SuperAdminApiIntegrationTest {
     }
 
     @Test
+    void userListIsPagedFilteredAndHidesSuperAdmins() throws Exception {
+        String tag = unique("zz").replace("@", "").replace(".", "");
+        jdbc.update("INSERT INTO users(email, password_hash, role, status, full_name) VALUES (?, 'x', 'CUSTOMER', 'ACTIVE', ?)",
+                tag + "-a@list.test", "List A");
+        jdbc.update("INSERT INTO users(email, password_hash, role, status, full_name) VALUES (?, 'x', 'CUSTOMER', 'LOCKED', ?)",
+                tag + "-b@list.test", "List B");
+        jdbc.update("INSERT INTO users(email, password_hash, role, status, full_name) VALUES (?, 'x', 'ADMIN', 'ACTIVE', ?)",
+                tag + "-c@list.test", "List C");
+
+        mvc.perform(asSuperAdmin(get("/api/super-admin/users").param("query", tag.toUpperCase()).param("size", "2")))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("no-store")))
+                .andExpect(jsonPath("$.totalElements").value(3))
+                .andExpect(jsonPath("$.totalPages").value(2))
+                .andExpect(jsonPath("$.number").value(0))
+                .andExpect(jsonPath("$.size").value(2))
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[0].email").value(tag + "-c@list.test"))
+                .andExpect(jsonPath("$.content[0].passwordHash").doesNotExist());
+        mvc.perform(asSuperAdmin(get("/api/super-admin/users").param("query", tag).param("role", "CUSTOMER")
+                        .param("status", "LOCKED")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].fullName").value("List B"));
+        // LIKE wildcards in the term are literal, not patterns.
+        mvc.perform(asSuperAdmin(get("/api/super-admin/users").param("query", "%")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+        mvc.perform(asSuperAdmin(get("/api/super-admin/users").param("size", "100")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[?(@.role == 'SUPER_ADMIN')]").isEmpty());
+    }
+
+    @Test
+    void userListRejectsBadParametersAndNonSuperAdmins() throws Exception {
+        mvc.perform(asSuperAdmin(get("/api/super-admin/users").param("role", "SUPER_ADMIN")))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+        mvc.perform(asSuperAdmin(get("/api/super-admin/users").param("status", "NOPE")))
+                .andExpect(status().isBadRequest());
+        mvc.perform(asSuperAdmin(get("/api/super-admin/users").param("size", "101")))
+                .andExpect(status().isBadRequest());
+        mvc.perform(asSuperAdmin(get("/api/super-admin/users").param("page", "abc")))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/super-admin/users")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/super-admin/users").header("Authorization", bearer(CUSTOMER, "CUSTOMER")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void approvePublishesOwnerApprovedEventAndSecondApprovalConflicts() throws Exception {
         long owner = pendingOwner();
         mvc.perform(asSuperAdmin(put("/api/super-admin/court-admins/" + owner + "/approve"))

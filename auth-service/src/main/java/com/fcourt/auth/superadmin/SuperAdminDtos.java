@@ -19,6 +19,15 @@ public final class SuperAdminDtos {
     public record DocumentResponse(long id, String url, String docType) {
     }
 
+    /** One row of the super admin user list; never carries credentials or documents. */
+    public record UserListItem(long id, String email, String fullName, String phone, String role, String status,
+                               OffsetDateTime createdAt) {
+    }
+
+    /** Spring-style page envelope, the shape fcourt-web already reads ({@code number} is zero based). */
+    public record UserPage(List<UserListItem> content, int number, int size, long totalElements, int totalPages) {
+    }
+
     public record UserStatusResponse(long id, String status) {
     }
 

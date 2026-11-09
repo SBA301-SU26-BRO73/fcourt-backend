@@ -53,6 +53,33 @@ class SuperAdminRepository {
                 + "AND deleted_at IS NULL ORDER BY created_at, id", this::user);
     }
 
+    /** Newest first. {@code likePattern} is already escaped with a backslash; null filters are skipped. */
+    List<UserRecord> search(String role, String status, String likePattern, int limit, long offset) {
+        var params = filterParams(role, status, likePattern).addValue("limit", limit).addValue("offset", offset);
+        return named.query(USER_COLUMNS + filterClause() + " ORDER BY created_at DESC, id DESC LIMIT :limit OFFSET :offset",
+                params, this::user);
+    }
+
+    long countSearch(String role, String status, String likePattern) {
+        Long total = named.queryForObject("SELECT count(*) FROM users " + filterClause(),
+                filterParams(role, status, likePattern), Long.class);
+        return total == null ? 0 : total;
+    }
+
+    /** SUPER_ADMIN rows are never listed. */
+    private static String filterClause() {
+        return "WHERE deleted_at IS NULL AND role <> 'SUPER_ADMIN' "
+                + "AND (CAST(:role AS text) IS NULL OR role = :role) "
+                + "AND (CAST(:status AS text) IS NULL OR status = :status) "
+                + "AND (CAST(:pattern AS text) IS NULL OR lower(email) LIKE :pattern ESCAPE '\\' "
+                + "OR lower(full_name) LIKE :pattern ESCAPE '\\' OR lower(phone) LIKE :pattern ESCAPE '\\')";
+    }
+
+    private static MapSqlParameterSource filterParams(String role, String status, String likePattern) {
+        return new MapSqlParameterSource().addValue("role", role).addValue("status", status)
+                .addValue("pattern", likePattern);
+    }
+
     Map<Long, List<DocumentResponse>> documentsOf(Collection<Long> userIds) {
         Map<Long, List<DocumentResponse>> documents = new LinkedHashMap<>();
         if (userIds.isEmpty()) {
