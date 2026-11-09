@@ -321,8 +321,18 @@ class HoldIntegrationTest {
     }
 
     @Test
+    void signedInCustomerMayHoldWithoutAPhone() throws Exception {
+        available();
+        mvc.perform(post("/api/bookings/hold-slots").contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer token-validated-by-booking-service")
+                .content("{\"courtId\":1,\"date\":\"2030-01-01\",\"slotIds\":[1]}"))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
     void rejectsInvalidRequestsWithoutCallingDiscovery() throws Exception {
         for (String json : List.of("{}", "{\"courtId\":1,\"date\":\"2030-01-01\",\"slotIds\":[1],\"guestPhone\":\"123\"}",
+                "{\"courtId\":1,\"date\":\"2030-01-01\",\"slotIds\":[1]}",
                 MAPPER.writeValueAsString(request(1L, 1L)), MAPPER.writeValueAsString(request()))) {
             mvc.perform(post("/api/bookings/hold-slots").contentType(MediaType.APPLICATION_JSON).content(json))
                     .andExpect(status().isBadRequest());
