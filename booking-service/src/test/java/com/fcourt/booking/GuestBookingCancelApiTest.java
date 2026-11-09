@@ -84,6 +84,23 @@ class GuestBookingCancelApiTest {
     }
 
     @Test
+    void unpaidGuestBookingInsideCutoffIsCancelledAnyTime() throws Exception {
+        booking(6, null, "0901234567", "PENDING_PAYMENT", "PENDING", "FC00000006", "2000-01-01");
+        jdbc.update("UPDATE bookings SET receipt_image_url=NULL WHERE id=6");
+        mvc.perform(post("/api/public/bookings/cancel").contentType("application/json").content(body("FC00000006", "0901234567")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("CANCELLED")).andExpect(jsonPath("$.refundAmount").value(0));
+        assertThat(jdbc.queryForObject("SELECT active FROM booking_slots WHERE booking_id=6", Boolean.class)).isFalse();
+    }
+
+    @Test
+    void awaitingConfirmationWithReceiptInsideCutoffIsRejected() throws Exception {
+        booking(7, null, "0901234567", "AWAITING_CONFIRMATION", "PENDING", "FC00000007", "2000-01-01");
+        mvc.perform(post("/api/public/bookings/cancel").contentType("application/json").content(body("FC00000007", "0901234567")))
+                .andExpect(status().isBadRequest());
+        assertThat(statusOf(7)).isEqualTo("AWAITING_CONFIRMATION");
+    }
+
+    @Test
     void repeatedCancelIsIdempotentAndCreatesOneEvent() throws Exception {
         for (int i = 0; i < 2; i++)
             mvc.perform(post("/api/public/bookings/cancel").contentType("application/json").content(body("FC00000002", "0901234567")))

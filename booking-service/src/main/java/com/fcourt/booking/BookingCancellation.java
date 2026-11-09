@@ -44,10 +44,12 @@ class BookingCancellation {
         Instant before=starts==null?null:starts.minus(cutoff);
         String status=b.get("status").toString();
         boolean valid=Set.of("PENDING_PAYMENT","AWAITING_CONFIRMATION","CONFIRMED").contains(status);
-        boolean allowed=valid && before!=null && !clock.instant().isAfter(before);
+        // Unpaid (no money taken, no receipt): cancellable any time, no cut-off, no refund.
+        boolean unpaid="PENDING_PAYMENT".equals(status) && !"CONFIRMED".equals(b.get("payment_status")) && b.get("receipt_image_url")==null;
+        boolean allowed=valid && (unpaid || before!=null && !clock.instant().isAfter(before));
         BigDecimal amount=allowed && "CONFIRMED".equals(b.get("payment_status"))
             ? ((BigDecimal)b.get("total_price")).multiply(refundPercent).divide(BigDecimal.valueOf(100),0,RoundingMode.DOWN):BigDecimal.ZERO;
-        return new Policy(allowed,!valid?"Trạng thái đơn không cho phép hủy":starts==null?"Chưa có lịch sân để xác định chính sách":allowed?"Được hủy trước hạn quy định":"Đã quá thời hạn hủy",starts,before,cutoff.toHours(),amount,refundPercent,"VND");
+        return new Policy(allowed,!valid?"Trạng thái đơn không cho phép hủy":starts==null&&!unpaid?"Chưa có lịch sân để xác định chính sách":allowed?(unpaid?"Đơn chưa thanh toán, được hủy bất cứ lúc nào":"Được hủy trước hạn quy định"):"Đã quá thời hạn hủy",starts,before,cutoff.toHours(),amount,refundPercent,"VND");
     }
     @Transactional
     BookingView cancel(long id,String reason,Jwt jwt) {
