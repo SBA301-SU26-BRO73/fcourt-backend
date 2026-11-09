@@ -55,6 +55,7 @@ class BookingSecurity {
                         a ->
                                 a.dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR)
                                         .permitAll()
+                                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
                                         .requestMatchers("/actuator/health", "/api/bookings/{id}", "/ws-fcourt")
                                         .permitAll()
                                         .requestMatchers(org.springframework.http.HttpMethod.POST,
