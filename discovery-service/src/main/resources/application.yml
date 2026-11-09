@@ -87,3 +87,12 @@ discovery:
     cache-ttl-seconds: ${DISCOVERY_CACHE_TTL_SECONDS:5}
   kafka:
     branch-topic: ${BRANCH_UPDATED_TOPIC:facility.branch-updated.v1}
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
+    path: /swagger-ui.html
+  paths-to-exclude: /api/internal/**,/error
