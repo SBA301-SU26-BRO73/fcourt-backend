@@ -1,6 +1,6 @@
 package com.fcourt.facility.service;
 
-/** Remote image host (Cloudinary in production). Failures surface as ResponseStatusException. */
+/** Remote image host (S3 behind a public base URL). Failures surface as ResponseStatusException. */
 public interface ImageStorage {
     /** A file already validated by {@link ImageUploadValidator}. */
     record Upload(String filename, String contentType, byte[] content) { }

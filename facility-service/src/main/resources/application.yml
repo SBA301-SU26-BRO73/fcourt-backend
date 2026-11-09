@@ -61,12 +61,6 @@ facility:
   images:
     max-per-branch: ${FACILITY_IMAGES_MAX_PER_BRANCH:10}
     max-file-bytes: ${FACILITY_IMAGES_MAX_FILE_BYTES:5242880}
-    # Empty = upload disabled (503). Never commit real values; set them via environment.
-    cloudinary:
-      url: ${CLOUDINARY_URL:}
-      cloud-name: ${CLOUDINARY_CLOUD_NAME:}
-      api-key: ${CLOUDINARY_API_KEY:}
-      api-secret: ${CLOUDINARY_API_SECRET:}
   discovery:
     # Needed to verify bookings/holds before locking; empty = locking answers 503 (fail closed).
     base-url: ${DISCOVERY_BASE_URL:}
@@ -95,3 +89,15 @@ management:
   endpoint:
     health:
       show-details: never
+
+storage:
+  # Private S3 bucket; credentials come from the default AWS chain (EKS Pod Identity, AWS profile), never from config.
+  # Empty bucket = branch image upload disabled (503).
+  s3:
+    bucket: ${STORAGE_S3_BUCKET:}
+    region: ${STORAGE_S3_REGION:ap-southeast-1}
+    # LocalStack/MinIO only (for example http://localhost:4566); also turns on path-style addressing.
+    endpoint: ${STORAGE_S3_ENDPOINT:}
+    path-style: ${STORAGE_S3_PATH_STYLE:false}
+  # Base of every issued image URL (CloudFront). Default: endpoint/bucket or the bucket host.
+  public-base-url: ${STORAGE_PUBLIC_BASE_URL:}

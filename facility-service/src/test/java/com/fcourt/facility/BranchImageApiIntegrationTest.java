@@ -38,7 +38,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.web.server.ResponseStatusException;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-/** Branch gallery against a real Postgres and a fake image host (no Cloudinary account needed). */
+/** Branch gallery against a real Postgres and a fake image host (the S3 adapter has its own tests). */
 @SpringBootTest(properties = {
         "facility.images.max-per-branch=3",
         "facility.events.relay-delay-ms=200",
@@ -140,7 +140,7 @@ class BranchImageApiIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[0].branchId").value(branchId))
-                .andExpect(jsonPath("$[0].url").value("https://cdn.example.com/fcourt/branches/" + branchId + "/img1.png"))
+                .andExpect(jsonPath("$[0].url").value("https://cdn.example.com/branches/" + branchId + "/img1.png"))
                 .andExpect(jsonPath("$[0].sortOrder").value(0))
                 .andExpect(jsonPath("$[1].sortOrder").value(1));
 
