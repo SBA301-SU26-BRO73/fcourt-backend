@@ -355,8 +355,8 @@ class FacilityApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"ACTIVE\"}"))
                 .andExpect(status().isOk());
 
-        // 11 successful changes: branch, 4 courts, 2 applies, 1 create + 1 delete template, 2 status changes.
-        JsonNode latest = awaitLatestSnapshot(branchId, 11);
+        // 13 successful changes: branch, 4 courts, 2 applies, 1 create + 2 updates + 1 delete template, 2 status changes.
+        JsonNode latest = awaitLatestSnapshot(branchId, 13);
         assertThat(latest.get("active").asBoolean()).isTrue();
         assertThat(latest.get("deleted").asBoolean()).isFalse();
         assertThat(latest.get("district").asText()).isEqualTo("Quan 1");
