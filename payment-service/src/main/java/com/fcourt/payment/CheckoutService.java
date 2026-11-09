@@ -50,11 +50,14 @@ class CheckoutService {
             throw PaymentUpstreams.unavailable();
         }
         var bank = upstreams.bank(booking.branchId());
-        if (bank.id() == null || !bank.id().equals(booking.branchId()) || blank(bank.bankName())
-                || blank(bank.bankAccountNumber()) || blank(bank.bankAccountName())
+        if (bank.id() == null || !bank.id().equals(booking.branchId())) {
+            throw PaymentUpstreams.unavailable();
+        }
+        if (blank(bank.bankName()) || blank(bank.bankAccountNumber()) || blank(bank.bankAccountName())
                 || !bank.bankAccountNumber().matches("[0-9]{1,50}")
                 || bank.bankBin() == null || !bank.bankBin().matches("[0-9]{6}")) {
-            throw PaymentUpstreams.unavailable();
+            // Branch misconfiguration, not an upstream outage: tell the client clearly.
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, BANK_NOT_CONFIGURED);
         }
         // The upstream calls must not allow a checkout that expired in flight.
         if (!booking.holdExpiresAt().isAfter(clock.instant())) {
@@ -67,6 +70,9 @@ class CheckoutService {
                 "FC " + booking.bookingCode(), booking.holdExpiresAt(), booking.customerName(),
                 profile == null ? null : profile.email(), profile == null ? null : profile.id());
     }
+
+    static final String BANK_NOT_CONFIGURED =
+            "Chi nhánh chưa cấu hình đủ thông tin tài khoản ngân hàng để thanh toán";
 
     private boolean blank(String value) { return value == null || value.isBlank(); }
 }
