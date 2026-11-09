@@ -8,6 +8,7 @@ on:
     paths:
       - '*-service/**'
       - 'slot-hold-engine/**'
+      - 'eureka-server/**'
   workflow_dispatch:
     inputs:
       services:
