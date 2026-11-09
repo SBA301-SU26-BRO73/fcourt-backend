@@ -1,9 +1,9 @@
 package com.fcourt.discovery.config;
 
-import com.fcourt.discovery.component.CloudinaryImageStorage;
 import com.fcourt.discovery.component.ImageStorage;
 import com.fcourt.discovery.component.ReviewImagePolicy;
-import java.time.Clock;
+import com.fcourt.discovery.component.S3ImageStorage;
+import java.net.URI;
 import java.time.Instant;
 import java.util.List;
 import org.slf4j.Logger;
@@ -14,12 +14,13 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.server.ResponseStatusException;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
 
 /**
- * Chooses the image host. {@code storage.provider} selects the adapter; only {@code cloudinary} exists today, and a
- * new host (for example S3 behind a CDN) needs one more {@link ImageStorage} adapter plus its own settings and
- * {@code storage.public-base-url}. Without credentials the service still starts: uploads answer 503 and review
- * photos are rejected.
+ * Builds the S3 image adapter with the default AWS credential chain (EKS Pod Identity in the cluster, a profile or
+ * the AWS_* variables locally); no access key is configured. Without {@code storage.s3.bucket} the service still
+ * starts: uploads answer 503 and review photos are rejected.
  */
 @Configuration
 @EnableScheduling
@@ -27,18 +28,13 @@ class ImageStorageConfig {
     private static final Logger log = LoggerFactory.getLogger(ImageStorageConfig.class);
 
     @Bean
-    ImageStorage imageStorage(@Value("${storage.provider:cloudinary}") String provider,
-            @Value("${storage.cloudinary.url:}") String url,
-            @Value("${storage.cloudinary.cloud-name:}") String cloudName,
-            @Value("${storage.cloudinary.api-key:}") String apiKey,
-            @Value("${storage.cloudinary.api-secret:}") String apiSecret,
-            @Value("${storage.cloudinary.base-url:https://api.cloudinary.com}") String apiBaseUrl) {
-        if (!"cloudinary".equalsIgnoreCase(provider.trim()))
-            throw new IllegalStateException("Unsupported storage.provider '" + provider + "' (only 'cloudinary' is implemented)");
-        var credentials = new CloudinaryImageStorage.Credentials(cloudName, apiKey, apiSecret);
-        if (!credentials.complete()) credentials = CloudinaryImageStorage.Credentials.fromUrl(url);
-        if (!credentials.complete()) {
-            log.warn("Image storage is not configured (Cloudinary: set CLOUDINARY_URL or CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET): review photo upload is disabled");
+    ImageStorage imageStorage(@Value("${storage.s3.bucket:}") String bucket,
+            @Value("${storage.s3.region:ap-southeast-1}") String region,
+            @Value("${storage.s3.endpoint:}") String endpoint,
+            @Value("${storage.s3.path-style:false}") boolean pathStyle,
+            @Value("${storage.public-base-url:}") String publicBaseUrl) {
+        if (bucket.isBlank()) {
+            log.warn("Image storage is not configured (set STORAGE_S3_BUCKET): review photo upload is disabled");
             return new ImageStorage() {
                 @Override public String upload(String key, String contentType, byte[] content) {
                     throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Chưa cấu hình lưu trữ ảnh trên máy chủ");
@@ -47,12 +43,16 @@ class ImageStorageConfig {
                 @Override public List<StoredObject> listByPrefix(String prefix, Instant olderThan, int max) { return List.of(); }
             };
         }
-        return new CloudinaryImageStorage(credentials, apiBaseUrl, Clock.systemUTC());
+        var builder = S3Client.builder().region(Region.of(region)).forcePathStyle(pathStyle || !endpoint.isBlank());
+        if (!endpoint.isBlank()) builder.endpointOverride(URI.create(endpoint));
+        String base = !publicBaseUrl.isBlank() ? publicBaseUrl
+                : !endpoint.isBlank() ? endpoint.replaceAll("/+$", "") + "/" + bucket
+                : "https://" + bucket + ".s3." + region + ".amazonaws.com";
+        return new S3ImageStorage(builder.build(), bucket, base);
     }
 
-    /** {@code storage.public-base-url} overrides the base the adapter derives (needed for a CDN or custom domain). */
     @Bean
-    ReviewImagePolicy reviewImagePolicy(ImageStorage storage, @Value("${storage.public-base-url:}") String override) {
-        return new ReviewImagePolicy(override.isBlank() ? storage.publicBaseUrl() : override, storage.keyPrefix());
+    ReviewImagePolicy reviewImagePolicy(ImageStorage storage) {
+        return new ReviewImagePolicy(storage.publicBaseUrl(), storage.keyPrefix());
     }
 }

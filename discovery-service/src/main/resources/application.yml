@@ -51,15 +51,16 @@ management:
     health:
       show-details: never
 storage:
-  # Image host for the review photo feature. Only "cloudinary" is implemented; another host needs an adapter + its settings.
-  provider: ${STORAGE_PROVIDER:cloudinary}
-  # Optional: HTTPS base of every issued image URL; overrides what the adapter derives (CDN or custom domain).
+  # Private S3 bucket; credentials come from the default AWS chain (EKS Pod Identity, AWS profile), never from config.
+  # Empty bucket = review photo upload disabled (503).
+  s3:
+    bucket: ${STORAGE_S3_BUCKET:}
+    region: ${STORAGE_S3_REGION:ap-southeast-1}
+    # LocalStack/MinIO only (for example http://localhost:4566); also turns on path-style addressing.
+    endpoint: ${STORAGE_S3_ENDPOINT:}
+    path-style: ${STORAGE_S3_PATH_STYLE:false}
+  # Base of every issued image URL (CloudFront). Default: endpoint/bucket or the bucket host.
   public-base-url: ${STORAGE_PUBLIC_BASE_URL:}
-  cloudinary:
-    url: ${CLOUDINARY_URL:}
-    cloud-name: ${CLOUDINARY_CLOUD_NAME:}
-    api-key: ${CLOUDINARY_API_KEY:}
-    api-secret: ${CLOUDINARY_API_SECRET:}
 discovery:
   auth:
     jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
