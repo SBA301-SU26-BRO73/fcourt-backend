@@ -43,7 +43,7 @@ import org.testcontainers.junit.jupiter.*;
 class ReviewIntegrationTest {
     @Container static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>("postgres:16-alpine");
     static final String BUCKET="fcourt-discovery-test";
-    @Container static final org.testcontainers.containers.MinIOContainer STORAGE = new org.testcontainers.containers.MinIOContainer(org.testcontainers.utility.DockerImageName.parse("cgr.dev/chainguard/minio:latest").asCompatibleSubstituteFor("minio/minio"));
+    @Container static final org.testcontainers.containers.MinIOContainer STORAGE = new org.testcontainers.containers.MinIOContainer(org.testcontainers.utility.DockerImageName.parse("cgr.dev/chainguard/minio@sha256:a1ac4589a5f8136b616e667b48a0bea9719bb10bd45799ea946f24bbedfafde4").asCompatibleSubstituteFor("minio/minio"));
     static final ObjectMapper JSON = new ObjectMapper().findAndRegisterModules();
     static final RSAKey KEY = signingKey();
     static final String ISSUER = "http://reviews-test/auth";

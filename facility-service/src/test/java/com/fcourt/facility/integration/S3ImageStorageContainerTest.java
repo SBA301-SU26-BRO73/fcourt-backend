@@ -26,7 +26,7 @@ class S3ImageStorageContainerTest {
 
     @Container
     static final MinIOContainer S3 =
-            new MinIOContainer(DockerImageName.parse("cgr.dev/chainguard/minio:latest").asCompatibleSubstituteFor("minio/minio"));
+            new MinIOContainer(DockerImageName.parse("cgr.dev/chainguard/minio@sha256:a1ac4589a5f8136b616e667b48a0bea9719bb10bd45799ea946f24bbedfafde4").asCompatibleSubstituteFor("minio/minio"));
 
     static S3Client s3;
     static S3ImageStorage storage;
