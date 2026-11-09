@@ -24,6 +24,19 @@ public class PosStore {
                 AND (? = '' OR category = ?) ORDER BY name, id LIMIT ? OFFSET ?
                 """, this::productRow, branch, query, category, category, limit, offset);
     }
+    /** Danh sách cho owner: kể cả sản phẩm inactive; active = null nghĩa là cả hai. */
+    public List<PosViews.Product> adminProducts(long branch, String query, Boolean active, int limit, int offset) {
+        return jdbc.query("""
+                SELECT * FROM products WHERE branch_id = ? AND position(lower(?) in lower(name)) > 0
+                AND (?::boolean IS NULL OR active = ?::boolean) ORDER BY name, id LIMIT ? OFFSET ?
+                """, this::productRow, branch, query, active, active, limit, offset);
+    }
+    public long adminProductCount(long branch, String query, Boolean active) {
+        return jdbc.queryForObject("""
+                SELECT count(*) FROM products WHERE branch_id = ? AND position(lower(?) in lower(name)) > 0
+                AND (?::boolean IS NULL OR active = ?::boolean)
+                """, Long.class, branch, query, active, active);
+    }
     public PosViews.Order order(long id, boolean lock) {
         var rows = jdbc.query("SELECT * FROM orders WHERE id = ?" + (lock ? " FOR UPDATE" : ""), this::orderRow, id);
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found");
