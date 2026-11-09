@@ -214,6 +214,32 @@ class BookingApiTest {
         assertThat((java.math.BigDecimal)order.get("total_price")).isEqualByComparingTo(Boolean.TRUE.equals(order.get("payment_frozen"))?"100000":"80000");
     }
 
+    @Test void detachRestoresOriginalAmountAndIsIdempotent() {
+        jdbc.update("UPDATE bookings SET hold_expires_at=? WHERE id=1",java.sql.Timestamp.from(Instant.now().plusSeconds(3600)));
+        var actor=org.springframework.security.oauth2.jwt.Jwt.withTokenValue("fixture").header("alg","RS256").subject("10").build();
+        voucherBridge.attach(1,actor,new BookingVoucherBridge.Attachment(UUID.randomUUID(),7,new java.math.BigDecimal("100000"),new java.math.BigDecimal("20000"),new java.math.BigDecimal("80000")));
+        var result=voucherBridge.detach(1,actor);
+        assertThat(result.voucherApplicationId()).isNull();
+        assertThat(result.totalPrice()).isEqualByComparingTo("100000");
+        var row=jdbc.queryForMap("SELECT voucher_id,original_amount,discount_amount,total_price FROM bookings WHERE id=1");
+        assertThat(row.get("voucher_id")).isNull();
+        assertThat(row.get("original_amount")).isNull();
+        assertThat(row.get("discount_amount")).isNull();
+        assertThat((java.math.BigDecimal)row.get("total_price")).isEqualByComparingTo("100000");
+        assertThat(voucherBridge.detach(1,actor).totalPrice()).isEqualByComparingTo("100000");
+    }
+
+    @Test void detachRefusesFrozenPriceAndOtherCustomers() {
+        jdbc.update("UPDATE bookings SET hold_expires_at=? WHERE id=1",java.sql.Timestamp.from(Instant.now().plusSeconds(3600)));
+        var actor=org.springframework.security.oauth2.jwt.Jwt.withTokenValue("fixture").header("alg","RS256").subject("10").build();
+        var other=org.springframework.security.oauth2.jwt.Jwt.withTokenValue("fixture").header("alg","RS256").subject("11").build();
+        voucherBridge.attach(1,actor,new BookingVoucherBridge.Attachment(UUID.randomUUID(),7,new java.math.BigDecimal("100000"),new java.math.BigDecimal("20000"),new java.math.BigDecimal("80000")));
+        assertThatThrownBy(()->voucherBridge.detach(1,other)).isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        jdbc.update("UPDATE bookings SET payment_frozen=true WHERE id=1");
+        assertThatThrownBy(()->voucherBridge.detach(1,actor)).isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        assertThat(jdbc.queryForObject("SELECT total_price FROM bookings WHERE id=1",java.math.BigDecimal.class)).isEqualByComparingTo("80000");
+    }
+
     @Test void databaseRejectsPartialVoucherSnapshotsAndNegativeFinalTotals() {
         assertThatThrownBy(()->jdbc.update("UPDATE bookings SET voucher_application_id=? WHERE id=1",UUID.randomUUID()))
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
