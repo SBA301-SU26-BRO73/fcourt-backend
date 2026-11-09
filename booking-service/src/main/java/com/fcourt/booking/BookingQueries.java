@@ -85,6 +85,6 @@ class BookingQueries {
             r.getString("checkin_code"),r.getString("qr_image_url"),r.getString("receipt_image_url"),r.getString("payment_status"),r.getTimestamp("created_at").toInstant(),r.getBigDecimal("refund_amount"),r.getString("cancellation_reason"),
             r.getLong("court_id"),
             r.getObject("voucher_application_id",java.util.UUID.class),r.getObject("voucher_id",Long.class),
-            r.getBigDecimal("original_amount"),r.getBigDecimal("discount_amount"),r.getBoolean("payment_frozen"));
+            r.getBigDecimal("original_amount"),r.getBigDecimal("discount_amount"),r.getBoolean("payment_frozen"),r.getString("guest_phone"));
     }
 }

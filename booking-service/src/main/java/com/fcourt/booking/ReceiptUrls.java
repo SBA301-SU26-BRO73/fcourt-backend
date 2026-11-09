@@ -60,7 +60,7 @@ class ReceiptUrls {
         return new BookingView(b.id(), b.bookingCode(), b.branchId(), b.branchName(), b.branchAddress(), b.branchPhone(), b.courtName(),
                 b.date(), b.slots(), b.totalPrice(), b.status(), b.customerName(), b.holdExpiresAt(), b.checkInCode(), b.qrImageUrl(),
                 view(b.receiptImageUrl()), b.paymentStatus(), b.createdAt(), b.refundAmount(), b.cancellationReason(), b.courtId(),
-                b.voucherApplicationId(), b.voucherId(), b.originalAmount(), b.discountAmount(), b.paymentFrozen());
+                b.voucherApplicationId(), b.voucherId(), b.originalAmount(), b.discountAmount(), b.paymentFrozen(), b.customerPhone());
     }
 
     BookingView.Page view(BookingView.Page page) {

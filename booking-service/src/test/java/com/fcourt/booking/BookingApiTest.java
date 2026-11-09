@@ -68,7 +68,7 @@ class BookingApiTest {
             .andExpect(status().isOk()).andExpect(jsonPath("$.branchAddress").value("123 Street"))
             .andExpect(jsonPath("$.slots[0].startTime").value("18:00:00"))
             .andExpect(jsonPath("$.holdTokenHash").doesNotExist()).andExpect(jsonPath("$.customerId").doesNotExist());
-        mvc.perform(get("/api/bookings/4").header("X-Hold-Token","guest-secret")).andExpect(status().isOk());
+        mvc.perform(get("/api/bookings/4").header("X-Hold-Token","guest-secret")).andExpect(status().isOk()).andExpect(jsonPath("$.customerPhone").value("0901234567"));
         mvc.perform(get("/api/bookings/4").header("X-Hold-Token","wrong")).andExpect(status().isNotFound());
     }
     @Test void historyLoadsSlotsInOrderAndSlotLookupByBookingIsIndexed() throws Exception {
