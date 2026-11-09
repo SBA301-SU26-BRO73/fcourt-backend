@@ -1,12 +1,9 @@
 package com.fcourt.booking.service;
 
-import com.fcourt.booking.config.GuestLookupProperties;
 import com.fcourt.booking.dto.request.GuestLookupRequest;
 import com.fcourt.booking.dto.response.GuestBookingResponse;
-import com.fcourt.booking.exception.TooManyRequestsException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.time.Clock;
 import java.time.LocalTime;
 import java.util.HexFormat;
 import java.util.List;
@@ -28,19 +25,14 @@ public class GuestBookingLookupService {
     private static final String DUMMY_PHONE = "0000000000";
 
     private final JdbcTemplate jdbc;
-    private final TokenBucketLimiter ipLimiter;
-    private final TokenBucketLimiter codeLimiter;
 
-    public GuestBookingLookupService(JdbcTemplate jdbc, Clock clock, GuestLookupProperties props) {
+    public GuestBookingLookupService(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
-        this.ipLimiter = new TokenBucketLimiter(props.ipLimit(), props.window(), props.maxTrackedKeys(), clock);
-        this.codeLimiter = new TokenBucketLimiter(props.codeLimit(), props.window(), props.maxTrackedKeys(), clock);
     }
 
     @Transactional(readOnly = true)
-    public GuestBookingResponse lookup(GuestLookupRequest request, String clientIp) {
+    public GuestBookingResponse lookup(GuestLookupRequest request) {
         String code = request.bookingCode().strip().toUpperCase(Locale.ROOT).replace("-", "");
-        throttle(code, clientIp);
         var rows = jdbc.queryForList("SELECT * FROM bookings WHERE booking_code=? AND customer_id IS NULL", code);
         String stored = rows.isEmpty() ? null : (String) rows.getFirst().get("guest_phone");
         boolean phoneMatches = phoneEquals(stored == null ? DUMMY_PHONE : stored, request.phone());
@@ -64,14 +56,6 @@ public class GuestBookingLookupService {
                 (String) row.get("payment_status"),
                 confirmed ? (String) row.get("checkin_code") : null,
                 confirmed ? (String) row.get("qr_image_url") : null);
-    }
-
-    private void throttle(String code, String ip) {
-        long wait = Math.max(ipLimiter.tryAcquire("ip:" + ip), codeLimiter.tryAcquire("code:" + code));
-        if (wait > 0) {
-            log.warn("guest lookup rate limited codeHash={}", shortHash(code));
-            throw new TooManyRequestsException("Too many lookup attempts, try again later", wait);
-        }
     }
 
     /** 0901234567, 84901234567 và +84901234567 coi là cùng một số. */

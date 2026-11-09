@@ -14,14 +14,12 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
-@SpringBootTest(properties = {"booking.events-enabled=false", "booking.guest-lookup.ip-limit=100",
-        "booking.guest-lookup.code-limit=3", "booking.guest-lookup.window=1h"})
+@SpringBootTest(properties = "booking.events-enabled=false")
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class GuestBookingLookupApiTest {
@@ -52,10 +50,6 @@ class GuestBookingLookupApiTest {
         booking(2, null, "0901234567", "PENDING_PAYMENT", "FC00000002");
         booking(3, 10L, null, "CONFIRMED", "FC00000003");
         booking(4, null, "0901234567", "CONFIRMED", "FC00000004");
-    }
-
-    private static RequestPostProcessor ip(String address) {
-        return request -> { request.setRemoteAddr(address); return request; };
     }
 
     private String body(String code, String phone) {
@@ -92,7 +86,7 @@ class GuestBookingLookupApiTest {
         String[][] cases = {{"FC00000001", "0909999999"}, {"FC99999999", "0901234567"}, {"FC00000003", "0901234567"}};
         for (int i = 0; i < cases.length; i++) {
             var result = mvc.perform(post("/api/public/bookings/lookup").contentType("application/json")
-                            .content(body(cases[i][0], cases[i][1])).with(ip("10.0.0." + i)))
+                            .content(body(cases[i][0], cases[i][1])))
                     .andExpect(status().isNotFound()).andReturn();
             var json = new com.fasterxml.jackson.databind.ObjectMapper().readTree(result.getResponse().getContentAsString());
             details[i] = json.path("detail").asText() + json.path("title").asText() + json.path("status").asInt();
@@ -106,16 +100,5 @@ class GuestBookingLookupApiTest {
                 body("FC00000001", "")})
             mvc.perform(post("/api/public/bookings/lookup").contentType("application/json").content(bad))
                     .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void perBookingCodeLimitReturns429WithRetryAfter() throws Exception {
-        for (int i = 0; i < 3; i++)
-            mvc.perform(post("/api/public/bookings/lookup").contentType("application/json")
-                    .content(body("FC00000004", "0900000001")).with(ip("10.1.0." + i))).andExpect(status().isNotFound());
-        mvc.perform(post("/api/public/bookings/lookup").contentType("application/json")
-                        .content(body("FC00000004", "0901234567")).with(ip("10.1.9.9")))
-                .andExpect(status().isTooManyRequests()).andExpect(header().exists("Retry-After"))
-                .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
     }
 }
