@@ -164,12 +164,24 @@ class CheckoutApiTest {
     }
 
     @Test
-    void mismatchedOrIncompleteBankConfigurationFailsClosed() throws Exception {
-        for (String body : java.util.List.of("null", "{}", BANK.replace("\"id\":7", "\"id\":8"),
-                BANK.replace("970436", "invalid"), BANK.replace("00123456789", ""))) {
+    void mismatchedOrMalformedBankResponseFailsClosedWith503() throws Exception {
+        for (String body : java.util.List.of("null", "{}", BANK.replace("\"id\":7", "\"id\":8"))) {
             setup(); bookingResponse(BOOKING); bankResponse(body);
             mvc.perform(get("/api/payments/checkout-info/42").header("X-Hold-Token", "guest-token"))
                     .andExpect(status().isServiceUnavailable());
+        }
+    }
+
+    @Test
+    void incompleteBankConfigurationReturns422WithClearMessage() throws Exception {
+        for (String body : java.util.List.of(BANK.replace("\"bankBin\":\"970436\"", "\"bankBin\":null"),
+                BANK.replace("970436", "invalid"), BANK.replace("00123456789", ""),
+                BANK.replace("FCOURT DEMO", " "), BANK.replace("Vietcombank", ""))) {
+            setup(); bookingResponse(BOOKING); bankResponse(body);
+            mvc.perform(get("/api/payments/checkout-info/42").header("X-Hold-Token", "guest-token"))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(result -> assertThat(result.getResolvedException().getMessage())
+                            .contains("Chi nhánh chưa cấu hình đủ thông tin tài khoản ngân hàng"));
         }
     }
 
