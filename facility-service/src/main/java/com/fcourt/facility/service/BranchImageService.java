@@ -57,7 +57,7 @@ public class BranchImageService {
 
         var stored = new ArrayList<ImageStorage.Stored>();
         try {
-            for (var upload : uploads) stored.add(storage.store("fcourt/branches/" + branchId, upload));
+            for (var upload : uploads) stored.add(storage.store("branches/" + branchId, upload));
             return tx.execute(status -> {
                 if (!branches.lockOwned(branchId, adminId)) throw BranchService.notFound();
                 requireCapacity(branchId, stored.size());
