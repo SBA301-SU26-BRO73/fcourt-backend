@@ -4,11 +4,11 @@
   <groupId>com.fcourt</groupId>
   <artifactId>payment-service</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <properties><java.version>21</java.version><testcontainers.version>1.21.4</testcontainers.version><awssdk.version>2.57.5</awssdk.version></properties>
+  <properties><java.version>21</java.version><testcontainers.version>1.21.4</testcontainers.version><awssdk.version>2.57.5</awssdk.version><spring-cloud.version>2025.0.3</spring-cloud.version></properties>
   <dependencyManagement><dependencies>
     <dependency><groupId>software.amazon.awssdk</groupId><artifactId>bom</artifactId><version>${awssdk.version}</version><type>pom</type><scope>import</scope></dependency>
-  </dependencies></dependencyManagement>
-  <dependencies>
+  <dependency><groupId>org.springframework.cloud</groupId><artifactId>spring-cloud-dependencies</artifactId><version>${spring-cloud.version}</version><type>pom</type><scope>import</scope></dependency></dependencies></dependencyManagement>
+  <dependencies><dependency><groupId>org.springframework.cloud</groupId><artifactId>spring-cloud-starter-netflix-eureka-client</artifactId></dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-data-redis</artifactId></dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-validation</artifactId></dependency>
