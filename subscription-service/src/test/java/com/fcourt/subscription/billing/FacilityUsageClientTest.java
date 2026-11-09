@@ -22,7 +22,7 @@ class FacilityUsageClientTest {
     void setUp() {
         var builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
-        client = new FacilityUsageClient(builder, "http://facility");
+        client = new FacilityUsageClient(builder.baseUrl("http://facility").build());
     }
 
     @Test

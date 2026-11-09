@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
@@ -25,12 +26,17 @@ class FacilityUsageClient {
 
     private final RestClient facility;
 
+    @Autowired
     FacilityUsageClient(RestClient.Builder builder,
             @Value("${subscription.facility-url:${FACILITY_URL:http://localhost:8083}}") String url) {
         var factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(2));
         factory.setReadTimeout(Duration.ofSeconds(3));
         facility = builder.clone().requestFactory(factory).baseUrl(url).build();
+    }
+
+    FacilityUsageClient(RestClient facility) {
+        this.facility = facility;
     }
 
     /** @return the owner's usage, or null when it cannot be determined. */
