@@ -27,6 +27,8 @@ class OnlineBooking {
   private final CounterDependencies facility;
   private final BookingQueries queries;
   private final Clock clock;
+  /** Idempotency namespace shared by all guests; real user ids never reach this value. */
+  static final long GUEST_ACTOR = Long.MAX_VALUE;
   private final SecureRandom random = new SecureRandom();
 
   OnlineBooking(
@@ -44,8 +46,12 @@ class OnlineBooking {
 
   @Transactional(timeout = 15)
   public BookingView create(Jwt jwt, UUID key, Request request) {
-    long actor = BookingQueries.actor(jwt);
-    var customer = upstream.customer(jwt);
+    // Guest (no JWT): authority is the hold token and the phone sealed in the hold, like the old
+    // monolith phone-only guest booking. Registered customers keep the JWT path.
+    boolean guest = jwt == null;
+    long actor = guest ? GUEST_ACTOR : BookingQueries.actor(jwt);
+    var customer = guest ? null : upstream.customer(jwt);
+    String holdToken = request.holdToken().toString();
     if (request.slotIds().size() != new HashSet<>(request.slotIds()).size())
       throw bad("Duplicate slots");
     var ids = request.slotIds().stream().sorted().toList();
@@ -63,7 +69,7 @@ class OnlineBooking {
       if (!fingerprint.equals(previous.getFirst().get("fingerprint")))
         throw conflict("Idempotency key changed");
       return queries.detail(
-          ((Number) previous.getFirst().get("booking_id")).longValue(), jwt, null);
+          ((Number) previous.getFirst().get("booking_id")).longValue(), jwt, holdToken);
     }
     if (request.date().getYear() < 1
         || request.date().getYear() > 9999
@@ -104,6 +110,7 @@ class OnlineBooking {
       if (occupied.stream().anyMatch(s -> s.overlaps(slot.startTime(), slot.endTime())))
         throw conflict("Selected slots already booked");
     var lease = upstream.claim(actor, key, request);
+    if (guest && lease.guestPhone() == null) throw bad("Phone number is required for guest booking");
     if (!lease.expiresAt().isAfter(clock.instant().plusSeconds(20)))
       throw conflict("Hold too close to expiration");
     long id = 0;
@@ -118,7 +125,7 @@ branch_address,branch_phone,court_name,customer_name,hold_token_hash,hold_expire
 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'PENDING') ON CONFLICT(booking_code) DO NOTHING RETURNING id
 """,
                 request.courtId(),
-                actor,
+                guest ? null : actor,
                 lease.guestPhone(),
                 request.date(),
                 total,
@@ -128,7 +135,7 @@ VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'PENDING') ON CONFLICT(booking_code) DO NOTH
                 context.branchAddress(),
                 context.branchPhone(),
                 context.courtName(),
-                customer.fullName(),
+                guest ? null : customer.fullName(),
                 lease.holdHash(),
                 Timestamp.from(lease.expiresAt()));
         if (!created.isEmpty()) id = ((Number) created.getFirst().get("id")).longValue();
@@ -160,7 +167,7 @@ VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'PENDING') ON CONFLICT(booking_code) DO NOTH
     } catch (DuplicateKeyException e) {
       throw conflict("Hold or slot already committed");
     }
-    return queries.detail(id, jwt, null);
+    return queries.detail(id, jwt, holdToken);
   }
 
   static String hash(String value) {

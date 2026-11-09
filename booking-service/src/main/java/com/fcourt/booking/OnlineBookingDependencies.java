@@ -110,8 +110,8 @@ class OnlineBookingDependencies {
         || lease.slotIds() == null
         || lease.slotIds().size() != request.slotIds().size()
         || !new HashSet<>(lease.slotIds()).equals(new HashSet<>(request.slotIds()))
-        || lease.guestPhone() == null
-        || !lease.guestPhone().matches("0[35789][0-9]{8}")) throw unavailable();
+        || (lease.guestPhone() != null && !lease.guestPhone().matches("0[35789][0-9]{8}")))
+      throw unavailable();
     return lease;
   }
 
