@@ -17,10 +17,19 @@ public class LocalFixtureApplication {
     @Bean
     @Primary
     ReceiptStorage fixtureReceipts() {
-      return bytes ->
-          "https://res.cloudinary.com/local-fixture/image/upload/"
-              + java.util.UUID.randomUUID()
-              + ".png";
+      return new ReceiptStorage() {
+        public String upload(byte[] bytes) {
+          return "receipts/" + java.util.UUID.randomUUID() + ".png";
+        }
+
+        public String uploadRefundProof(byte[] bytes) {
+          return "refund-proofs/" + java.util.UUID.randomUUID() + ".png";
+        }
+
+        public String signedUrl(String stored) {
+          return "http://localhost/fixture/" + stored + "?signed";
+        }
+      };
     }
   }
 }

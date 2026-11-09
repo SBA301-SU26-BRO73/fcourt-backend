@@ -20,7 +20,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 class AdminRefundProofCleanupTest {
-    static final String URL = "https://res.cloudinary.com/demo/image/upload/v1/fcourt/receipts/proof.png";
+    static final String URL = "refund-proofs/proof.png";
     final PaymentStore store = mock(PaymentStore.class);
     final BranchOwnership ownership = mock(BranchOwnership.class);
     final ReceiptStorage storage = mock(ReceiptStorage.class);
@@ -48,7 +48,7 @@ class AdminRefundProofCleanupTest {
         });
         when(store.jdbc()).thenReturn(jdbc);
         when(ownership.actor(any())).thenReturn(9L);
-        when(storage.upload(any())).thenReturn(URL);
+        when(storage.uploadRefundProof(any())).thenReturn(URL);
         when(tx.execute(any())).thenAnswer(call -> ((TransactionCallback<?>) call.getArgument(0)).doInTransaction(null));
         return new AdminRefundService(store, ownership, storage, tx);
     }
@@ -68,9 +68,9 @@ class AdminRefundProofCleanupTest {
 
     @Test
     void proofIsDeletedWhenAnotherRequestCompletedFirst() throws Exception {
-        var service = service("APPROVED", "COMPLETED", "https://res.cloudinary.com/demo/other.png");
+        var service = service("APPROVED", "COMPLETED", "refund-proofs/other.png");
         var result = service.decide(5, "COMPLETED", null, image(), jwt);
-        assertThat(result.transferProofUrl()).isEqualTo("https://res.cloudinary.com/demo/other.png");
+        assertThat(result.transferProofUrl()).isEqualTo("refund-proofs/other.png");
         verify(storage).delete(URL);
     }
 }

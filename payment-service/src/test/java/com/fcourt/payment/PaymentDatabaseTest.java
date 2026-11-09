@@ -613,7 +613,7 @@ class PaymentDatabaseTest {
     @Test
     void refundCompletionRequiresActualImageAndCannotOverwriteCompletedProof() throws Exception {
         long id=pendingRefund();var storage=org.mockito.Mockito.mock(ReceiptStorage.class);
-        org.mockito.Mockito.when(storage.upload(org.mockito.ArgumentMatchers.any())).thenReturn("https://res.cloudinary.com/demo/proof.png");
+        org.mockito.Mockito.when(storage.uploadRefundProof(org.mockito.ArgumentMatchers.any())).thenReturn("refund-proofs/proof.png");
         var service=adminRefunds(storage);
         org.assertj.core.api.Assertions.assertThatThrownBy(()->service.decide(id,"COMPLETED",null,null,admin())).hasMessageContaining("400");
         var bad=new org.springframework.mock.web.MockMultipartFile("file","fake.jpg","image/jpeg","fake".getBytes());
@@ -621,16 +621,16 @@ class PaymentDatabaseTest {
         org.mockito.Mockito.verifyNoInteractions(storage);
         assertThat(service.decide(id,"APPROVED",null,null,admin()).status()).isEqualTo("APPROVED");
         var completed=service.decide(id,"COMPLETED",null,image(),admin());
-        assertThat(completed.transferProofUrl()).isEqualTo("https://res.cloudinary.com/demo/proof.png");
+        assertThat(completed.transferProofUrl()).isEqualTo("refund-proofs/proof.png");
         assertThat(service.decide(id,"COMPLETED",null,image(),admin()).id()).isEqualTo(id);
-        org.mockito.Mockito.verify(storage,org.mockito.Mockito.times(1)).upload(org.mockito.ArgumentMatchers.any());
+        org.mockito.Mockito.verify(storage,org.mockito.Mockito.times(1)).uploadRefundProof(org.mockito.ArgumentMatchers.any());
         assertThat(jdbc.queryForObject("SELECT count(*) FROM payment_outbox WHERE event_type='RefundCompletedEvent'",Long.class)).isEqualTo(1);
         String payload=jdbc.queryForObject("SELECT payload::text FROM payment_outbox WHERE event_type='RefundCompletedEvent'",String.class);
         assertThat(payload).doesNotContain("bankAccountNumber").contains("transferProofUrl");
     }
     @Test
     void refundDecisionRaceHasOneFinalStateAndOneCompletionEvent() throws Exception {
-        long id=pendingRefund();var service=adminRefunds(bytes->"https://res.cloudinary.com/demo/proof.png");
+        long id=pendingRefund();var service=adminRefunds(bytes->"refund-proofs/proof.png");
         try(var pool=java.util.concurrent.Executors.newFixedThreadPool(2)){
             var start=new java.util.concurrent.CountDownLatch(1);var calls=new java.util.ArrayList<java.util.concurrent.Future<?>>();
             for(boolean complete:new boolean[]{true,false})calls.add(pool.submit(()->{try{start.await();service.decide(id,complete?"COMPLETED":"REJECTED","Không hợp lệ",complete?image():null,admin());}catch(org.springframework.web.server.ResponseStatusException e){assertThat(e.getStatusCode().value()).isEqualTo(409);}catch(Exception e){throw new RuntimeException(e);}}));
@@ -645,7 +645,7 @@ class PaymentDatabaseTest {
         long id=pendingRefund();
         jdbc.execute("ALTER TABLE payment_outbox ADD CONSTRAINT test_refund_outbox CHECK(event_type<>'RefundCompletedEvent') NOT VALID");
         try{
-            org.assertj.core.api.Assertions.assertThatThrownBy(()->adminRefunds(bytes->"https://res.cloudinary.com/demo/proof.png").decide(id,"COMPLETED",null,image(),admin())).isInstanceOf(RuntimeException.class);
+            org.assertj.core.api.Assertions.assertThatThrownBy(()->adminRefunds(bytes->"refund-proofs/proof.png").decide(id,"COMPLETED",null,image(),admin())).isInstanceOf(RuntimeException.class);
             assertThat(jdbc.queryForObject("SELECT status FROM refund_requests WHERE id=?",String.class,id)).isEqualTo("PENDING");
         }finally{jdbc.execute("ALTER TABLE payment_outbox DROP CONSTRAINT test_refund_outbox");}
     }
@@ -678,7 +678,7 @@ class PaymentDatabaseTest {
     void unifiedLedgerBalancesPaymentRefundAndCashWithoutCountingPendingRefunds() throws Exception {
         long id=pendingRefund();consumeCash(cashEvent(java.util.UUID.randomUUID(),"50000"));
         assertThat(unified.history(7,null,null,"ALL","","ALL",0,1,admin()).summary().netRevenue()).isEqualByComparingTo("210000");
-        adminRefunds(bytes->"https://res.cloudinary.com/demo/proof.png").decide(id,"COMPLETED",null,image(),admin());
+        adminRefunds(bytes->"refund-proofs/proof.png").decide(id,"COMPLETED",null,image(),admin());
         var result=unified.history(7,null,null,"ALL","","ALL",0,1,admin());
         assertThat(result.total()).isEqualTo(3);assertThat(result.items()).hasSize(1);
         assertThat(result.summary().received()).isEqualByComparingTo("210000");assertThat(result.summary().refunded()).isEqualByComparingTo("80000");
