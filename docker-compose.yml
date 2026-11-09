@@ -289,6 +289,8 @@ services:
       FACILITY_DB_URL: jdbc:postgresql://postgres:5432/facility_db
       FACILITY_DB_USER: ${POSTGRES_USER:-postgres}
       FACILITY_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      # Khoa/mo khoa san phat su kien slot qua Redis cho STOMP (docs/SCRUM-108.md).
+      FACILITY_REALTIME_ENABLED: "true"
 
   booking-service:
     build: ./booking-service
@@ -300,6 +302,9 @@ services:
       DATABASE_URL: jdbc:postgresql://postgres:5432/booking_db
       DATABASE_USER: ${POSTGRES_USER:-postgres}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      # STOMP /ws-fcourt chi mo khi profile realtime bat (neu khong handshake qua gateway tra 404). Origin cua web dev/preview.
+      SPRING_PROFILES_ACTIVE: realtime
+      SLOT_ALLOWED_ORIGINS: ${SLOT_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:4173,http://localhost:3000,http://localhost:8080}
 
   slot-hold-engine:
     build: ./slot-hold-engine
