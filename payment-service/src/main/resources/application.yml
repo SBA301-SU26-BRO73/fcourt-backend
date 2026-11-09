@@ -61,6 +61,9 @@ storage:
     endpoint: ${STORAGE_S3_ENDPOINT:}
     path-style: ${STORAGE_S3_PATH_STYLE:false}
     presign-ttl: ${STORAGE_S3_PRESIGN_TTL:10m}
+    # Host baked into presigned URLs when the browser reaches the bucket by another address than the service does
+    # (Compose: service uses http://s3:9000, browser http://localhost:9000). Empty = same as endpoint. Signing is offline.
+    presign-endpoint: ${STORAGE_S3_PRESIGN_ENDPOINT:}
 
 springdoc:
   api-docs:
