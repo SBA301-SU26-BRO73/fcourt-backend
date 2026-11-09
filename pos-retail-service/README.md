@@ -1,6 +1,6 @@
 # POS retail Backend — SCRUM-106
 
-Independent Spring Boot 3.5 / Java 21 service, port **8091**, PostgreSQL
+Independent Spring Boot 3.5 / Java 21 service, port **8092**, PostgreSQL
 **pos_retail_db**. Backend only; tablet/cart/Android UI belongs to Flutter repo.
 Includes product catalog, stock adjustments, branch-scoped invoices, CASH sales
 and durable booking-charge handoff. No reads/writes to another service's DB.
@@ -12,7 +12,7 @@ Set POS_DATABASE_PASSWORD in the process environment, then:
 ```powershell
 docker compose -f pos-retail-service/compose.yml up -d
 mvn -f pos-retail-service/pom.xml spring-boot:run
-Invoke-RestMethod http://localhost:8091/actuator/health
+Invoke-RestMethod http://localhost:8092/actuator/health
 mvn -f pos-retail-service/pom.xml clean verify
 ```
 
@@ -24,7 +24,7 @@ legacy databases require a reviewed V1 baseline; automatic baseline is disabled.
 
 | Environment | Default / purpose |
 |---|---|
-| SERVER_PORT | 8091 |
+| SERVER_PORT | 8092 |
 | POS_DATABASE_URL | jdbc:postgresql://localhost:5491/pos_retail_db |
 | POS_DATABASE_USER / POS_DATABASE_PASSWORD | postgres / required |
 | POS_DATABASE_PORT | 5491, Compose host mapping only |
