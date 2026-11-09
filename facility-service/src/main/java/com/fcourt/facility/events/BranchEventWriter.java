@@ -62,8 +62,26 @@ public class BranchEventWriter {
             return new BranchUpdatedEvent(branchId, version, rs.getString("name"), rs.getString("address"),
                     rs.getString("city"), rs.getString("district"),
                     latitude == null ? null : latitude.doubleValue(), longitude == null ? null : longitude.doubleValue(),
-                    active, deleted, courts);
+                    active, deleted, courts, deleted ? null : coverImage(branchId),
+                    hhmm(rs.getTime("open_time")), hhmm(rs.getTime("close_time")));
         }, branchId);
+    }
+
+    /** First gallery photo, else the first active court photo, else none. */
+    private String coverImage(long branchId) {
+        return jdbc.query("""
+                SELECT url FROM (
+                    SELECT url, 0 AS source, sort_order AS ord, id FROM branch_images WHERE branch_id = ?
+                    UNION ALL
+                    SELECT image_url, 1, 0, id FROM courts
+                    WHERE branch_id = ? AND deleted_at IS NULL AND status = 'ACTIVE'
+                      AND image_url IS NOT NULL AND image_url <> ''
+                ) covers ORDER BY source, ord, id LIMIT 1
+                """, (rs, n) -> rs.getString(1), branchId, branchId).stream().findFirst().orElse(null);
+    }
+
+    private static String hhmm(java.sql.Time time) {
+        return time == null ? null : time.toLocalTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
     }
 
     private List<BranchUpdatedEvent.CourtSnapshot> courts(long branchId) {

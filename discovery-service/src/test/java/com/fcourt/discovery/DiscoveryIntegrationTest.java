@@ -272,6 +272,27 @@ class DiscoveryIntegrationTest {
     }
 
     @Test
+    void listCardsCarryCoverPhotoOpeningHoursAndCourtTypeIds() {
+        projection.apply(new BranchUpdatedEvent(1L, 1L, "Sunrise", "12 Le Loi", "Da Nang", "Hai Chau", null, null,
+                true, false,
+                List.of(new CourtSnapshot(1L, 2L, new BigDecimal("100000"), new BigDecimal("200000")),
+                        new CourtSnapshot(2L, 1L, new BigDecimal("100000"), new BigDecimal("200000")),
+                        new CourtSnapshot(3L, 2L, new BigDecimal("100000"), new BigDecimal("200000"))),
+                "https://cdn.example/cover.jpg", "06:00", "22:30"));
+        projection.apply(new BranchUpdatedEvent(2L, 1L, "Plain", "1 A", "Da Nang", null, null, null, true, false,
+                List.of()));
+        var cards = repository.search(request(null, null, null, null, null, null, null, null)).content();
+        var first = cards.stream().filter(card -> card.id() == 1L).findFirst().orElseThrow();
+        assertThat(first.imageUrl()).isEqualTo("https://cdn.example/cover.jpg");
+        assertThat(first.openTime()).isEqualTo("06:00");
+        assertThat(first.closeTime()).isEqualTo("22:30");
+        assertThat(first.courtTypeIds()).containsExactly(1L, 2L);
+        var plain = cards.stream().filter(card -> card.id() == 2L).findFirst().orElseThrow();
+        assertThat(plain.imageUrl()).isNull();
+        assertThat(plain.courtTypeIds()).isEmpty();
+    }
+
+    @Test
     void keywordSearchMatchesCityAndDistrictLikeMonolith() {
         projection.apply(new BranchUpdatedEvent(1L, 1L, "Sunrise", "12 Le Loi", "Da Nang", "Hai Chau",
                 null, null, true, false, List.of()));

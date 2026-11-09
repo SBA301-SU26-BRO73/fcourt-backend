@@ -72,6 +72,7 @@ class FacilityApiIntegrationTest {
 
     @MockitoBean SlotAvailabilityClient availability;
     @Autowired MockMvc mvc;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     @Autowired ObjectMapper json;
     @Autowired EmbeddedKafkaBroker broker;
 
@@ -139,6 +140,11 @@ class FacilityApiIntegrationTest {
 
         mvc.perform(get("/api/public/branches/{id}", branchId))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.bankAccountNumber").value("0123456789"))
+                .andExpect(jsonPath("$.phone").value("0901234567"))
+                .andExpect(jsonPath("$.openTime").value("06:00"))
+                .andExpect(jsonPath("$.closeTime").value("22:00"))
+                .andExpect(jsonPath("$.district").value("Quan 1"))
+                .andExpect(jsonPath("$.ward").value("Ben Thanh"))
                 .andExpect(jsonPath("$.adminId").doesNotExist());
         mvc.perform(get("/api/staff/branches/{id}", branchId).with(as(55, "STAFF")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("ACTIVE"));
@@ -187,8 +193,8 @@ class FacilityApiIntegrationTest {
                 .andExpect(jsonPath("$[0].branchId").doesNotExist())
                 .andExpect(jsonPath("$[0].adminId").doesNotExist())
                 .andExpect(jsonPath("$[0].status").doesNotExist())
-                .andExpect(jsonPath("$[0].description").doesNotExist())
-                .andExpect(jsonPath("$[0].imageUrl").doesNotExist())
+                .andExpect(jsonPath("$[0].description").value("Indoor"))
+                .andExpect(jsonPath("$[0].imageUrl").value("https://example.com/c.jpg"))
                 .andExpect(jsonPath("$[0].createdAt").doesNotExist())
                 .andExpect(jsonPath("$[0].updatedAt").doesNotExist());
     }
@@ -219,6 +225,22 @@ class FacilityApiIntegrationTest {
                 .andExpect(status().isNoContent());
         mvc.perform(get("/api/public/branches/{id}/courts", deletedBranch)).andExpect(status().isNotFound());
         mvc.perform(get("/api/public/branches/{id}/courts", Long.MAX_VALUE)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void branchSnapshotCarriesCoverImageAndOpeningHoursForListCards() throws Exception {
+        long owner = 9183;
+        long branch = id(postJson("/api/admin/branches", branchBody("Cover fixture", "06:30", "21:00"), owner)
+                .andExpect(status().isCreated()));
+        postJson("/api/admin/branches/" + branch + "/courts", courtBody("Cover court", "100000"), owner)
+                .andExpect(status().isCreated());
+        String payload = jdbc.queryForObject("SELECT payload::text FROM facility_outbox WHERE event_key = ? "
+                + "ORDER BY id DESC LIMIT 1", String.class, Long.toString(branch));
+        var snapshot = json.readTree(payload);
+        // No gallery yet, so the first active court photo is the cover.
+        org.assertj.core.api.Assertions.assertThat(snapshot.get("imageUrl").asText()).isEqualTo("https://example.com/c.jpg");
+        org.assertj.core.api.Assertions.assertThat(snapshot.get("openTime").asText()).isEqualTo("06:30");
+        org.assertj.core.api.Assertions.assertThat(snapshot.get("closeTime").asText()).isEqualTo("21:00");
     }
 
     @Test

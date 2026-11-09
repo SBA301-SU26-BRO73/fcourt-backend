@@ -100,7 +100,7 @@ public class BranchSearchRepository {
                 + "FROM (SELECT count(*) AS total_elements FROM matched) s LEFT JOIN page p ON true "
                 + "LEFT JOIN branch_review_stats r ON r.branch_id=p.id "
                 + "LEFT JOIN LATERAL (SELECT min(c.min_price) AS min_price, max(c.max_price) AS max_price, "
-                + "count(*) AS court_count FROM court_read_model c WHERE c.branch_id = p.id) a ON true "
+                + "count(*) AS court_count, array_agg(DISTINCT c.court_type_id ORDER BY c.court_type_id) AS court_type_ids FROM court_read_model c WHERE c.branch_id = p.id) a ON true "
                 + (request.latitude() != null ? "ORDER BY p.distance_km ASC NULLS LAST, p.id"
                 : hasText(request.query()) ? "ORDER BY p.relevance DESC, p.id" : "ORDER BY p.id");
         var totalRows = new long[1];
@@ -112,7 +112,9 @@ public class BranchSearchRepository {
                     rs.getString("city"), rs.getString("district"),
                     rs.getObject("latitude", Double.class), rs.getObject("longitude", Double.class),
                     rs.getBigDecimal("min_price"), rs.getBigDecimal("max_price"),
-                    rs.getLong("court_count"), rs.getObject("distance_km", Double.class), rs.getBigDecimal("average_rating"), rs.getLong("review_count"));
+                    rs.getLong("court_count"), rs.getObject("distance_km", Double.class), rs.getBigDecimal("average_rating"), rs.getLong("review_count"),
+                    rs.getString("image_url"), rs.getString("open_time"), rs.getString("close_time"),
+                    courtTypeIds(rs));
         });
         var content = rows.stream().filter(java.util.Objects::nonNull).toList();
         long total = totalRows[0];
@@ -135,6 +137,12 @@ public class BranchSearchRepository {
     private String normalize(String value) {
         return jdbc.queryForObject("SELECT lower(unaccent(:value))",
                 new MapSqlParameterSource("value", value.trim()), String.class);
+    }
+
+    private static java.util.List<Long> courtTypeIds(java.sql.ResultSet rs) throws java.sql.SQLException {
+        var array = rs.getArray("court_type_ids");
+        if (array == null) return java.util.List.of();
+        return java.util.Arrays.stream((Object[]) array.getArray()).map(id -> ((Number) id).longValue()).toList();
     }
 
     private static boolean hasText(String text) {

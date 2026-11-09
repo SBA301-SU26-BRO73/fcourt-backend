@@ -18,7 +18,18 @@ public record BranchUpdatedEvent(
         @DecimalMin("-180") @DecimalMax("180") Double longitude,
         @NotNull Boolean active,
         @NotNull Boolean deleted,
-        @NotNull @Size(max = 10000) List<@NotNull @Valid CourtSnapshot> courts) {
+        @NotNull @Size(max = 10000) List<@NotNull @Valid CourtSnapshot> courts,
+        @Size(max = 2048) String imageUrl,
+        @Pattern(regexp = "([01][0-9]|2[0-3]):[0-5][0-9]") String openTime,
+        @Pattern(regexp = "([01][0-9]|2[0-3]):[0-5][0-9]") String closeTime) {
+    /** Snapshot without the card fields (older producers). */
+    public BranchUpdatedEvent(Long branchId, Long version, String name, String address, String city, String district,
+            Double latitude, Double longitude, Boolean active, Boolean deleted, List<CourtSnapshot> courts) {
+        this(branchId, version, name, address, city, district, latitude, longitude, active, deleted, courts,
+                null, null, null);
+    }
+
+
     @JsonIgnore
     @AssertTrue(message = "latitude and longitude must be supplied together")
     public boolean isCoordinatePairValid() {

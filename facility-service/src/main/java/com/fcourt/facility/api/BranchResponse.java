@@ -21,12 +21,20 @@ public record BranchResponse(
                 status, courtCount, createdAt, updatedAt, gallery);
     }
 
-    /** Bank details used by payment-service to build the VietQR transfer. */
-    public record Public(long id, String name, String address, String city, String bankName, String bankBin,
-                         String bankAccountNumber, String bankAccountName, String status) { }
+    /**
+     * Customer-facing branch detail plus the bank details payment-service uses for the VietQR transfer.
+     * Contact and opening hours are shown on the court detail page (parity with the old web).
+     */
+    public record Public(long id, String name, String address, String ward, String district, String city,
+                         BigDecimal latitude, BigDecimal longitude, String phone,
+                         @JsonFormat(pattern = "HH:mm") LocalTime openTime,
+                         @JsonFormat(pattern = "HH:mm") LocalTime closeTime,
+                         String bankName, String bankBin, String bankAccountNumber, String bankAccountName,
+                         String status) { }
 
     public Public toPublic() {
-        return new Public(id, name, address, city, bankName, bankBin, bankAccountNumber, bankAccountName, status);
+        return new Public(id, name, address, ward, district, city, latitude, longitude, phone, openTime, closeTime,
+                bankName, bankBin, bankAccountNumber, bankAccountName, status);
     }
 
     public record Status(long id, String status) { }
