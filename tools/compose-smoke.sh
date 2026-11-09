@@ -3,7 +3,7 @@
 GATEWAY="${GATEWAY_URL:-http://localhost:8080}"
 PASSWORD="${SEED_PASSWORD:-Fcourt@123456}"
 ORIGIN="${WEB_ORIGIN:-http://localhost:5173}"
-DATE="${SMOKE_DATE:-$(date -d '+3 day' +%F)}"
+DATE="${SMOKE_DATE:-$(date -d "+$((3 + RANDOM % 25)) day" +%F)}"   # ngay ngau nhien de chay lai khong dung cho da giu
 BRANCH=1; COURT=21   # chi nhanh cua owner01 va mot san cua chi nhanh do (co khung gio)
 
 jf() { sed -n "s/.*\"$1\":\"\{0,1\}\([^\",}]*\)\"\{0,1\}.*/\1/p" | head -1; }
@@ -67,7 +67,7 @@ chk superadmin GET /api/super-admin/pos/products "$T_SA"
 
 echo; echo "Guest: giu cho -> dat san -> tra cuu -> huy (khong dang nhap)"
 PHONE=0987654321
-SLOTS=$(curl -s "$GATEWAY/api/public/courts/$COURT/slots?date=$DATE" | grep -o '"slotId":[0-9]*' | cut -d: -f2 | sed -n '3,4p' | paste -sd, -)
+SLOTS=$(curl -s "$GATEWAY/api/public/courts/$COURT/slots?date=$DATE" | grep -o '"slotId":[0-9]*' | cut -d: -f2 | sed -n "$((2 + RANDOM % 20)),+1p" | paste -sd, -)
 chk guest POST /api/bookings/hold-slots "" "{\"courtId\":$COURT,\"date\":\"$DATE\",\"slotIds\":[$SLOTS],\"guestPhone\":\"$PHONE\"}"
 HOLD=$(echo "$BODY" | jf holdToken)
 KEY=$(printf '%08x-0000-4000-8000-%012x' $RANDOM $RANDOM)
