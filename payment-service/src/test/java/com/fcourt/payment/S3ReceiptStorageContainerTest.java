@@ -10,7 +10,7 @@ import java.time.Duration;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.containers.localstack.LocalStackContainer;
+import org.testcontainers.containers.MinIOContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -21,29 +21,30 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
-/** The Spring configuration builds the adapter as in a local run, against a LocalStack S3 (no AWS account). */
+/** The Spring configuration builds the adapter as in a local run, against a MinIO (S3-compatible) container (no AWS account). */
 @Testcontainers
-class S3ReceiptStorageLocalStackTest {
+class S3ReceiptStorageContainerTest {
     static final String BUCKET = "fcourt-payment-test";
+    static final String REGION = "us-east-1";
     static final byte[] PNG = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 1, 2};
 
     @Container
-    static final LocalStackContainer LOCALSTACK =
-            new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.8.1")).withServices(LocalStackContainer.Service.S3);
+    static final MinIOContainer S3 =
+            new MinIOContainer(DockerImageName.parse("cgr.dev/chainguard/minio:latest").asCompatibleSubstituteFor("minio/minio"));
 
     static S3Client admin;
     static ReceiptStorage storage;
 
     @BeforeAll
     static void setUp() {
-        System.setProperty("aws.accessKeyId", "test");
-        System.setProperty("aws.secretAccessKey", "test");
-        admin = S3Client.builder().endpointOverride(LOCALSTACK.getEndpoint()).region(Region.of(LOCALSTACK.getRegion()))
+        System.setProperty("aws.accessKeyId", S3.getUserName());
+        System.setProperty("aws.secretAccessKey", S3.getPassword());
+        admin = S3Client.builder().endpointOverride(java.net.URI.create(S3.getS3URL())).region(Region.of(REGION))
                 .forcePathStyle(true)
-                .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create("test", "test"))).build();
+                .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create(S3.getUserName(), S3.getPassword()))).build();
         admin.createBucket(b -> b.bucket(BUCKET));
-        storage = new ReceiptStorageConfiguration().receiptStorage(BUCKET, LOCALSTACK.getRegion(),
-                LOCALSTACK.getEndpoint().toString(), false, Duration.ofMinutes(10));
+        storage = new ReceiptStorageConfiguration().receiptStorage(BUCKET, REGION,
+                java.net.URI.create(S3.getS3URL()).toString(), false, Duration.ofMinutes(10));
     }
 
     @AfterAll
