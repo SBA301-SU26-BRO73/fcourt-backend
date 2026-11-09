@@ -13,7 +13,7 @@
 set -euo pipefail
 
 GATEWAY="${GATEWAY_URL:-http://localhost:8080}"
-PASSWORD="${SEED_PASSWORD:-Fcourt@123}"
+PASSWORD="${SEED_PASSWORD:-Fcourt@123456}"
 cd "$(dirname "$0")/.."
 DC="docker compose --profile all"
 PSQL="$DC exec -T postgres psql -v ON_ERROR_STOP=1 -U ${POSTGRES_USER:-postgres}"
@@ -23,7 +23,7 @@ $PSQL -d auth_db -q <<SQL
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 UPDATE users SET password_hash = crypt('${PASSWORD}', gen_salt('bf', 10)),
                  password_changed_at = NULL
- WHERE email LIKE '%@demo.com';
+ WHERE email LIKE '%@demo.com' OR email LIKE '%@fcourt.test';
 SQL
 
 json_field() { sed -n "s/.*\"$1\":\"\([^\"]*\)\".*/\1/p" | head -1; }
@@ -63,9 +63,25 @@ for id in $(curl -s -H "Authorization: Bearer $SA" "$GATEWAY/api/super-admin/cou
   echo "   approve pending owner id=$id -> HTTP $c"
 done
 
+
+echo ">> 3b. Gan nhan vien demo vao chi nhanh (SQL: seed Flyway cua staff-operations khong co du lieu) + tao nhan vien moi bang API"
+$PSQL -d staff_db -q <<SQL
+INSERT INTO staff (user_id, branch_id, email, full_name)
+SELECT v.user_id, v.branch_id, v.email, v.name FROM (VALUES
+  (12, 1, 'staff01@demo.com', 'Nhân Viên Một'), (11, 2, 'staff02@demo.com', 'Nhân Viên Hai'),
+  (15, 9, 'staff03@demo.com', 'Nhân Viên Ba'), (14, 15, 'staff04@demo.com', 'Nhân Viên Bốn'),
+  (13, 16, 'staff05@demo.com', 'Nhân Viên Năm')) AS v(user_id, branch_id, email, name)
+WHERE NOT EXISTS (SELECT 1 FROM staff s WHERE s.user_id = v.user_id);
+SQL
+OWN=$(login owner01@demo.com)
+code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$GATEWAY/api/admin/staff" -H "Authorization: Bearer $OWN" \
+  -H 'Content-Type: application/json' -H "Idempotency-Key: 5eed0000-0000-4000-8000-000000000001" \
+  -d "{\"branchId\":1,\"email\":\"staff.local@fcourt.test\",\"password\":\"$PASSWORD\",\"fullName\":\"Nhan Vien Local\",\"phone\":\"0913000001\",\"shifts\":[{\"dayOfWeek\":1,\"startTime\":\"06:00\",\"endTime\":\"22:00\"}]}" || true)
+echo "   create staff via API -> HTTP $code (201 moi tao, 200 replay, 409 da co)"
+
 echo ">> 4. Dang nhap tung role qua gateway"
 for acct in superadmin@demo.com owner01@demo.com owner02@demo.com staff01@demo.com customer01@demo.com \
-            customer.local@fcourt.test owner.local@fcourt.test owner06@demo.com; do
+            customer.local@fcourt.test owner.local@fcourt.test owner06@demo.com staff.local@fcourt.test; do
   t=$(login "$acct" || true)
   if [ -n "$t" ]; then s="OK ${t:0:16}..."; else s=FAIL; fi
   echo "   $acct  $s"

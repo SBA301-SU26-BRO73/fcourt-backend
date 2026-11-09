@@ -1,6 +1,6 @@
 # Chạy cả hệ thống bằng Docker Compose
 
-Một lệnh dựng toàn bộ backend trên máy: PostgreSQL, Redis, Kafka, LocalStack (S3), Eureka, gateway và 12 service. Đây là cách chạy local mặc định và miễn phí; EKS chỉ dùng để demo trên cloud.
+Một lệnh dựng toàn bộ backend trên máy: PostgreSQL, Redis, Kafka, MinIO (S3), Eureka, gateway và 12 service. Đây là cách chạy local mặc định và miễn phí; EKS chỉ dùng để demo trên cloud.
 
 ## Chạy nhanh
 
@@ -30,7 +30,7 @@ Không đặt profile thì không có container nào chạy. Chọn một trong 
 
 | Profile | Gồm | RAM ước tính |
 |---|---|---|
-| `infra` | postgres, redis, kafka, localstack | khoảng 1,5 GB |
+| `infra` | postgres, redis, kafka, s3 (MinIO) | khoảng 1,5 GB |
 | `core` | `infra` + eureka-server, gateway, auth, facility, booking, slot-hold-engine, payment | khoảng 4,5 GB |
 | `all` | `core` + subscription, reporting, discovery, voucher, staff-operations, notification, pos-retail + mailpit | khoảng 7,5 GB |
 | `mail` | chỉ mailpit (đã nằm trong `all`) | 64 MB |
@@ -52,7 +52,7 @@ Có thể ghép profile: `--profile infra --profile core`. Mọi lệnh sau khi 
 
 ## Thứ tự khởi động
 
-`postgres, redis, kafka, localstack` (healthy), rồi `eureka-server` (healthy), rồi các service (healthy), cuối cùng `gateway-service`. Gateway chờ auth, facility, booking, slot-hold-engine và payment healthy trước khi lên. Healthcheck của service gọi `/actuator/health` bằng bash, không cần curl trong image.
+`postgres, redis, kafka, s3` (healthy), rồi `eureka-server` (healthy), rồi các service (healthy), cuối cùng `gateway-service`. Gateway chờ auth, facility, booking, slot-hold-engine và payment healthy trước khi lên. Healthcheck của service gọi `/actuator/health` bằng bash, không cần curl trong image.
 
 ## Cổng
 
@@ -63,7 +63,7 @@ Có thể ghép profile: `--profile infra --profile core`. Mọi lệnh sau khi 
 | 5432 | PostgreSQL | user/mật khẩu trong `.env` (mặc định `postgres`/`postgres`) |
 | 6387 | Redis | |
 | 9094 | Kafka (từ máy host) | trong Compose dùng `kafka:9092` |
-| 4566 | LocalStack S3 | bucket `fcourt-local` |
+| 9000 / 9001 | MinIO S3 / console | bucket `fcourt-local`, user `test`, mật khẩu `testtest1234` |
 | 8025 / 1025 | Mailpit web / SMTP | chỉ profile `all` hoặc `mail` |
 
 Các service còn lại không mở cổng ra host (chỉ gateway đi vào được). Cần gọi thẳng một service để debug: `docker compose exec gateway-service ...` hoặc tạm thêm `ports:` vào service đó.
@@ -77,7 +77,7 @@ Mọi giá trị đã có mặc định dùng được trong `docker-compose.yml
 - **Eureka**: `EUREKA_URL=http://eureka-server:8761/eureka`. Service chưa phải Eureka client sẽ bỏ qua biến này; gateway chỉ định tuyến được tới service đã đăng ký.
 - **Redis**: gateway dùng cho rate limiting (fail open, `RATE_LIMIT_*`, đặt `RATE_LIMIT_ENABLED=false` để tắt); slot-hold-engine lưu hold; facility, discovery, payment dùng cho cache.
 - **JWT/JWKS**: auth-service ký token, các service khác lấy khoá tại `http://auth-service:8081/.well-known/jwks.json`. Mặc định auth dùng khoá ký tạm, restart auth thì token cũ không còn hợp lệ (đăng nhập lại). Muốn cố định, đặt `AUTH_JWT_PRIVATE_KEY` (PKCS8 PEM).
-- **S3**: mọi service dùng LocalStack (`STORAGE_S3_ENDPOINT=http://localstack:4566`, path-style, credential `test`/`test`), xem [storage-s3.md](storage-s3.md). Presigned URL chứa host `localstack`; để mở được từ trình duyệt, thêm `127.0.0.1 localstack` vào file hosts.
+- **S3**: mọi service dùng MinIO thay LocalStack (`STORAGE_S3_ENDPOINT=http://s3:9000`, path-style, credential `test`/`testtest1234`; LocalStack 3.8.1 không chạy được trên Docker Desktop của máy dev này), xem [storage-s3.md](storage-s3.md). Presigned URL chứa host `s3`; để mở được từ trình duyệt, thêm `127.0.0.1 s3` vào file hosts.
 - **Token nội bộ** giữa các service (hold, POS, payment, ...) có giá trị DEV cố định trong Compose. Chỉ dùng local, không dùng cho môi trường thật.
 - **Tính năng cần tài khoản ngoài** (PayOS, SMTP thật, Firebase/SNS push, đăng nhập Google) để trống thì tắt; phần còn lại chạy bình thường. Mail đi vào Mailpit.
 
