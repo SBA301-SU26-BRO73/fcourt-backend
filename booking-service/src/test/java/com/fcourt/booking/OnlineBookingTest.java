@@ -320,8 +320,7 @@ class OnlineBookingTest {
 
   @Test
   void guestWithoutPhoneOnTheHoldIsRejectedAndLeavesNoBooking() {
-    when(upstream.claim(anyLong(), any(), any()))
-        .thenAnswer(
+    doAnswer(
             invocation -> {
               OnlineBooking.Request r = invocation.getArgument(2);
               return new OnlineBookingDependencies.Lease(
@@ -331,7 +330,9 @@ class OnlineBookingTest {
                   DAY,
                   r.slotIds(),
                   null);
-            });
+            })
+        .when(upstream)
+        .claim(anyLong(), any(), any());
     assertThatThrownBy(() -> service.create(null, UUID.randomUUID(), request))
         .isInstanceOfSatisfying(
             ResponseStatusException.class,
@@ -341,8 +342,7 @@ class OnlineBookingTest {
 
   @Test
   void loggedInCustomerMayBookWithoutAPhoneOnTheHold() {
-    when(upstream.claim(anyLong(), any(), any()))
-        .thenAnswer(
+    doAnswer(
             invocation -> {
               OnlineBooking.Request r = invocation.getArgument(2);
               return new OnlineBookingDependencies.Lease(
@@ -352,7 +352,9 @@ class OnlineBookingTest {
                   DAY,
                   r.slotIds(),
                   null);
-            });
+            })
+        .when(upstream)
+        .claim(anyLong(), any(), any());
     var result = service.create(customer, UUID.randomUUID(), request);
     assertThat(jdbc.queryForObject("SELECT customer_id FROM bookings", Long.class)).isEqualTo(200L);
     assertThat(jdbc.queryForObject("SELECT guest_phone FROM bookings", String.class)).isNull();
