@@ -5,6 +5,8 @@ import com.fcourt.auth.common.ApiException;
 import com.fcourt.auth.superadmin.SuperAdminDtos.DocumentResponse;
 import com.fcourt.auth.outbox.OutboxWriter;
 import com.fcourt.auth.superadmin.SuperAdminDtos.CourtAdminResponse;
+import com.fcourt.auth.superadmin.SuperAdminDtos.UserListItem;
+import com.fcourt.auth.superadmin.SuperAdminDtos.UserPage;
 import com.fcourt.auth.superadmin.SuperAdminDtos.UserStatusResponse;
 import com.fcourt.auth.superadmin.SuperAdminRepository.UserRecord;
 import com.fcourt.auth.user.UserRole;
@@ -12,6 +14,7 @@ import com.fcourt.auth.user.UserStatus;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,6 +55,54 @@ public class SuperAdminService {
         var owner = users.find(ownerId).filter(SuperAdminService::isOwner)
                 .orElseThrow(() -> ApiException.notFound("Court admin not found"));
         return withDocuments(List.of(owner)).getFirst();
+    }
+
+    static final int MAX_PAGE_SIZE = 100;
+    static final int MAX_QUERY_LENGTH = 100;
+
+    /** Paged user list, newest first. SUPER_ADMIN accounts are neither listed nor searchable. */
+    @Transactional(readOnly = true)
+    public UserPage listUsers(long actorId, String role, String status, String query, int page, int size) {
+        requireActiveSuperAdmin(actorId);
+        if (page < 0) {
+            throw ApiException.badRequest("page must be 0 or greater");
+        }
+        if (size < 1 || size > MAX_PAGE_SIZE) {
+            throw ApiException.badRequest("size must be between 1 and " + MAX_PAGE_SIZE);
+        }
+        String roleFilter = enumFilter(role, "role", UserRole.class);
+        if (UserRole.SUPER_ADMIN.name().equals(roleFilter)) {
+            throw ApiException.badRequest("role must be one of CUSTOMER, STAFF, ADMIN");
+        }
+        String statusFilter = enumFilter(status, "status", UserStatus.class);
+        String term = normalise(query);
+        if (term != null && term.length() > MAX_QUERY_LENGTH) {
+            throw ApiException.badRequest("query must be at most " + MAX_QUERY_LENGTH + " characters");
+        }
+        String pattern = term == null ? null : "%" + escapeLike(term.toLowerCase(Locale.ROOT)) + "%";
+        long total = users.countSearch(roleFilter, statusFilter, pattern);
+        var items = users.search(roleFilter, statusFilter, pattern, size, (long) page * size).stream()
+                .map(user -> new UserListItem(user.id(), user.email(), user.fullName(), user.phone(), user.role(),
+                        user.status(), user.createdAt()))
+                .toList();
+        int totalPages = (int) ((total + size - 1) / size);
+        return new UserPage(items, page, size, total, totalPages);
+    }
+
+    private static <E extends Enum<E>> String enumFilter(String value, String name, Class<E> type) {
+        String text = normalise(value);
+        if (text == null) {
+            return null;
+        }
+        try {
+            return Enum.valueOf(type, text.toUpperCase(Locale.ROOT)).name();
+        } catch (IllegalArgumentException unknown) {
+            throw ApiException.badRequest("Unknown " + name + ": " + text);
+        }
+    }
+
+    private static String escapeLike(String text) {
+        return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
     @Transactional
