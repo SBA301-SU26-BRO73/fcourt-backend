@@ -33,12 +33,6 @@ booking:
   jwt-issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
   jwt-audience: ${AUTH_JWT_AUDIENCE:fcourt}
   events-enabled: ${BOOKING_EVENTS_ENABLED:true}
-  # Tra cuu booking khach vang lai: gioi han tam trong service (token bucket) toi khi gateway co rate limit.
-  guest-lookup:
-    ip-limit: ${BOOKING_LOOKUP_IP_LIMIT:10}
-    code-limit: ${BOOKING_LOOKUP_CODE_LIMIT:5}
-    window: ${BOOKING_LOOKUP_WINDOW:15m}
-    trust-forwarded-for: ${BOOKING_LOOKUP_TRUST_FORWARDED_FOR:false}
 management:
   endpoints:
     web:
