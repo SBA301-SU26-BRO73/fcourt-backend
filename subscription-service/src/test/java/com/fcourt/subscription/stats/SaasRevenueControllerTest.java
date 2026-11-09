@@ -12,6 +12,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fcourt.subscription.config.SecurityConfiguration;
 import com.fcourt.subscription.stats.SaasRevenueStats.MonthAmount;
 import com.fcourt.subscription.stats.SaasRevenueStats.SaasRevenue;
+import com.fcourt.subscription.stats.SubscriptionListStats.PlanRevenue;
+import com.fcourt.subscription.stats.SubscriptionListStats.SubscriptionOverview;
+import com.fcourt.subscription.stats.SubscriptionListStats.SubscriptionRow;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -33,6 +36,7 @@ class SaasRevenueControllerTest {
     @Autowired MockMvc mvc;
     @MockitoBean JwtDecoder decoder;
     @MockitoBean SaasRevenueStats stats;
+    @MockitoBean SubscriptionListStats subscriptions;
 
     @Test
     void superAdminReadsRevenue() throws Exception {
@@ -67,5 +71,23 @@ class SaasRevenueControllerTest {
                         .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))))
                 .andExpect(status().isBadRequest());
         verifyNoInteractions(stats);
+    }
+
+    @Test
+    void superAdminListsSubscriptionsAndOthersAreForbidden() throws Exception {
+        when(subscriptions.overview()).thenReturn(new SubscriptionOverview(
+                List.of(new SubscriptionRow(1, 7, 2, "Pro", 10, 3, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 2, 1),
+                        false, new BigDecimal("500000.00"))),
+                List.of(new PlanRevenue(2, "Pro", 1, new BigDecimal("500000.00")))));
+
+        mvc.perform(get("/api/super-admin/stats/subscriptions")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.subscriptions[0].planName").value("Pro"))
+                .andExpect(jsonPath("$.subscriptions[0].endDate").value("2026-02-01"))
+                .andExpect(jsonPath("$.plans[0].revenue").value(500000.00));
+        mvc.perform(get("/api/super-admin/stats/subscriptions")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
+                .andExpect(status().isForbidden());
     }
 }

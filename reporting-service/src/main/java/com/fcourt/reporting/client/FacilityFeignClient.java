@@ -1,5 +1,7 @@
 package com.fcourt.reporting.client;
 
+import com.fcourt.reporting.integration.FacilityClient.BranchDetail;
+import com.fcourt.reporting.integration.FacilityClient.CourtDetail;
 import com.fcourt.reporting.integration.FacilityClient.CourtInfo;
 import com.fcourt.reporting.integration.FacilityClient.OwnedBranch;
 import java.util.List;
@@ -28,4 +30,10 @@ public interface FacilityFeignClient {
 
     @GetMapping("/api/admin/branches/{id}/courts")
     List<CourtInfo> courts(@PathVariable("id") long branchId, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization);
+
+    @GetMapping("/api/admin/branches")
+    List<BranchDetail> branchDetails(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization);
+
+    @GetMapping("/api/admin/branches/{id}/courts")
+    List<CourtDetail> courtDetails(@PathVariable("id") long branchId, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization);
 }

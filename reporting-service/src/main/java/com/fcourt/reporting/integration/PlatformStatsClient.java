@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -36,6 +37,17 @@ public class PlatformStatsClient {
     public record MonthAmount(String month, BigDecimal amount) { }
 
     public record SaasRevenue(BigDecimal total, long paidPayments, List<MonthAmount> byMonth) { }
+
+    public record SubscriptionRow(long id, long adminId, long planId, String planName, int maxCourts, int maxBranches,
+                                  LocalDate startDate, LocalDate endDate, boolean starter, BigDecimal price) { }
+
+    public record PlanRevenue(long planId, String planName, long paidCount, BigDecimal revenue) { }
+
+    public record SubscriptionOverview(List<SubscriptionRow> subscriptions, List<PlanRevenue> plans) { }
+
+    public record CourtTypeName(long id, String name) { }
+
+    private record CourtTypePage(List<CourtTypeName> content) { }
 
     private final RestClient auth;
     private final RestClient subscription;
@@ -70,6 +82,20 @@ public class PlatformStatsClient {
         return call(() -> subscription.get()
                 .uri("/api/super-admin/stats/saas-revenue?from={from}&timeZone={zone}", from, timeZone)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + bearer).retrieve().body(SaasRevenue.class));
+    }
+
+    /** Every subscription row plus per-plan PAID revenue (SUPER_ADMIN endpoint of subscription-service). */
+    public SubscriptionOverview subscriptions(String bearer) {
+        return call(() -> subscription.get().uri("/api/super-admin/stats/subscriptions")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + bearer).retrieve().body(SubscriptionOverview.class));
+    }
+
+    /** Court type id to name; the catalog is public in subscription-service (first 100, the page maximum). */
+    public Map<Long, String> courtTypeNames() {
+        CourtTypePage page = call(() -> subscription.get().uri("/api/court-types?size=100").retrieve()
+                .body(CourtTypePage.class));
+        return page.content() == null ? Map.of() : page.content().stream()
+                .collect(Collectors.toMap(CourtTypeName::id, CourtTypeName::name, (a, b) -> a));
     }
 
     private static <T> T call(java.util.function.Supplier<T> request) {

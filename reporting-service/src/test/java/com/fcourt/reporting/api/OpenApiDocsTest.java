@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fcourt.reporting.config.OpenApiConfig;
 import com.fcourt.reporting.service.DashboardService;
 import com.fcourt.reporting.service.RevenueExportService;
+import com.fcourt.reporting.service.SuperAdminDetailsService;
 import com.fcourt.reporting.service.SuperAdminOverviewService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +48,7 @@ class OpenApiDocsTest {
     @MockitoBean JwtDecoder decoder;
     @MockitoBean RevenueExportService export;
     @MockitoBean SuperAdminOverviewService overview;
+    @MockitoBean SuperAdminDetailsService details;
     @MockitoBean DashboardService dashboard;
 
     @Test

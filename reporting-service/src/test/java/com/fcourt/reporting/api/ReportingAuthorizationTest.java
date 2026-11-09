@@ -17,6 +17,7 @@ import com.fcourt.reporting.service.DashboardService;
 import com.fcourt.reporting.service.RevenueExportService;
 import com.fcourt.reporting.service.RevenueExportService.ExportFile;
 import com.fcourt.reporting.service.RevenueExportService.Format;
+import com.fcourt.reporting.service.SuperAdminDetailsService;
 import com.fcourt.reporting.service.SuperAdminOverviewService;
 import com.fcourt.reporting.service.SuperAdminOverviewService.Branches;
 import com.fcourt.reporting.service.SuperAdminOverviewService.Customers;
@@ -52,11 +53,13 @@ class ReportingAuthorizationTest {
 
     static final String EXPORT = "/api/admin/dashboard/export/revenue?fromDate=2026-10-01&toDate=2026-10-31";
     static final String OVERVIEW = "/api/super-admin/dashboard/overview";
+    static final String DETAILS = "/api/super-admin/dashboard/details";
 
     @Autowired MockMvc mvc;
     @MockitoBean JwtDecoder decoder;
     @MockitoBean RevenueExportService export;
     @MockitoBean SuperAdminOverviewService overview;
+    @MockitoBean SuperAdminDetailsService details;
     @MockitoBean DashboardService dashboard;
 
     static RequestPostProcessor as(String role) {
@@ -121,5 +124,27 @@ class ReportingAuthorizationTest {
         }
         mvc.perform(get(OVERVIEW)).andExpect(status().isUnauthorized());
         verifyNoInteractions(overview);
+    }
+
+    @Test
+    void superAdminReadsTheDetails() throws Exception {
+        when(details.details(any())).thenReturn(new SuperAdminDetailsService.Details(List.of(), List.of(), List.of(),
+                List.of(new SuperAdminDetailsService.PlanSales(2, "Pro", 3, 2, 1, new BigDecimal("1500000"))), 2, 1,
+                Instant.parse("2026-11-05T03:00:00Z")));
+
+        mvc.perform(get(DETAILS).with(as("SUPER_ADMIN"))).andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+                .andExpect(jsonPath("$.planSales[0].planName").value("Pro"))
+                .andExpect(jsonPath("$.planSales[0].revenue").value(1500000))
+                .andExpect(jsonPath("$.activeSubscriptionCount").value(2));
+    }
+
+    @Test
+    void detailsAreForSuperAdminOnly() throws Exception {
+        for (String role : new String[] {"ADMIN", "STAFF", "CUSTOMER"}) {
+            mvc.perform(get(DETAILS).with(as(role))).andExpect(status().isForbidden());
+        }
+        mvc.perform(get(DETAILS)).andExpect(status().isUnauthorized());
+        verifyNoInteractions(details);
     }
 }

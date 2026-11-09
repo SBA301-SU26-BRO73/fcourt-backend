@@ -27,6 +27,13 @@ public class FacilityClient {
     public record OwnedBranch(Long id, Long adminId, String status, LocalTime openTime, LocalTime closeTime,
                               Integer courtCount) { }
 
+    /** Branch row for the SUPER_ADMIN dashboard detail modals (facility returns every branch to a SUPER_ADMIN). */
+    public record BranchDetail(Long id, Long adminId, String name, String address, String ward, String district,
+                               String city, String phone, String status, Integer courtCount) { }
+
+    /** Court row for the SUPER_ADMIN dashboard detail modals. */
+    public record CourtDetail(Long id, Long branchId, String name, Long courtTypeId, String status) { }
+
     /** Court of an owned branch; {@code name} is unique inside its branch (case-insensitive). */
     public record CourtInfo(Long id, Long branchId, String name, String status) { }
 
@@ -64,6 +71,22 @@ public class FacilityClient {
         if (branches == null) throw unavailable();
         branches.forEach(FacilityClient::validate);
         return branches;
+    }
+
+    /** Every branch with its display fields; facility returns them all only to a SUPER_ADMIN token. */
+    public List<BranchDetail> branchDetails(String bearer) {
+        List<BranchDetail> branches = call(() -> facility.branchDetails("Bearer " + bearer), 401, 403);
+        if (branches == null || branches.stream().anyMatch(branch -> branch == null || branch.id() == null
+                || branch.adminId() == null || branch.name() == null || branch.status() == null)) throw unavailable();
+        return branches;
+    }
+
+    /** Courts of any branch; a SUPER_ADMIN token is accepted by facility for every branch. */
+    public List<CourtDetail> courtDetails(long branchId, String bearer) {
+        List<CourtDetail> courts = call(() -> facility.courtDetails(branchId, "Bearer " + bearer), 401, 403, 404);
+        if (courts == null || courts.stream().anyMatch(court -> court == null || court.id() == null
+                || court.name() == null || court.status() == null)) throw unavailable();
+        return courts;
     }
 
     /** Courts of one branch the caller owns (facility enforces ownership with the forwarded token). */
