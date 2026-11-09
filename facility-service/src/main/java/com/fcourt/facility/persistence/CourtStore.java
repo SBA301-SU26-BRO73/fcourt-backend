@@ -81,6 +81,10 @@ public class CourtStore {
                 r.status(), courtId);
     }
 
+    public void updateImage(long courtId, String imageUrl) {
+        jdbc.update("UPDATE courts SET image_url = ?, updated_at = now() WHERE id = ?", imageUrl, courtId);
+    }
+
     public void updateStatus(long courtId, String status) {
         jdbc.update("UPDATE courts SET status = ?, updated_at = now() WHERE id = ?", status, courtId);
     }
