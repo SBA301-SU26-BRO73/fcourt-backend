@@ -36,6 +36,13 @@ public class ProductService {
         return transaction.execute(status -> new ProductPageResponse(store.adminProducts(branch, q, active, size, page * size),
                 page, size, store.adminProductCount(branch, q, active)));
     }
+    /** Read-only list across every branch (optionally one branch) for SUPER_ADMIN. */
+    public ProductPageResponse superAdminList(Jwt jwt, Long branch, String query, Boolean active, int page, int size) {
+        access.superAdmin(jwt);
+        String q = query == null ? "" : query.strip();
+        return transaction.execute(status -> new ProductPageResponse(store.allProducts(branch, q, active, size, page * size),
+                page, size, store.allProductCount(branch, q, active)));
+    }
     public PosViews.Product create(Jwt jwt, UUID key, PosRequests.Product request) {
         long actor = Long.parseLong(jwt.getSubject());
         access.adminBranch(jwt, request.branchId());

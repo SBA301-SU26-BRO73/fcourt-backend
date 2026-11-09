@@ -41,6 +41,14 @@ class PosController {
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(products.adminList(jwt, branchId, query, active, page, size));
     }
+    @GetMapping("/api/super-admin/pos/products")
+    ResponseEntity<ProductPageResponse> superAdminProducts(@AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) @Positive Long branchId, @RequestParam(required = false) Boolean active,
+            @RequestParam(defaultValue = "") @Size(max = 100) String query,
+            @RequestParam(defaultValue = "0") @Min(0) @Max(100000) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(products.superAdminList(jwt, branchId, query, active, page, size));
+    }
     @PostMapping("/api/admin/pos/products")
     ResponseEntity<PosViews.Product> createProduct(@AuthenticationPrincipal Jwt jwt, @RequestHeader("Idempotency-Key") UUID key,
             @Valid @RequestBody PosRequests.Product request) {

@@ -76,7 +76,7 @@ class PosSecurity {
         converter.setJwtGrantedAuthoritiesConverter(jwt -> {
             Object value = jwt.getClaims().get("roles");
             Collection<?> roles = value instanceof Collection<?> collection ? collection : List.of(jwt.getClaims().getOrDefault("role", ""));
-            return roles.stream().filter(role -> "ADMIN".equals(role) || "STAFF".equals(role))
+            return roles.stream().filter(role -> "ADMIN".equals(role) || "STAFF".equals(role) || "SUPER_ADMIN".equals(role))
                     .<GrantedAuthority>map(role -> new SimpleGrantedAuthority("ROLE_" + role)).toList();
         });
         return http.csrf(csrf -> csrf.disable())
@@ -85,6 +85,7 @@ class PosSecurity {
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
                         .requestMatchers("/api/admin/pos/**").hasRole("ADMIN")
+                        .requestMatchers("/api/super-admin/pos/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/staff/pos/**").hasRole("STAFF").anyRequest().denyAll())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(converter))).build();
     }
