@@ -62,3 +62,15 @@ springdoc:
     enabled: ${SWAGGER_ENABLED:true}
     path: /swagger-ui.html
   paths-to-exclude: /api/internal/**,/error
+
+storage:
+  # Payment receipts live in a private S3 bucket; booking only signs read URLs for them (receipts/*).
+  # Credentials come from the default AWS chain (EKS Pod Identity, AWS profile), never from config.
+  # Empty bucket = the stored value is returned unchanged.
+  s3:
+    bucket: ${STORAGE_S3_BUCKET:}
+    region: ${STORAGE_S3_REGION:ap-southeast-1}
+    # LocalStack/MinIO only (for example http://localhost:4566); also turns on path-style addressing.
+    endpoint: ${STORAGE_S3_ENDPOINT:}
+    path-style: ${STORAGE_S3_PATH_STYLE:false}
+    presign-ttl: ${STORAGE_S3_PRESIGN_TTL:10m}

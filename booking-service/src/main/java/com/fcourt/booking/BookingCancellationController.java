@@ -8,10 +8,11 @@ import org.springframework.security.oauth2.jwt.Jwt;
 @RequestMapping("/api/bookings/{id}")
 class BookingCancellationController {
     private final BookingCancellation cancellation;
-    BookingCancellationController(BookingCancellation cancellation){this.cancellation=cancellation;}
+    private final ReceiptUrls urls;
+    BookingCancellationController(BookingCancellation cancellation,ReceiptUrls urls){this.cancellation=cancellation;this.urls=urls;}
     record Request(String reason) {}
     @GetMapping("/cancellation-policy")
     BookingCancellation.Policy quote(@PathVariable long id,@AuthenticationPrincipal Jwt jwt){return cancellation.quote(id,jwt);}
     @PostMapping("/cancel")
-    BookingView cancel(@PathVariable long id,@RequestBody Request request,@AuthenticationPrincipal Jwt jwt){return cancellation.cancel(id,request.reason(),jwt);}
+    BookingView cancel(@PathVariable long id,@RequestBody Request request,@AuthenticationPrincipal Jwt jwt){return urls.view(cancellation.cancel(id,request.reason(),jwt));}
 }

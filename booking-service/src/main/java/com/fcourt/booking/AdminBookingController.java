@@ -12,11 +12,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 class AdminBookingController {
     private final AdminBookingQueries queries;
+    private final ReceiptUrls urls;
 
     private final AdminBookingCancellation cancellation;
 
-    AdminBookingController(AdminBookingQueries queries, AdminBookingCancellation cancellation) {
+    AdminBookingController(AdminBookingQueries queries, AdminBookingCancellation cancellation, ReceiptUrls urls) {
         this.queries = queries;
+        this.urls = urls;
         this.cancellation = cancellation;
     }
 
@@ -30,12 +32,12 @@ class AdminBookingController {
         if (key.isBlank() || key.length() > 128)
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.BAD_REQUEST, "Idempotency-Key must be 1-128 characters");
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(cancellation.cancel(id, request.reason(), jwt));
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(urls.view(cancellation.cancel(id, request.reason(), jwt)));
     }
 
     @GetMapping("/api/admin/bookings")
     ResponseEntity<AdminBookingView.Page> list(@AuthenticationPrincipal Jwt jwt,
             @Valid @ModelAttribute AdminBookingFilter filter) {
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(queries.search(jwt, filter));
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(urls.view(queries.search(jwt, filter)));
     }
 }

@@ -4,10 +4,16 @@
   <groupId>com.fcourt</groupId>
   <artifactId>booking-service</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <properties><spring-cloud.version>2025.0.3</spring-cloud.version><java.version>21</java.version><grpc.version>1.85.1</grpc.version><protobuf.version>4.33.0</protobuf.version><testcontainers.version>1.21.4</testcontainers.version></properties>
-  <dependencyManagement><dependencies><dependency><groupId>org.springframework.cloud</groupId><artifactId>spring-cloud-dependencies</artifactId><version>${spring-cloud.version}</version><type>pom</type><scope>import</scope></dependency></dependencies></dependencyManagement>
+  <properties><spring-cloud.version>2025.0.3</spring-cloud.version><java.version>21</java.version><grpc.version>1.85.1</grpc.version><protobuf.version>4.33.0</protobuf.version><testcontainers.version>1.21.4</testcontainers.version><awssdk.version>2.57.5</awssdk.version></properties>
+  <dependencyManagement><dependencies>
+    <dependency><groupId>org.springframework.cloud</groupId><artifactId>spring-cloud-dependencies</artifactId><version>${spring-cloud.version}</version><type>pom</type><scope>import</scope></dependency>
+    <dependency><groupId>software.amazon.awssdk</groupId><artifactId>bom</artifactId><version>${awssdk.version}</version><type>pom</type><scope>import</scope></dependency>
+  </dependencies></dependencyManagement>
   <dependencies>
     <dependency><groupId>org.springframework.cloud</groupId><artifactId>spring-cloud-starter-netflix-eureka-client</artifactId></dependency>
+    <dependency><groupId>software.amazon.awssdk</groupId><artifactId>s3</artifactId>
+      <exclusions><exclusion><groupId>software.amazon.awssdk</groupId><artifactId>netty-nio-client</artifactId></exclusion></exclusions>
+    </dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-websocket</artifactId></dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-data-redis</artifactId></dependency>
         <dependency>
