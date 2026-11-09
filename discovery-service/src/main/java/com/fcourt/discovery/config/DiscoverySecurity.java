@@ -34,6 +34,7 @@ public class DiscoverySecurity {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/public/**", "/actuator/health", "/actuator/info").permitAll()
                         // Service-to-service lock check of facility-service; the X-Internal-Service-Token is verified in the controller.
                         .requestMatchers(HttpMethod.GET, "/api/internal/courts/*/slot-conflicts").permitAll()
