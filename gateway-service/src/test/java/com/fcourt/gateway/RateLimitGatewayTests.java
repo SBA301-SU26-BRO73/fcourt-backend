@@ -143,6 +143,20 @@ class RateLimitGatewayTests {
     }
 
     @Test
+    void guestCancelSharesThePerIpLookupBudgetSoPhonesCannotBeGuessed() {
+        String ip = "203.0.113.9";
+        for (int i = 0; i < 3; i++) {
+            post("/api/public/bookings/cancel", ip).expectStatus().isOk();
+        }
+        post("/api/public/bookings/lookup", ip).expectStatus().isOk();
+        post("/api/public/bookings/lookup", ip).expectStatus().isOk();
+        post("/api/public/bookings/cancel", ip).expectStatus().isEqualTo(HttpStatus.TOO_MANY_REQUESTS)
+                .expectHeader().contentType(MediaType.APPLICATION_PROBLEM_JSON);
+        // Another client is not affected.
+        post("/api/public/bookings/cancel", "203.0.113.10").expectStatus().isOk();
+    }
+
+    @Test
     void holdAndBookingCreationAreLimitedPerClientForGuestsAndPerUserWhenSignedIn() throws JOSEException {
         String ip = "203.0.113.5";
         // One budget for hold + create: a guest flow is one of each.
