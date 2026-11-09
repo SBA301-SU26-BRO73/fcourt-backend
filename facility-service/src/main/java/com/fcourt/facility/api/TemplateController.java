@@ -11,6 +11,7 @@ import com.fcourt.facility.api.TemplateDtos.PreviewResponse;
 import com.fcourt.facility.api.TemplateDtos.SingleTemplateRequest;
 import com.fcourt.facility.api.TemplateDtos.SlotSchedule;
 import com.fcourt.facility.api.TemplateDtos.TemplateSlot;
+import com.fcourt.facility.api.TemplateDtos.UpdateTemplateRequest;
 import com.fcourt.facility.service.TemplateService;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -74,6 +76,12 @@ class TemplateController {
     TemplateSlot create(@AuthenticationPrincipal Jwt jwt, @PathVariable long courtId,
                         @Valid @RequestBody SingleTemplateRequest request) {
         return templates.createOne(owners.forCourt(jwt, courtId), courtId, request);
+    }
+
+    @PutMapping("/api/admin/time-slot-templates/{id}")
+    TemplateSlot update(@AuthenticationPrincipal Jwt jwt, @PathVariable long id,
+                        @Valid @RequestBody UpdateTemplateRequest request) {
+        return templates.update(owners.forTemplate(jwt, id), id, request);
     }
 
     @DeleteMapping("/api/admin/time-slot-templates/{id}")

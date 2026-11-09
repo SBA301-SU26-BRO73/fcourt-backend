@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fcourt.facility.api.TemplateDtos.ApplyTemplateRequest;
 import com.fcourt.facility.api.TemplateDtos.SingleTemplateRequest;
+import com.fcourt.facility.api.TemplateDtos.UpdateTemplateRequest;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import java.math.BigDecimal;
@@ -31,5 +32,15 @@ class TemplateRequestValidationTest {
         assertThat(validator.validate(free)).hasSize(1);
         assertThat(validator.validate(paid)).isEmpty();
         assertThat(validator.validate(derived)).isEmpty();
+    }
+
+    @Test
+    void updateRequestFieldsAreOptionalButValidatedWhenPresent() {
+        assertThat(validator.validate(new UpdateTemplateRequest(null, null, null, null))).isEmpty();
+        assertThat(validator.validate(new UpdateTemplateRequest(6, null, null, new BigDecimal("1000.50")))).isEmpty();
+        assertThat(validator.validate(new UpdateTemplateRequest(7, null, null, null))).hasSize(1);
+        assertThat(validator.validate(new UpdateTemplateRequest(-1, null, null, null))).hasSize(1);
+        assertThat(validator.validate(new UpdateTemplateRequest(null, null, null, BigDecimal.ZERO))).hasSize(1);
+        assertThat(validator.validate(new UpdateTemplateRequest(null, null, null, new BigDecimal("1.234")))).hasSize(1);
     }
 }

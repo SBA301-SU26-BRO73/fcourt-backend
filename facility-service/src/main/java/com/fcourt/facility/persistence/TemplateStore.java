@@ -39,6 +39,26 @@ public class TemplateStore {
         return count != null && count > 0;
     }
 
+    /** Like {@link #overlaps} but ignoring the template being edited. */
+    public boolean overlapsOther(long templateId, long courtId, int dayOfWeek, LocalTime start, LocalTime end) {
+        Integer count = jdbc.queryForObject("SELECT count(*) FROM time_slot_templates WHERE court_id = ?"
+                        + " AND id <> ? AND day_of_week = ? AND " + LIVE + " AND start_time < ? AND end_time > ?",
+                Integer.class, courtId, templateId, dayOfWeek, Time.valueOf(end), Time.valueOf(start));
+        return count != null && count > 0;
+    }
+
+    public Optional<TemplateSlot> findLive(long templateId) {
+        return jdbc.query("SELECT * FROM time_slot_templates WHERE id = ? AND " + LIVE, this::row, templateId)
+                .stream().findFirst();
+    }
+
+    public TemplateSlot update(long templateId, int dayOfWeek, LocalTime start, LocalTime end, BigDecimal price) {
+        return jdbc.queryForObject("""
+                UPDATE time_slot_templates SET day_of_week = ?, start_time = ?, end_time = ?, price = ?, updated_at = now()
+                WHERE id = ? RETURNING *
+                """, this::row, dayOfWeek, Time.valueOf(start), Time.valueOf(end), price, templateId);
+    }
+
     public TemplateSlot insert(long courtId, int dayOfWeek, LocalTime start, LocalTime end, BigDecimal price) {
         return jdbc.queryForObject("""
                 INSERT INTO time_slot_templates (court_id, day_of_week, start_time, end_time, price, is_active)

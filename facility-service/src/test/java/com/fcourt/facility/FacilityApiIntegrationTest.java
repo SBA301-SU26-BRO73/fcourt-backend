@@ -295,6 +295,37 @@ class FacilityApiIntegrationTest {
         long templateId = id(postJson(single,
                 "{\"dayOfWeek\":1,\"startTime\":\"10:00\",\"endTime\":\"10:30\",\"price\":1000}", owner)
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.active").value(true)));
+        String templateUrl = "/api/admin/time-slot-templates/{id}";
+        // PUT edits in place: same id, only the given fields change.
+        mvc.perform(put(templateUrl, templateId).with(as(owner, "ADMIN")).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"price\":1200}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(templateId))
+                .andExpect(jsonPath("$.startTime").value("10:00"))
+                .andExpect(jsonPath("$.price").value(1200.0));
+        mvc.perform(put(templateUrl, templateId).with(as(owner, "ADMIN")).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"startTime\":\"10:30\",\"endTime\":\"11:00\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.startTime").value("10:30"))
+                .andExpect(jsonPath("$.endTime").value("11:00"))
+                .andExpect(jsonPath("$.price").value(1200.0));
+        for (String body : new String[] {"{}", "{\"dayOfWeek\":7}", "{\"price\":0}",
+                "{\"startTime\":\"10:00\",\"endTime\":\"11:00\"}", "{\"startTime\":\"11:00\",\"endTime\":\"10:30\"}",
+                "{\"startTime\":\"05:00\",\"endTime\":\"05:30\"}"}) {
+            mvc.perform(put(templateUrl, templateId).with(as(owner, "ADMIN")).contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isBadRequest());
+        }
+        // 09:30-10:00 on Monday is another live template of the same court.
+        mvc.perform(put(templateUrl, templateId).with(as(owner, "ADMIN")).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"startTime\":\"09:30\",\"endTime\":\"10:00\"}"))
+                .andExpect(status().isConflict());
+        mvc.perform(put(templateUrl, templateId).with(as(9999, "ADMIN")).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"price\":1300}"))
+                .andExpect(status().isNotFound());
+        mvc.perform(put(templateUrl, 987654321L).with(as(owner, "ADMIN")).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"price\":1300}"))
+                .andExpect(status().isNotFound());
         mvc.perform(delete("/api/admin/time-slot-templates/{id}", templateId).with(as(9999, "ADMIN")))
                 .andExpect(status().isNotFound());
         mvc.perform(delete("/api/admin/time-slot-templates/{id}", templateId).with(as(owner, "ADMIN")))
@@ -324,8 +355,8 @@ class FacilityApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"ACTIVE\"}"))
                 .andExpect(status().isOk());
 
-        // 11 successful changes: branch, 4 courts, 2 applies, 1 create + 1 delete template, 2 status changes.
-        JsonNode latest = awaitLatestSnapshot(branchId, 11);
+        // 13 successful changes: branch, 4 courts, 2 applies, 1 create + 2 updates + 1 delete template, 2 status changes.
+        JsonNode latest = awaitLatestSnapshot(branchId, 13);
         assertThat(latest.get("active").asBoolean()).isTrue();
         assertThat(latest.get("deleted").asBoolean()).isFalse();
         assertThat(latest.get("district").asText()).isEqualTo("Quan 1");
