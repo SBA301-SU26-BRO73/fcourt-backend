@@ -61,7 +61,7 @@ class ReviewImagePolicyTest {
                 "HTTPS:cdn.fcourt.test/reviews/10/a.jpg")) {
             assertThat(policy.allows(url, 10)).as(url).isFalse();
         }
-        assertThat(policy.allows("HTTPS://RES.CLOUDINARY.COM/demo/image/upload/reviews/10/a.jpg", 10)).as("scheme and host are case-insensitive").isTrue();
+        assertThat(policy.allows("HTTPS://CDN.FCOURT.TEST/reviews/10/a.jpg", 10)).as("scheme and host are case-insensitive").isTrue();
     }
 
     @Test
