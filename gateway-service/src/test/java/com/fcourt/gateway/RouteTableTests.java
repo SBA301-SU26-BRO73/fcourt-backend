@@ -51,6 +51,7 @@ class RouteTableTests {
                 // precedence: specific before broad
                 Arguments.of("/api/bookings/hold-slots", "slot-hold-engine"),
                 Arguments.of("/api/bookings/hold-slots/6f1a", "slot-hold-engine"),
+                Arguments.of("/api/public/bookings/lookup", "booking-service"),
                 Arguments.of("/api/bookings", "booking-service"),
                 Arguments.of("/api/bookings/42", "booking-service"),
                 Arguments.of("/api/bookings/my", "booking-service"),

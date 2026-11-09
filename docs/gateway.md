@@ -42,6 +42,7 @@ Khớp theo `order` (nhỏ trước), rồi theo thứ tự khai báo. Cụ th�
 | `/api/public/branches/**`, `/api/admin/{branches,courts,time-slot-templates}/**`, `/api/staff/{branches,courts}/**` | facility-service | 20 |
 | `/api/admin/dashboard/**`, `/api/super-admin/dashboard/**` | reporting-service | 20 |
 | `/api/vouchers/**`, `/api/admin/vouchers/**` | voucher-service | 20 |
+| `/api/public/bookings/**` (tra cứu booking của khách) | booking-service | 10 |
 | `/api/bookings/**`, `/api/admin/bookings/**` | booking-service | 20 |
 | `/ws-fcourt/**` (WebSocket/STOMP, `lb:ws://`) | booking-service | 20 |
 | `/api/payments/**`, `/api/refunds/**`, `/api/admin/{payments,refunds}/**` | payment-service | 20 |
@@ -64,6 +65,7 @@ Lấy từ cấu hình bảo mật của từng service (`fcourt.gateway.securit
 | `POST /api/subscriptions/payment-webhook` (PayOS, xác thực bằng chữ ký) | subscription-service |
 | `/api/bookings/hold-slots/**` (khách vãng lai giữ chỗ) | slot-hold-engine |
 | `GET /api/bookings/*` (khách xem booking bằng `X-Hold-Token`) | booking-service |
+| `/api/public/bookings/**` (tra cứu booking của khách, POST lookup) | booking-service |
 | `/ws-fcourt/**` | booking-service |
 | `/api/payments/**` (checkout, trạng thái, biên lai, vé; ủy quyền cho booking) | payment-service |
 | `/swagger-ui.html`, `/swagger-ui/**`, `/webjars/**`, `/v3/api-docs/**`, `GET /docs/**` | gateway |

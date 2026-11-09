@@ -22,6 +22,12 @@ spring:
               order: 10
               predicates:
                 - Path=/api/bookings/hold-slots/**
+            - id: booking-service-public
+              uri: lb://booking-service
+              order: 10
+              predicates:
+                # Guest booking lookup (public, no token).
+                - Path=/api/public/bookings/**
             - id: discovery-service-branches
               uri: lb://discovery-service
               order: 10
@@ -140,6 +146,7 @@ fcourt:
         - POST /api/subscriptions/payment-webhook
         # slot-hold-engine: guest hold and release
         - ANY /api/bookings/hold-slots/**
+        - ANY /api/public/bookings/**
         # booking-service: guest booking view (X-Hold-Token) and the realtime slot socket
         - GET /api/bookings/*
         - ANY /ws-fcourt/**
