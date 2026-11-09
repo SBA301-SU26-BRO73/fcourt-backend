@@ -62,7 +62,9 @@ class OnlineBookingTest {
 
   @Autowired OnlineBooking service;
   @Autowired StaffCounter counter;
+  @Autowired BookingQueries queries;
   @Autowired JdbcTemplate jdbc;
+  @Autowired com.fcourt.booking.service.GuestBookingLookupService lookup;
   @Autowired MockMvc mvc;
   @Autowired ObjectMapper json;
   @Autowired TransactionTemplate tx;
@@ -261,7 +263,7 @@ class OnlineBookingTest {
   void httpRejectsMissingIdentityAndClientPrices() throws Exception {
     String body = json.writeValueAsString(request);
     mvc.perform(post("/api/bookings").contentType("application/json").content(body))
-        .andExpect(status().isUnauthorized());
+        .andExpect(status().isBadRequest()); // guests are allowed; the Idempotency-Key header is what is missing
     mvc.perform(
             post("/api/bookings")
                 .with(jwt().jwt(j -> j.subject("200")))
@@ -278,6 +280,95 @@ class OnlineBookingTest {
                 .content(altered.toString()))
         .andExpect(status().isBadRequest());
     assertThat(jdbc.queryForObject("SELECT count(*) FROM bookings", Integer.class)).isZero();
+  }
+
+  @Test
+  void guestBookingStoresPhoneWithoutCustomerAndIsAuthorizedByHoldToken() {
+    UUID key = UUID.randomUUID();
+    var result = service.create(null, key, request);
+    assertThat(result.status()).isEqualTo("PENDING_PAYMENT");
+    assertThat(result.customerName()).isNull();
+    assertThat(result.totalPrice()).isEqualByComparingTo("100000");
+    verify(upstream, never()).customer(any());
+    verify(upstream).claim(eq(OnlineBooking.GUEST_ACTOR), eq(key), any());
+    assertThat(jdbc.queryForObject("SELECT customer_id FROM bookings", Long.class)).isNull();
+    assertThat(jdbc.queryForObject("SELECT guest_phone FROM bookings", String.class))
+        .isEqualTo("0901234567");
+    // Retrying the same command returns the same booking and does not claim twice.
+    assertThat(service.create(null, key, request).id()).isEqualTo(result.id());
+    verify(upstream, times(1)).claim(anyLong(), any(), any());
+    // The hold token reads the booking back; a different token or none does not.
+    var token = request.holdToken().toString();
+    assertThat(queries.detail(result.id(), null, token).id()).isEqualTo(result.id());
+    assertThatThrownBy(() -> queries.detail(result.id(), null, UUID.randomUUID().toString()))
+        .isInstanceOf(ResponseStatusException.class);
+    assertThatThrownBy(() -> queries.detail(result.id(), null, null))
+        .isInstanceOf(ResponseStatusException.class);
+    // Public lookup by booking code + phone now finds the online guest booking.
+    var found =
+        lookup.lookup(
+            new com.fcourt.booking.dto.request.GuestLookupRequest(
+                result.bookingCode(), "0901234567"));
+    assertThat(found.id()).isEqualTo(result.id());
+    assertThatThrownBy(
+            () ->
+                lookup.lookup(
+                    new com.fcourt.booking.dto.request.GuestLookupRequest(
+                        result.bookingCode(), "0911111111")))
+        .isInstanceOf(ResponseStatusException.class);
+  }
+
+  @Test
+  void guestWithoutPhoneOnTheHoldIsRejectedAndLeavesNoBooking() {
+    when(upstream.claim(anyLong(), any(), any()))
+        .thenAnswer(
+            invocation -> {
+              OnlineBooking.Request r = invocation.getArgument(2);
+              return new OnlineBookingDependencies.Lease(
+                  OnlineBooking.hash(r.holdToken().toString()),
+                  NOW.plusSeconds(300),
+                  21,
+                  DAY,
+                  r.slotIds(),
+                  null);
+            });
+    assertThatThrownBy(() -> service.create(null, UUID.randomUUID(), request))
+        .isInstanceOfSatisfying(
+            ResponseStatusException.class,
+            e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
+    assertThat(jdbc.queryForObject("SELECT count(*) FROM bookings", Integer.class)).isZero();
+  }
+
+  @Test
+  void loggedInCustomerMayBookWithoutAPhoneOnTheHold() {
+    when(upstream.claim(anyLong(), any(), any()))
+        .thenAnswer(
+            invocation -> {
+              OnlineBooking.Request r = invocation.getArgument(2);
+              return new OnlineBookingDependencies.Lease(
+                  OnlineBooking.hash(r.holdToken().toString()),
+                  NOW.plusSeconds(300),
+                  21,
+                  DAY,
+                  r.slotIds(),
+                  null);
+            });
+    var result = service.create(customer, UUID.randomUUID(), request);
+    assertThat(jdbc.queryForObject("SELECT customer_id FROM bookings", Long.class)).isEqualTo(200L);
+    assertThat(jdbc.queryForObject("SELECT guest_phone FROM bookings", String.class)).isNull();
+    assertThat(result.customerName()).isEqualTo("Guest");
+  }
+
+  @Test
+  void httpGuestCanCreateABookingWithoutAToken() throws Exception {
+    mvc.perform(
+            post("/api/bookings")
+                .header("Idempotency-Key", UUID.randomUUID())
+                .contentType("application/json")
+                .content(json.writeValueAsString(request)))
+        .andExpect(status().isCreated());
+    assertThat(jdbc.queryForObject("SELECT count(*) FROM bookings WHERE customer_id IS NULL", Integer.class))
+        .isEqualTo(1);
   }
 
   @Test
