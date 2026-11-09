@@ -1,14 +1,15 @@
 package com.fcourt.notification.device;
 
 import java.util.Optional;
+import java.util.List;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 @Repository
-class UserDeviceRepository {
+public class UserDeviceRepository {
     private final JdbcClient jdbc;
 
-    UserDeviceRepository(JdbcClient jdbc) {
+    public UserDeviceRepository(JdbcClient jdbc) {
         this.jdbc = jdbc;
     }
 
@@ -20,6 +21,7 @@ class UserDeviceRepository {
                         SET platform = EXCLUDED.platform,
                             fcm_token = EXCLUDED.fcm_token,
                             endpoint_arn = EXCLUDED.endpoint_arn,
+                            status = 'ACTIVE',
                             updated_at = now()
                         """)
                 .param("userId", userId)
@@ -44,5 +46,19 @@ class UserDeviceRepository {
                         .param("deviceId", deviceId)
                         .update()
                 > 0;
+    }
+
+    public record ActiveDevice(long id, String deviceId, String endpointArn) { }
+
+    public List<ActiveDevice> activeDevices(long userId) {
+        return jdbc.sql("SELECT id, device_id, endpoint_arn FROM user_devices WHERE user_id = :userId AND status = 'ACTIVE'")
+                .param("userId", userId)
+                .query((row, index) -> new ActiveDevice(row.getLong("id"), row.getString("device_id"),
+                        row.getString("endpoint_arn"))).list();
+    }
+
+    public void disable(long userId, String deviceId) {
+        jdbc.sql("UPDATE user_devices SET status = 'DISABLED', updated_at = now() WHERE user_id = :userId AND device_id = :deviceId")
+                .param("userId", userId).param("deviceId", deviceId).update();
     }
 }

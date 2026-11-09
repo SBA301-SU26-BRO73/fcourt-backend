@@ -36,7 +36,7 @@ public class ReminderScheduler {
         Instant now = clock.instant();
         var ids = jdbc.queryForList("""
                 SELECT booking_id FROM booking_reminders
-                WHERE reminder_sent = false AND starts_at > ? AND starts_at <= ?
+                WHERE reminder_sent = false AND recipient_email IS NOT NULL AND starts_at > ? AND starts_at <= ?
                 ORDER BY starts_at LIMIT 100
                 """, Long.class, Timestamp.from(now),
                 Timestamp.from(now.plus(Duration.ofMinutes(135))));

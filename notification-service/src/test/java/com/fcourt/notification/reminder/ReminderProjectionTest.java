@@ -19,22 +19,24 @@ class ReminderProjectionTest {
     void confirmedBookingProjectsFirstSlotWithRecipientAndTicket() {
         projection.apply(event("""
                 {"type":"PaymentConfirmedEvent","recipient":{"email":"player@example.com","fullName":"Player"},
-                 "payment":{"bookingId":42,"checkInCode":"TICKET-42","checkout":{
+                 "payment":{"bookingId":42,"customerId":7,"checkInCode":"TICKET-42","checkout":{
                    "date":"2026-11-08","bookingCode":"BK-42","branchName":"District 1",
                    "courtName":"Court A","slots":[{"startTime":"20:00"},{"startTime":"18:00"}]}}}
                 """));
 
         verify(jdbc).update(contains("INSERT INTO booking_reminders"), eq(42L), eq("player@example.com"),
                 eq("Player"), eq("BK-42"), eq("District 1"), eq("Court A"),
-                eq(Timestamp.from(Instant.parse("2026-11-08T11:00:00Z"))), eq("TICKET-42"), eq(42L));
+                eq(Timestamp.from(Instant.parse("2026-11-08T11:00:00Z"))), eq("TICKET-42"), eq(7L), eq(42L));
     }
 
     @Test
-    void missingRecipientDoesNotCreateReminder() {
+    void missingEmailStillProjectsPushReminderWithoutEmailRecipient() {
         projection.apply(event("""
-                {"type":"PaymentConfirmedEvent","payment":{"bookingId":42}}
+                {"type":"PaymentConfirmedEvent","payment":{"bookingId":42,"checkInCode":"TICKET","checkout":{
+                  "date":"2026-11-08","slots":[{"startTime":"18:00"}]}}}
                 """));
-        verifyNoInteractions(jdbc);
+        verify(jdbc).update(contains("INSERT INTO booking_reminders"), eq(42L), isNull(), anyString(),
+                anyString(), anyString(), anyString(), any(Timestamp.class), eq("TICKET"), isNull(), eq(42L));
     }
 
     @Test
