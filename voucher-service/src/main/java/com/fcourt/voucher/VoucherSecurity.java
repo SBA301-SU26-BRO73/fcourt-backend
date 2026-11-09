@@ -35,6 +35,7 @@ class VoucherSecurity {
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll()
                         .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
                         .requestMatchers("/api/admin/vouchers", "/api/admin/vouchers/**").authenticated()
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/vouchers/apply").authenticated()
                         .anyRequest().denyAll())
