@@ -95,7 +95,7 @@ public class BranchSearchRepository {
         String sql = "WITH matched AS MATERIALIZED (SELECT b.* FROM branch_read_model b" + where + "), "
                 + "page AS (SELECT b.*, " + score + " AS relevance, " + distance
                 + " AS distance_km FROM matched b ORDER BY " + order + " LIMIT :limit OFFSET :offset) "
-                + "SELECT p.*, a.min_price, a.max_price, a.court_count, s.total_elements, "
+                + "SELECT p.*, a.min_price, a.max_price, a.court_count, a.court_type_ids, s.total_elements, "
                 + "COALESCE(round(r.rating_sum::numeric / NULLIF(r.review_count,0),2),0) AS average_rating, COALESCE(r.review_count,0) AS review_count "
                 + "FROM (SELECT count(*) AS total_elements FROM matched) s LEFT JOIN page p ON true "
                 + "LEFT JOIN branch_review_stats r ON r.branch_id=p.id "

@@ -141,8 +141,8 @@ class FacilityApiIntegrationTest {
         mvc.perform(get("/api/public/branches/{id}", branchId))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.bankAccountNumber").value("0123456789"))
                 .andExpect(jsonPath("$.phone").value("0901234567"))
-                .andExpect(jsonPath("$.openTime").value("06:00"))
-                .andExpect(jsonPath("$.closeTime").value("22:00"))
+                .andExpect(jsonPath("$.openTime").value("05:00"))
+                .andExpect(jsonPath("$.closeTime").value("23:00"))
                 .andExpect(jsonPath("$.district").value("Quan 1"))
                 .andExpect(jsonPath("$.ward").value("Ben Thanh"))
                 .andExpect(jsonPath("$.adminId").doesNotExist());
