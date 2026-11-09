@@ -20,6 +20,18 @@ spring:
       fail-on-numbers-for-enums: true
   application:
     name: voucher-service
+  # OpenFeign client to facility-service (client/FacilityFeignClient). Timeouts are the former RestClient ones.
+  cloud:
+    openfeign:
+      client:
+        config:
+          facility-service:
+            connect-timeout: 2000
+            read-timeout: 3000
+    circuitbreaker:
+      resilience4j:
+        # The breaker runs on the calling thread; the HTTP timeouts above bound each attempt.
+        disable-time-limiter: true
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5486/voucher_db}
     username: ${DATABASE_USER:postgres}
