@@ -30,6 +30,7 @@ class ReceiptUrls {
     ReceiptUrls(@Value("${storage.s3.bucket:}") String bucket,
             @Value("${storage.s3.region:ap-southeast-1}") String region,
             @Value("${storage.s3.endpoint:}") String endpoint,
+            @Value("${storage.s3.presign-endpoint:}") String presignEndpoint,
             @Value("${storage.s3.path-style:false}") boolean pathStyle,
             @Value("${storage.s3.presign-ttl:10m}") Duration ttl) {
         this.bucket = bucket;
@@ -40,7 +41,7 @@ class ReceiptUrls {
         }
         var builder = S3Presigner.builder().region(Region.of(region))
                 .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(pathStyle || !endpoint.isBlank()).build());
-        if (!endpoint.isBlank()) builder.endpointOverride(URI.create(endpoint));
+        if (!endpoint.isBlank()) builder.endpointOverride(URI.create(presignEndpoint.isBlank() ? endpoint : presignEndpoint));
         this.presigner = builder.build();
     }
 
