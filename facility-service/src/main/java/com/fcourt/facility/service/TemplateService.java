@@ -15,6 +15,7 @@ import com.fcourt.facility.api.TemplateDtos.ScheduleSlot;
 import com.fcourt.facility.api.TemplateDtos.SingleTemplateRequest;
 import com.fcourt.facility.api.TemplateDtos.SlotSchedule;
 import com.fcourt.facility.api.TemplateDtos.TemplateSlot;
+import com.fcourt.facility.api.TemplateDtos.UpdateTemplateRequest;
 import com.fcourt.facility.events.BranchEventWriter;
 import com.fcourt.facility.persistence.BranchStore;
 import com.fcourt.facility.persistence.CourtStore;
@@ -212,6 +213,43 @@ public class TemplateService {
                     request.price().setScale(2, java.math.RoundingMode.HALF_UP));
             events.branchChanged(branchId);
             return slot;
+        });
+    }
+
+    /**
+     * Edits a template in place (same id). Day, times and price are optional; a time change must keep the
+     * 30-minute length, stay inside branch hours and not overlap another live template of the court.
+     * Prices of bookings already made are stored on the booking, so they are untouched.
+     */
+    public TemplateSlot update(long adminId, long templateId, UpdateTemplateRequest request) {
+        if (request.dayOfWeek() == null && request.startTime() == null && request.endTime() == null
+                && request.price() == null) {
+            throw badRequest("Provide at least one of dayOfWeek, startTime, endTime, price");
+        }
+        long[] owner = templates.findOwner(templateId).filter(row -> row[2] == adminId).orElseThrow(TemplateService::notFound);
+        long courtId = owner[0];
+        long branchId = owner[1];
+        return tx.execute(status -> {
+            if (!branches.lockOwned(branchId, adminId)) throw notFound();
+            templates.findOwner(templateId).filter(row -> row[2] == adminId).orElseThrow(TemplateService::notFound);
+            TemplateSlot current = templates.findLive(templateId).orElseThrow(TemplateService::notFound);
+            OwnedCourt court = courtService.owned(adminId, courtId);
+            int day = request.dayOfWeek() == null ? current.dayOfWeek() : request.dayOfWeek();
+            LocalTime start = request.startTime() == null ? current.startTime() : request.startTime();
+            LocalTime end = request.endTime() == null ? current.endTime() : request.endTime();
+            BigDecimal price = request.price() == null ? current.price()
+                    : request.price().setScale(2, java.math.RoundingMode.HALF_UP);
+            if (!end.isAfter(start)) throw badRequest("endTime must be after startTime");
+            if (Duration.between(start, end).toMinutes() != SlotTemplateEngine.SLOT_MINUTES || start.getSecond() != 0) {
+                throw badRequest("A template slot must last exactly " + SlotTemplateEngine.SLOT_MINUTES + " minutes");
+            }
+            requireWithinHours(branch(court), start, end);
+            if (templates.overlapsOther(templateId, courtId, day, start, end)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Slot overlaps an existing template slot");
+            }
+            TemplateSlot updated = templates.update(templateId, day, start, end, price);
+            events.branchChanged(branchId);
+            return updated;
         });
     }
 
