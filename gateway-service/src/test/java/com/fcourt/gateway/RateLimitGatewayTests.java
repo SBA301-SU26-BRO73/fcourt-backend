@@ -46,7 +46,7 @@ import reactor.core.publisher.Mono;
 
 /**
  * Whole gateway with the rate limiter switched on and an in-memory token counter in place of Redis
- * (limits: guest-lookup 5, auth 10, general 1000). Each test uses its own client IP.
+ * (limits: guest-lookup 5, guest-booking 3, auth 10, general 1000). Each test uses its own client IP.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {"gateway.rate-limit.enabled=true", "gateway.rate-limit.trust-forwarded-for=true"})
@@ -55,7 +55,7 @@ import reactor.core.publisher.Mono;
 @Import(RateLimitGatewayTests.InMemoryBackend.class)
 class RateLimitGatewayTests {
     static final String ISSUER = "http://auth.test";
-    static final Map<String, Integer> LIMITS = Map.of("guest-lookup", 5, "auth", 10, "general", 1000);
+    static final Map<String, Integer> LIMITS = Map.of("guest-lookup", 5, "guest-booking", 3, "auth", 10, "general", 1000);
     static final Map<String, AtomicInteger> COUNTS = new ConcurrentHashMap<>();
     static final List<String> KEYS = new CopyOnWriteArrayList<>();
 
@@ -140,6 +140,24 @@ class RateLimitGatewayTests {
                 .jsonPath("$.title").isEqualTo("Too Many Requests").jsonPath("$.detail").exists();
         // Another client is not affected.
         post("/api/public/bookings/lookup", "203.0.113.2").expectStatus().isOk();
+    }
+
+    @Test
+    void holdAndBookingCreationAreLimitedPerClientForGuestsAndPerUserWhenSignedIn() throws JOSEException {
+        String ip = "203.0.113.5";
+        // One budget for hold + create: a guest flow is one of each.
+        post("/api/bookings/hold-slots", ip).expectStatus().isOk();
+        post("/api/bookings", ip).expectStatus().isOk();
+        post("/api/bookings", ip).expectStatus().isOk();
+        post("/api/bookings", ip).expectStatus().isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        post("/api/bookings/hold-slots", ip).expectStatus().isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        // Reads of a booking are not part of the strict policy.
+        client.get().uri("/api/bookings/42").header("X-Forwarded-For", ip).exchange().expectStatus().isOk();
+        // A signed-in customer behind the same IP has their own budget, keyed by token subject.
+        KEYS.clear();
+        client.post().uri("/api/bookings").header("X-Forwarded-For", ip)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token("77")).exchange().expectStatus().isOk();
+        assertThat(KEYS).contains("guest-booking:user:77");
     }
 
     @Test

@@ -42,6 +42,29 @@ spring:
                   args:
                     rate-limiter: "#{@guestLookupRateLimiter}"
                     key-resolver: "#{@guestLookupKeyResolver}"
+            # Guests may now hold and book without a token: cap creation per client (token subject when signed in, else IP).
+            - id: booking-create-limited
+              uri: lb://booking-service
+              order: 5
+              predicates:
+                - Path=/api/bookings
+                - Method=POST
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    rate-limiter: "#{@guestBookingRateLimiter}"
+                    key-resolver: "#{@guestBookingKeyResolver}"
+            - id: slot-hold-create-limited
+              uri: lb://slot-hold-engine
+              order: 5
+              predicates:
+                - Path=/api/bookings/hold-slots
+                - Method=POST
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    rate-limiter: "#{@guestBookingRateLimiter}"
+                    key-resolver: "#{@guestBookingKeyResolver}"
             - id: auth-service-sensitive-limited
               uri: lb://auth-service
               order: 5
@@ -183,7 +206,8 @@ fcourt:
         # slot-hold-engine: guest hold and release
         - ANY /api/bookings/hold-slots/**
         - ANY /api/public/bookings/**
-        # booking-service: guest booking view (X-Hold-Token) and the realtime slot socket
+        # booking-service: guest booking creation (hold token + phone sealed in the hold), then view with X-Hold-Token
+        - POST /api/bookings
         - GET /api/bookings/*
         - ANY /ws-fcourt/**
         # payment-service: customer and guest authorization is delegated to booking per request
@@ -227,6 +251,11 @@ gateway:
       requests: ${RATE_LIMIT_LOOKUP_REQUESTS:5}
       window-seconds: ${RATE_LIMIT_LOOKUP_WINDOW_SECONDS:60}
       burst: ${RATE_LIMIT_LOOKUP_BURST:5}
+    # Creating a hold or a booking (guests included): per token subject, else per IP.
+    guest-booking:
+      requests: ${RATE_LIMIT_GUEST_BOOKING_REQUESTS:20}
+      window-seconds: ${RATE_LIMIT_GUEST_BOOKING_WINDOW_SECONDS:60}
+      burst: ${RATE_LIMIT_GUEST_BOOKING_BURST:20}
     auth:
       requests: ${RATE_LIMIT_AUTH_REQUESTS:10}
       window-seconds: ${RATE_LIMIT_AUTH_WINDOW_SECONDS:60}

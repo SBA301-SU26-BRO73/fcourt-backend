@@ -131,6 +131,7 @@ class GatewaySecurityTests {
                 of(HttpMethod.GET, "/api/subscription-plans/all"),
                 of(HttpMethod.POST, "/api/subscriptions/payment-webhook"),
                 of(HttpMethod.POST, "/api/bookings/hold-slots"),
+                of(HttpMethod.POST, "/api/bookings"),
                 of(HttpMethod.DELETE, "/api/bookings/hold-slots/6f1a"),
                 of(HttpMethod.POST, "/api/public/bookings/lookup"), of(HttpMethod.GET, "/api/bookings/42"), of(HttpMethod.GET, "/api/payments/42/status"),
                 of(HttpMethod.GET, "/api/payments/checkout-info/42"),
@@ -153,7 +154,7 @@ class GatewaySecurityTests {
     static Stream<org.junit.jupiter.params.provider.Arguments> protectedRequests() {
         return Stream.of(
                 of(HttpMethod.GET, "/api/auth/me"), of(HttpMethod.PUT, "/api/auth/profile"),
-                of(HttpMethod.POST, "/api/bookings"), of(HttpMethod.GET, "/api/bookings/my"),
+                of(HttpMethod.GET, "/api/bookings/my"),
                 of(HttpMethod.POST, "/api/bookings/42/cancel"), of(HttpMethod.GET, "/api/admin/bookings"),
                 of(HttpMethod.GET, "/api/payments/my-transactions"),
                 of(HttpMethod.POST, "/api/payments/42/confirm-free"), of(HttpMethod.POST, "/api/refunds/request"),

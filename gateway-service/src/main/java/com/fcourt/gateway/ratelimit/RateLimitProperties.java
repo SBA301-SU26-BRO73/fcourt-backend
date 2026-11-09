@@ -17,11 +17,13 @@ public record RateLimitProperties(
         @DefaultValue("300") long redisTimeoutMs,
         Policy general,
         Policy guestLookup,
+        Policy guestBooking,
         Policy auth) {
 
     public RateLimitProperties {
         general = general != null ? general : new Policy(50, 1, 100);
         guestLookup = guestLookup != null ? guestLookup : new Policy(5, 60, 5);
+        guestBooking = guestBooking != null ? guestBooking : new Policy(20, 60, 20);
         auth = auth != null ? auth : new Policy(10, 60, 10);
     }
 
