@@ -24,7 +24,7 @@ class HoldConfiguration {
     }
 
     @Bean
-    RestClient discoveryClient(@Value("${hold.discovery-url}") String url) {
+    RestClient discoveryRestClient(@Value("${hold.discovery-url}") String url) {
         var factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(2));
         factory.setReadTimeout(Duration.ofSeconds(2));

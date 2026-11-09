@@ -20,8 +20,8 @@ class DiscoveryGateway {
     private final RestClient client;
     private final Clock clock;
 
-    DiscoveryGateway(RestClient discoveryClient, Clock clock) {
-        this.client = discoveryClient;
+    DiscoveryGateway(RestClient discoveryRestClient, Clock clock) {
+        this.client = discoveryRestClient;
         this.clock = clock;
     }
 
