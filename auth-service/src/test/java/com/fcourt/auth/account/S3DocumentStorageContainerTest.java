@@ -48,7 +48,7 @@ class S3DocumentStorageContainerTest {
                 .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create(S3.getUserName(), S3.getPassword()))).build();
         admin.createBucket(CreateBucketRequest.builder().bucket(BUCKET).build());
         storage = new DocumentStorageConfiguration().documentStorage(BUCKET, REGION,
-                URI.create(S3.getS3URL()).toString(), false, Duration.ofMinutes(10), "");
+                URI.create(S3.getS3URL()).toString(), "", false, Duration.ofMinutes(10), "");
     }
 
     @AfterAll
