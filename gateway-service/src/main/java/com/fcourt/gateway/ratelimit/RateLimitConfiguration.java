@@ -29,6 +29,12 @@ public class RateLimitConfiguration {
     }
 
     @Bean
+    PolicyRateLimiter guestBookingRateLimiter(RateLimitProperties p, ObjectProvider<RateLimitBackend> backend) {
+        return new PolicyRateLimiter("guest-booking", p.guestBooking(), p.enabled(), p.redisTimeoutMs(),
+                backend.getIfAvailable());
+    }
+
+    @Bean
     PolicyRateLimiter authRateLimiter(RateLimitProperties p, ObjectProvider<RateLimitBackend> backend) {
         return new PolicyRateLimiter("auth", p.auth(), p.enabled(), p.redisTimeoutMs(), backend.getIfAvailable());
     }
@@ -43,6 +49,12 @@ public class RateLimitConfiguration {
     @Bean
     KeyResolver guestLookupKeyResolver(RateLimitProperties p) {
         return new ClientKeyResolver("guest-lookup", false, p.trustForwardedFor());
+    }
+
+    /** Token subject when signed in, else client IP: a school Wi-Fi NAT must not block signed-in students. */
+    @Bean
+    KeyResolver guestBookingKeyResolver(RateLimitProperties p) {
+        return new ClientKeyResolver("guest-booking", true, p.trustForwardedFor());
     }
 
     @Bean
