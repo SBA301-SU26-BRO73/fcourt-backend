@@ -1,6 +1,6 @@
 # FCourt: chay ca he thong local bang Docker Compose. Huong dan day du: docs/docker-compose.md
 #
-#   docker compose --profile infra up -d     # chi ha tang: postgres, redis, kafka, localstack
+#   docker compose --profile infra up -d     # chi ha tang: postgres, redis, kafka, s3 (MinIO)
 #   docker compose --profile core up -d      # infra + eureka + gateway + auth, facility, booking, slot-hold, payment
 #   docker compose --profile all up -d       # toan bo 12 service + mailpit
 #
@@ -20,6 +20,8 @@ x-env: &env
   REDIS_HOST: redis
   REDIS_PORT: "6379"
   REDIS_ADDRESS: redis://redis:6379
+  SPRING_DATA_REDIS_HOST: redis
+  SPRING_DATA_REDIS_PORT: "6379"
   # JWT: auth-service ky (khoa tam neu AUTH_JWT_PRIVATE_KEY de trong), cac service con lai kiem bang JWKS.
   AUTH_JWK_SET_URI: http://auth-service:8081/.well-known/jwks.json
   AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-http://localhost:8081}
@@ -40,14 +42,14 @@ x-env: &env
   HOLD_GRPC_TARGET: slot-hold-engine:9087
   BOOKING_GRPC_TARGET: booking-service:9088
   STAFF_GRPC_PLAINTEXT: "true"
-  # S3 (LocalStack), xem docs/storage-s3.md. LocalStack nhan moi credential.
+  # S3 (MinIO), xem docs/storage-s3.md. Credential test / testtest1234.
   STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET:-fcourt-local}
   STORAGE_S3_REGION: ap-southeast-1
-  STORAGE_S3_ENDPOINT: http://localstack:4566
+  STORAGE_S3_ENDPOINT: http://s3:9000
   STORAGE_S3_PATH_STYLE: "true"
-  STORAGE_PUBLIC_BASE_URL: ${STORAGE_PUBLIC_BASE_URL:-http://localhost:4566/fcourt-local}
+  STORAGE_PUBLIC_BASE_URL: ${STORAGE_PUBLIC_BASE_URL:-http://localhost:9000/fcourt-local}
   AWS_ACCESS_KEY_ID: test
-  AWS_SECRET_ACCESS_KEY: test
+  AWS_SECRET_ACCESS_KEY: testtest1234
   AWS_REGION: ap-southeast-1
   # Token noi bo giua cac service: gia tri DEV, chi dung local. Doi trong .env neu muon.
   BOOKING_HOLD_SERVICE_TOKEN: ${BOOKING_HOLD_SERVICE_TOKEN:-dev-booking-hold-token-0123456789abcdef}
@@ -70,10 +72,10 @@ x-app: &app
     redis: {condition: service_healthy}
     kafka: {condition: service_healthy}
     eureka-server: {condition: service_healthy}
-    localstack: {condition: service_started}
+    s3: {condition: service_started}
   healthcheck: &app-health
     # Anh eclipse-temurin khong chac co curl; dung bash /dev/tcp + HTTP/1.0 tren cong SERVER_PORT cua container.
-    test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/$${SERVER_PORT} && printf 'GET /actuator/health HTTP/1.0\\r\\n\\r\\n' >&3 && head -n1 <&3 | grep -q ' 200'"]
+    test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/$${SERVER_PORT} && printf 'GET /actuator/health HTTP/1.0\\r\\n\\r\\n' >&3 && head -n1 <&3 | grep -q ' 200'"]
     interval: 10s
     timeout: 5s
     retries: 18
@@ -151,25 +153,32 @@ services:
       start_period: 20s
     restart: unless-stopped
 
-  # Local S3, khong can tai khoan AWS. Bucket tao boi docker/localstack/init-s3.sh.
-  localstack:
-    # Pinned: newer LocalStack images require an auth token.
-    image: localstack/localstack:3.8.1
+  # S3 local (MinIO, khong can tai khoan AWS). LocalStack 3.8.1 khong chay duoc tren Docker Desktop cua may nay;
+  # cung anh MinIO (Chainguard, khong co shell) voi Testcontainers cua backend. Bucket tao boi s3-init (mkdir trong volume).
+  s3-init:
+    image: busybox:1.37
+    profiles: [infra, core, all]
+    command: ["sh", "-c", "mkdir -p /data/${STORAGE_S3_BUCKET:-fcourt-local} && chmod -R 777 /data"]
+    volumes:
+      - fcourt_s3_data:/data
+    restart: "no"
+
+  s3:
+    image: cgr.dev/chainguard/minio:latest
     profiles: [infra, core, all]
     networks: [fcourt]
-    mem_limit: 768m
+    mem_limit: 256m
+    depends_on:
+      s3-init: {condition: service_completed_successfully}
     environment:
-      SERVICES: s3
-      STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET:-fcourt-local}
+      MINIO_ROOT_USER: test
+      MINIO_ROOT_PASSWORD: testtest1234
+    command: ["server", "/data", "--console-address", ":9001"]
     ports:
-      - "${LOCALSTACK_PORT:-4566}:4566"
+      - "${S3_PORT:-9000}:9000"
+      - "${S3_CONSOLE_PORT:-9001}:9001"
     volumes:
-      - ./docker/localstack/init-s3.sh:/etc/localstack/init/ready.d/01-init-s3.sh:ro
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:4566/_localstack/health >/dev/null"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+      - fcourt_s3_data:/data
     restart: unless-stopped
 
   # SMTP gia cho notification-service: web UI http://localhost:8025. Chi chay voi profile all hoac mail.
@@ -218,6 +227,9 @@ services:
       # Origin cua web dev (Vite 5173) va web build (3000) duoc goi gateway truc tiep (CORS).
       GATEWAY_ALLOWED_ORIGINS: ${GATEWAY_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000}
       RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+      # Gioi han dang nhap mac dinh 10 lan/phut/IP: qua chat khi test nhieu role tu mot may.
+      RATE_LIMIT_AUTH_REQUESTS: ${RATE_LIMIT_AUTH_REQUESTS:-120}
+      RATE_LIMIT_AUTH_BURST: ${RATE_LIMIT_AUTH_BURST:-120}
     ports:
       - "${GATEWAY_PORT:-8080}:8080"
 
@@ -381,6 +393,7 @@ services:
 volumes:
   fcourt_postgres_data:
   fcourt_kafka_data:
+  fcourt_s3_data:
 
 networks:
   fcourt:

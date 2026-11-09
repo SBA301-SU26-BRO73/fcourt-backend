@@ -28,6 +28,12 @@ SQL
 
 json_field() { sed -n "s/.*\"$1\":\"\([^\"]*\)\".*/\1/p" | head -1; }
 
+echo ">> Cho gateway thay auth-service trong Eureka (toi da 90s)"
+for i in $(seq 1 30); do
+  c=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$GATEWAY/api/auth/login" -H "Content-Type: application/json" -d "{}" || true)
+  [ "$c" = 400 ] && break; sleep 3
+done
+
 echo ">> 2. Dang ky customer moi qua API"
 code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$GATEWAY/api/auth/register/customer" \
   -H 'Content-Type: application/json' \
@@ -40,7 +46,7 @@ png=$(mktemp --suffix=.png)
 printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\xf8\xff\xff?\x00\x05\xfe\x02\xfe\xa7\x9a\xa0\xa0\x00\x00\x00\x00IEND\xaeB`\x82' > "$png"
 code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$GATEWAY/api/auth/register/court-owner" \
   -F fullName='Chu San Local' -F email=owner.local@fcourt.test -F phone=0912000001 -F "password=$PASSWORD" \
-  -F "legalDocuments=@$png;type=image/png")
+  -F "legalDocuments=@$(cygpath -m "$png" 2>/dev/null || echo "$png");type=image/png" || true)
 rm -f "$png"
 echo "   register court-owner -> HTTP $code (201 moi tao, 409 da co)"
 
@@ -52,7 +58,7 @@ login() { # email -> access token
 SA=$(login superadmin@demo.com)
 [ -n "$SA" ] || { echo "Khong dang nhap duoc superadmin@demo.com (auth chua san sang?)"; exit 1; }
 for id in $(curl -s -H "Authorization: Bearer $SA" "$GATEWAY/api/super-admin/court-admins/pending" \
-            | grep -o '"id":[0-9]*' | cut -d: -f2); do
+            | grep -oE '"id":[0-9]*,"(email|fullName)"' | grep -o '[0-9]*'); do
   c=$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H "Authorization: Bearer $SA" "$GATEWAY/api/super-admin/court-admins/$id/approve")
   echo "   approve pending owner id=$id -> HTTP $c"
 done
