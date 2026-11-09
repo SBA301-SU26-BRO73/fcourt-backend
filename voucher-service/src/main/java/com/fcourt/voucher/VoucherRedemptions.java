@@ -33,6 +33,10 @@ class VoucherRedemptions {
     void release(long bookingId) {
         jdbc.update("UPDATE voucher_redemptions SET status='RELEASED',updated_at=now() WHERE booking_id=? AND status='RESERVED'", bookingId);
     }
+    /** Explicit user removal: the row is deleted (not RELEASED) so the booking can apply a voucher again; booking_id is UNIQUE. */
+    int removeReserved(long bookingId) {
+        return jdbc.update("DELETE FROM voucher_redemptions WHERE booking_id=? AND status='RESERVED'", bookingId);
+    }
     void lockVoucher(long voucherId) {
         jdbc.queryForList("SELECT id FROM vouchers WHERE id=? FOR UPDATE", voucherId);
     }

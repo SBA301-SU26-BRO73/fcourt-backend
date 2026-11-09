@@ -21,6 +21,15 @@ class VoucherApplyController {
                 application.voucherId(), application.bookingId(), application.originalAmount(), application.discountAmount(),
                 application.finalAmount(), application.expiresAt()));
     }
+    @PostMapping("/api/vouchers/validate")
+    ResponseEntity<VoucherApplyService.Validation> validate(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody VoucherValidateRequest request) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.validate(request, jwt));
+    }
+
+    @DeleteMapping("/api/vouchers/apply/{bookingId}")
+    ResponseEntity<VoucherApplyService.Removal> remove(@AuthenticationPrincipal Jwt jwt, @PathVariable long bookingId) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.remove(bookingId, jwt));
+    }
     record Result(UUID applicationId, long voucherId, long bookingId, BigDecimal originalAmount,
             BigDecimal discountAmount, BigDecimal finalAmount, Instant expiresAt) {}
 }
