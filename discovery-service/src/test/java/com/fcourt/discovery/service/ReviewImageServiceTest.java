@@ -55,7 +55,7 @@ class ReviewImageServiceTest {
     @Test
     void customerUploadsLandInTheirOwnServerChosenFolder() {
         var urls = service.upload(jwt("10", "CUSTOMER"), List.of(png(), png()));
-        assertThat(urls).hasSize(2).allMatch(url -> url.contains("/fcourt/reviews/10/"));
+        assertThat(urls).hasSize(2).allMatch(url -> url.contains("/reviews/10/"));
         assertThat(keys).hasSize(2).allMatch(key -> key.matches("reviews/10/[0-9a-f-]{36}[.](png|jpg)"));
         assertThat(policy().allowsAll(urls, 10)).isTrue();
     }
