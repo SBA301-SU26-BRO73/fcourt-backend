@@ -10,7 +10,7 @@ import java.time.Duration;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.containers.localstack.LocalStackContainer;
+import org.testcontainers.containers.MinIOContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -23,16 +23,17 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
-/** The Spring configuration builds the adapter exactly as in a local run, against a LocalStack S3 (no AWS account). */
+/** The Spring configuration builds the adapter exactly as in a local run, against a MinIO S3 (no AWS account). */
 @Testcontainers
-class S3DocumentStorageLocalStackTest {
+class S3DocumentStorageContainerTest {
     static final String BUCKET = "fcourt-auth-test";
+    static final String REGION = "us-east-1";
     static final byte[] PDF = "%PDF-1.4 sample".getBytes();
     static final byte[] PNG = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 1, 2};
 
     @Container
-    static final LocalStackContainer LOCALSTACK =
-            new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.8.1")).withServices(LocalStackContainer.Service.S3);
+    static final MinIOContainer S3 =
+            new MinIOContainer(DockerImageName.parse("cgr.dev/chainguard/minio:latest").asCompatibleSubstituteFor("minio/minio"));
 
     static S3Client admin;
     static DocumentStorage storage;
@@ -40,14 +41,14 @@ class S3DocumentStorageLocalStackTest {
     @BeforeAll
     static void setUp() {
         // The default credential chain reads these; LocalStack accepts any value.
-        System.setProperty("aws.accessKeyId", "test");
-        System.setProperty("aws.secretAccessKey", "test");
-        admin = S3Client.builder().endpointOverride(LOCALSTACK.getEndpoint()).region(Region.of(LOCALSTACK.getRegion()))
+        System.setProperty("aws.accessKeyId", S3.getUserName());
+        System.setProperty("aws.secretAccessKey", S3.getPassword());
+        admin = S3Client.builder().endpointOverride(URI.create(S3.getS3URL())).region(Region.of(REGION))
                 .forcePathStyle(true)
-                .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create("test", "test"))).build();
+                .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create(S3.getUserName(), S3.getPassword()))).build();
         admin.createBucket(CreateBucketRequest.builder().bucket(BUCKET).build());
-        storage = new DocumentStorageConfiguration().documentStorage(BUCKET, LOCALSTACK.getRegion(),
-                LOCALSTACK.getEndpoint().toString(), false, Duration.ofMinutes(10), "");
+        storage = new DocumentStorageConfiguration().documentStorage(BUCKET, REGION,
+                URI.create(S3.getS3URL()).toString(), false, Duration.ofMinutes(10), "");
     }
 
     @AfterAll
@@ -85,6 +86,6 @@ class S3DocumentStorageLocalStackTest {
         var head = admin.headObject(HeadObjectRequest.builder().bucket(BUCKET).key(key).build());
         assertThat(head.contentType()).isEqualTo("image/png");
         assertThat(head.cacheControl()).isEqualTo(S3DocumentStorage.PUBLIC_CACHE);
-        assertThat(storage.publicUrl(key)).isEqualTo(LOCALSTACK.getEndpoint() + "/" + BUCKET + "/" + key);
+        assertThat(storage.publicUrl(key)).isEqualTo(URI.create(S3.getS3URL()) + "/" + BUCKET + "/" + key);
     }
 }
