@@ -69,7 +69,8 @@ jobs:
 
   build:
     needs: detect
-    if: needs.detect.outputs.services != '[]'
+    # Skipped until the ECR push role exists (repository variable AWS_ECR_PUSH_ROLE_ARN).
+    if: needs.detect.outputs.services != '[]' && vars.AWS_ECR_PUSH_ROLE_ARN != ''
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
