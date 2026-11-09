@@ -1,25 +1,163 @@
+# FCourt: chay ca he thong local bang Docker Compose. Huong dan day du: docs/docker-compose.md
+#
+#   docker compose --profile infra up -d     # chi ha tang: postgres, redis, kafka, localstack
+#   docker compose --profile core up -d      # infra + eureka + gateway + auth, facility, booking, slot-hold, payment
+#   docker compose --profile all up -d       # toan bo 12 service + mailpit
+#
+# Khong dat profile thi khong service nao chay (tranh vo tinh khoi dong 14 JVM tren may yeu).
+
+x-java: &java
+  # Heap tinh theo mem_limit cua container (55%); SerialGC + C1 de tiet kiem RAM/CPU khi chay local.
+  JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=55 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xss512k -XX:ReservedCodeCacheSize=64m -XX:MaxMetaspaceSize=192m"
+
+x-env: &env
+  <<: *java
+  # Service tim nhau qua Eureka (lb://<ten>), tu dang ky bang IP. Service nao chua la Eureka client thi bo qua cac bien nay.
+  EUREKA_ENABLED: "true"
+  EUREKA_URL: http://eureka-server:8761/eureka
+  EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+  KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  REDIS_ADDRESS: redis://redis:6379
+  # JWT: auth-service ky (khoa tam neu AUTH_JWT_PRIVATE_KEY de trong), cac service con lai kiem bang JWKS.
+  AUTH_JWK_SET_URI: http://auth-service:8081/.well-known/jwks.json
+  AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-http://localhost:8081}
+  AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-fcourt}
+  # URL goi truc tiep giua cac service (mang noi bo cua Compose).
+  AUTH_URL: http://auth-service:8081
+  AUTH_SERVICE_URL: http://auth-service:8081
+  SUBSCRIPTION_URL: http://subscription-service:8082
+  SUBSCRIPTION_BASE_URL: http://subscription-service:8082
+  FACILITY_URL: http://facility-service:8083
+  DISCOVERY_URL: http://discovery-service:8085
+  DISCOVERY_BASE_URL: http://discovery-service:8085
+  HOLD_URL: http://slot-hold-engine:8087
+  BOOKING_URL: http://booking-service:8088
+  PAYMENT_URL: http://payment-service:8089
+  STAFF_URL: http://staff-operations-service:8090
+  POS_URL: http://pos-retail-service:8092
+  HOLD_GRPC_TARGET: slot-hold-engine:9087
+  BOOKING_GRPC_TARGET: booking-service:9088
+  STAFF_GRPC_PLAINTEXT: "true"
+  # S3 (LocalStack), xem docs/storage-s3.md. LocalStack nhan moi credential.
+  STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET:-fcourt-local}
+  STORAGE_S3_REGION: ap-southeast-1
+  STORAGE_S3_ENDPOINT: http://localstack:4566
+  STORAGE_S3_PATH_STYLE: "true"
+  STORAGE_PUBLIC_BASE_URL: ${STORAGE_PUBLIC_BASE_URL:-http://localhost:4566/fcourt-local}
+  AWS_ACCESS_KEY_ID: test
+  AWS_SECRET_ACCESS_KEY: test
+  AWS_REGION: ap-southeast-1
+  # Token noi bo giua cac service: gia tri DEV, chi dung local. Doi trong .env neu muon.
+  BOOKING_HOLD_SERVICE_TOKEN: ${BOOKING_HOLD_SERVICE_TOKEN:-dev-booking-hold-token-0123456789abcdef}
+  BOOKING_INTEGRATION_TOKEN: ${BOOKING_INTEGRATION_TOKEN:-dev-booking-integration-token-0123456789}
+  PAYMENT_BOOKING_SERVICE_TOKEN: ${PAYMENT_BOOKING_SERVICE_TOKEN:-dev-payment-booking-token-0123456789ab}
+  STAFF_BOOKING_SERVICE_TOKEN: ${STAFF_BOOKING_SERVICE_TOKEN:-dev-staff-booking-token-0123456789abcd}
+  POS_BOOKING_SERVICE_TOKEN: ${POS_BOOKING_SERVICE_TOKEN:-dev-pos-booking-token-0123456789abcdef}
+  POS_SETTLEMENT_SERVICE_TOKEN: ${POS_SETTLEMENT_SERVICE_TOKEN:-dev-pos-settlement-token-0123456789ab}
+  FACILITY_RESERVATION_TOKEN: ${FACILITY_RESERVATION_TOKEN:-dev-facility-reservation-token-0123456789}
+  DISCOVERY_INTERNAL_SLOT_TOKEN: ${DISCOVERY_INTERNAL_SLOT_TOKEN:-dev-discovery-slot-token-0123456789abc}
+  STAFF_OFFLINE_SIGNING_KEY: ${STAFF_OFFLINE_SIGNING_KEY:-dev-staff-offline-signing-key-0123456789ab}
+  SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: "5"
+
+x-app: &app
+  restart: on-failure:5
+  mem_limit: ${SERVICE_MEM_LIMIT:-512m}
+  networks: [fcourt]
+  depends_on: &app-deps
+    postgres: {condition: service_healthy}
+    redis: {condition: service_healthy}
+    kafka: {condition: service_healthy}
+    eureka-server: {condition: service_healthy}
+    localstack: {condition: service_started}
+  healthcheck: &app-health
+    # Anh eclipse-temurin khong chac co curl; dung bash /dev/tcp + HTTP/1.0 tren cong SERVER_PORT cua container.
+    test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/$${SERVER_PORT} && printf 'GET /actuator/health HTTP/1.0\\r\\n\\r\\n' >&3 && head -n1 <&3 | grep -q ' 200'"]
+    interval: 10s
+    timeout: 5s
+    retries: 18
+    start_period: 40s
+
 services:
+  # ---------------------------------------------------------------- ha tang (profile infra, core, all)
   postgres:
     image: postgres:16-alpine
-    container_name: fcourt_postgres
+    profiles: [infra, core, all]
+    networks: [fcourt]
+    mem_limit: 384m
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    command: ["postgres", "-c", "max_connections=150", "-c", "shared_buffers=64MB"]
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - fcourt_postgres_data:/var/lib/postgresql/data
-      - .:/repo:ro
       - ./docker/postgres/init-databases.sh:/docker-entrypoint-initdb.d/01-init-databases.sh:ro
+      - ./docker/postgres/services.txt:/etc/fcourt/services.txt:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     restart: unless-stopped
 
-  # Local S3 for file/image storage (no AWS account). Start with `docker compose up -d localstack`.
-  # Run a service against it with STORAGE_S3_BUCKET=fcourt-local STORAGE_S3_ENDPOINT=http://localhost:4566
-  # AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test (LocalStack accepts any credentials).
+  redis:
+    image: redis:7-alpine
+    profiles: [infra, core, all]
+    networks: [fcourt]
+    mem_limit: 96m
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "64mb"]
+    ports:
+      - "${REDIS_HOST_PORT:-6387}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # Kafka mot node (KRaft). Trong mang Compose dung kafka:9092; tu may host dung localhost:${KAFKA_HOST_PORT:-9094}.
+  kafka:
+    image: apache/kafka:3.9.1
+    profiles: [infra, core, all]
+    networks: [fcourt]
+    mem_limit: 640m
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:${KAFKA_HOST_PORT:-9094}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_HEAP_OPTS: "-Xms256m -Xmx384m"
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    ports:
+      - "${KAFKA_HOST_PORT:-9094}:9094"
+    volumes:
+      - fcourt_kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 15s
+      retries: 15
+      start_period: 20s
+    restart: unless-stopped
+
+  # Local S3, khong can tai khoan AWS. Bucket tao boi docker/localstack/init-s3.sh.
   localstack:
     # Pinned: newer LocalStack images require an auth token.
     image: localstack/localstack:3.8.1
-    container_name: fcourt_localstack
+    profiles: [infra, core, all]
+    networks: [fcourt]
+    mem_limit: 768m
     environment:
       SERVICES: s3
       STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET:-fcourt-local}
@@ -27,7 +165,221 @@ services:
       - "${LOCALSTACK_PORT:-4566}:4566"
     volumes:
       - ./docker/localstack/init-s3.sh:/etc/localstack/init/ready.d/01-init-s3.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4566/_localstack/health >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
+
+  # SMTP gia cho notification-service: web UI http://localhost:8025. Chi chay voi profile all hoac mail.
+  mailpit:
+    image: axllent/mailpit:latest
+    profiles: [all, mail]
+    networks: [fcourt]
+    mem_limit: 64m
+    ports:
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------- eureka + gateway (profile core, all)
+  eureka-server:
+    build: ./eureka-server
+    profiles: [core, all]
+    networks: [fcourt]
+    restart: on-failure:5
+    mem_limit: 384m
+    environment:
+      <<: *java
+      SERVER_PORT: "8761"
+      EUREKA_HOSTNAME: eureka-server
+    ports:
+      - "${EUREKA_PORT:-8761}:8761"
+    healthcheck:
+      <<: *app-health
+      start_period: 30s
+
+  gateway-service:
+    build: ./gateway-service
+    profiles: [core, all]
+    <<: *app
+    depends_on:
+      redis: {condition: service_healthy}
+      eureka-server: {condition: service_healthy}
+      auth-service: {condition: service_healthy}
+      facility-service: {condition: service_healthy}
+      booking-service: {condition: service_healthy}
+      slot-hold-engine: {condition: service_healthy}
+      payment-service: {condition: service_healthy}
+    environment:
+      <<: *env
+      SERVER_PORT: "8080"
+      GATEWAY_ALLOWED_ORIGINS: ${GATEWAY_ALLOWED_ORIGINS:-}
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+
+  # ---------------------------------------------------------------- service loi (profile core, all)
+  auth-service:
+    build: ./auth-service
+    profiles: [core, all]
+    <<: *app
+    environment:
+      <<: *env
+      SERVER_PORT: "8081"
+      AUTH_DATABASE_URL: jdbc:postgresql://postgres:5432/auth_db
+      AUTH_DATABASE_USER: ${POSTGRES_USER:-postgres}
+      AUTH_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      # De trong: auth tao khoa ky tam (token mat hieu luc khi restart auth). Dat PKCS8 PEM de co dinh.
+      AUTH_JWT_PRIVATE_KEY: ${AUTH_JWT_PRIVATE_KEY:-}
+      AUTH_JWT_KEY_ID: ${AUTH_JWT_KEY_ID:-}
+      AUTH_GOOGLE_CLIENT_ID: ${AUTH_GOOGLE_CLIENT_ID:-}
+
+  facility-service:
+    build: ./facility-service
+    profiles: [core, all]
+    <<: *app
+    environment:
+      <<: *env
+      SERVER_PORT: "8083"
+      FACILITY_DB_URL: jdbc:postgresql://postgres:5432/facility_db
+      FACILITY_DB_USER: ${POSTGRES_USER:-postgres}
+      FACILITY_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+
+  booking-service:
+    build: ./booking-service
+    profiles: [core, all]
+    <<: *app
+    environment:
+      <<: *env
+      SERVER_PORT: "8088"
+      DATABASE_URL: jdbc:postgresql://postgres:5432/booking_db
+      DATABASE_USER: ${POSTGRES_USER:-postgres}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+
+  slot-hold-engine:
+    build: ./slot-hold-engine
+    profiles: [core, all]
+    <<: *app
+    environment:
+      <<: *env
+      SERVER_PORT: "8087"
+
+  payment-service:
+    build: ./payment-service
+    profiles: [core, all]
+    <<: *app
+    environment:
+      <<: *env
+      SERVER_PORT: "8089"
+      DATABASE_URL: jdbc:postgresql://postgres:5432/payment_db
+      DATABASE_USER: ${POSTGRES_USER:-postgres}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+
+  # ---------------------------------------------------------------- service con lai (chi profile all)
+  subscription-service:
+    build: ./subscription-service
+    profiles: [all]
+    <<: *app
+    environment:
+      <<: *env
+      SERVER_PORT: "8082"
+      SUBSCRIPTION_DATABASE_URL: jdbc:postgresql://postgres:5432/subscription_db
+      SUBSCRIPTION_DATABASE_USER: ${POSTGRES_USER:-postgres}
+      SUBSCRIPTION_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      # PayOS de trong: tinh nang thanh toan goi dang ky tat, phan con lai van chay.
+      PAYOS_CLIENT_ID: ${PAYOS_CLIENT_ID:-}
+      PAYOS_API_KEY: ${PAYOS_API_KEY:-}
+      PAYOS_CHECKSUM_KEY: ${PAYOS_CHECKSUM_KEY:-}
+      PAYOS_RETURN_URL: ${PAYOS_RETURN_URL:-}
+      PAYOS_CANCEL_URL: ${PAYOS_CANCEL_URL:-}
+
+  reporting-service:
+    build: ./reporting-service
+    profiles: [all]
+    <<: *app
+    environment:
+      <<: *env
+      SERVER_PORT: "8084"
+      REPORTING_DB_URL: jdbc:postgresql://postgres:5432/reporting_db
+      REPORTING_DB_USER: ${POSTGRES_USER:-postgres}
+      REPORTING_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+
+  discovery-service:
+    build: ./discovery-service
+    profiles: [all]
+    <<: *app
+    environment:
+      <<: *env
+      SERVER_PORT: "8085"
+      DISCOVERY_DB_URL: jdbc:postgresql://postgres:5432/discovery_db
+      DISCOVERY_DB_USER: ${POSTGRES_USER:-postgres}
+      DISCOVERY_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+
+  voucher-service:
+    build: ./voucher-service
+    profiles: [all]
+    <<: *app
+    environment:
+      <<: *env
+      SERVER_PORT: "8086"
+      DATABASE_URL: jdbc:postgresql://postgres:5432/voucher_db
+      DATABASE_USER: ${POSTGRES_USER:-postgres}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      # gRPC cua voucher mac dinh bind 127.0.0.1 va chua co client nao trong Compose, nen tat.
+      VOUCHER_GRPC_ENABLED: "false"
+
+  staff-operations-service:
+    build: ./staff-operations-service
+    profiles: [all]
+    <<: *app
+    environment:
+      <<: *env
+      SERVER_PORT: "8090"
+      STAFF_DATABASE_URL: jdbc:postgresql://postgres:5432/staff_db
+      STAFF_DATABASE_USER: ${POSTGRES_USER:-postgres}
+      STAFF_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+
+  notification-service:
+    build: ./notification-service
+    profiles: [all]
+    <<: *app
+    depends_on:
+      <<: *app-deps
+      mailpit: {condition: service_started}
+    environment:
+      <<: *env
+      SERVER_PORT: "8091"
+      NOTIFICATION_DATABASE_URL: jdbc:postgresql://postgres:5432/notification_db
+      NOTIFICATION_DATABASE_USER: ${POSTGRES_USER:-postgres}
+      NOTIFICATION_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      # Mail di vao Mailpit (http://localhost:8025). Muon gui mail that: dat NOTIFICATION_SMTP_* trong .env.
+      NOTIFICATION_SMTP_HOST: ${NOTIFICATION_SMTP_HOST:-mailpit}
+      NOTIFICATION_SMTP_PORT: ${NOTIFICATION_SMTP_PORT:-1025}
+      NOTIFICATION_SMTP_USER: ${NOTIFICATION_SMTP_USER:-}
+      NOTIFICATION_SMTP_PASSWORD: ${NOTIFICATION_SMTP_PASSWORD:-}
+      NOTIFICATION_SMTP_AUTH: ${NOTIFICATION_SMTP_AUTH:-false}
+      NOTIFICATION_SMTP_STARTTLS: ${NOTIFICATION_SMTP_STARTTLS:-false}
+      NOTIFICATION_MAIL_FROM: ${NOTIFICATION_MAIL_FROM:-FCOURT <no-reply@fcourt.local>}
+      NOTIFICATION_RESET_PASSWORD_URL: ${NOTIFICATION_RESET_PASSWORD_URL:-http://localhost:3000/reset-password}
+      # Push (SNS/Firebase) de trong = tat.
+      PUSH_REMINDER_ENABLED: "false"
+
+  pos-retail-service:
+    build: ./pos-retail-service
+    profiles: [all]
+    <<: *app
+    environment:
+      <<: *env
+      SERVER_PORT: "8092"
+      POS_DATABASE_URL: jdbc:postgresql://postgres:5432/pos_retail_db
+      POS_DATABASE_USER: ${POSTGRES_USER:-postgres}
+      POS_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
 
 volumes:
   fcourt_postgres_data:
+  fcourt_kafka_data:
+
+networks:
+  fcourt:
