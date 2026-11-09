@@ -1,6 +1,8 @@
 package com.fcourt.auth.superadmin;
 
+import com.fcourt.auth.account.DocumentStorage;
 import com.fcourt.auth.common.ApiException;
+import com.fcourt.auth.superadmin.SuperAdminDtos.DocumentResponse;
 import com.fcourt.auth.outbox.OutboxWriter;
 import com.fcourt.auth.superadmin.SuperAdminDtos.CourtAdminResponse;
 import com.fcourt.auth.superadmin.SuperAdminDtos.UserStatusResponse;
@@ -28,8 +30,11 @@ public class SuperAdminService {
     private final SuperAdminRepository users;
     private final OutboxWriter outbox;
     private final Clock clock;
+    /** Documents are private: the response carries short-lived presigned URLs, never the stored key. */
+    private final DocumentStorage storage;
 
-    SuperAdminService(SuperAdminRepository users, OutboxWriter outbox, Clock clock) {
+    SuperAdminService(SuperAdminRepository users, OutboxWriter outbox, Clock clock, DocumentStorage storage) {
+        this.storage = storage;
         this.users = users;
         this.outbox = outbox;
         this.clock = clock;
@@ -136,7 +141,9 @@ public class SuperAdminService {
         var documents = users.documentsOf(owners.stream().map(UserRecord::id).toList());
         return owners.stream().map(owner -> new CourtAdminResponse(owner.id(), owner.email(), owner.fullName(),
                 owner.phone(), owner.role(), owner.status(), owner.createdAt(),
-                documents.getOrDefault(owner.id(), List.of()))).toList();
+                documents.getOrDefault(owner.id(), List.of()).stream()
+                        .map(document -> new DocumentResponse(document.id(), storage.signedUrl(document.url()),
+                                document.docType())).toList())).toList();
     }
 
     private static boolean isOwner(UserRecord user) {
