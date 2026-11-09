@@ -86,3 +86,12 @@ storage:
     presign-ttl: ${STORAGE_S3_PRESIGN_TTL:10m}
   # Base of public object URLs (avatars), for example the CloudFront domain. Default: endpoint/bucket or the bucket host.
   public-base-url: ${STORAGE_PUBLIC_BASE_URL:}
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
+    path: /swagger-ui.html
+  paths-to-exclude: /api/internal/**,/error
