@@ -39,6 +39,7 @@ Folder nào service không cần thì bỏ qua, không tạo folder rỗng.
 4. **service/**: class `@Service` cụ thể, chứa business logic và transaction. Không tạo cặp interface + impl cho mỗi service. Chỉ dùng interface khi là port có từ 2 implementation trở lên.
 5. **repository/**: Spring Data repository, hoặc class truy cập DB bằng JDBC. Chỉ chứa query, không chứa business rule.
 6. **entity/**: class ánh xạ bảng DB. Các package cũ tên `model/` hoặc `persistence/` đổi về đây. Entity không đi ra ngoài API.
+   Với service dùng JDBC store (không có JPA), `entity/` chứa các row record của store. MapStruct chỉ dùng cho mapping đơn giản field-to-field giữa row record/entity và response DTO; service không có mapping như vậy thì không thêm MapStruct.
 7. **dto/request/, dto/response/**: dùng `record`. Request chứa annotation validation. Response không lộ field nội bộ. Mỗi DTO là một file riêng, không gom nhiều record vào một class "Requests"/"Views".
 8. **enums/**: mọi enum dùng chung giữa các tầng.
 9. **mapper/**: MapStruct, `@Mapper(componentModel = "spring")`, mỗi aggregate một mapper. Chỉ dùng cho mapping field đơn giản entity <-> DTO. Logic mapping phức tạp (tính toán, gọi service khác, điều kiện nghiệp vụ) để trong `service`, không nhét vào mapper.
