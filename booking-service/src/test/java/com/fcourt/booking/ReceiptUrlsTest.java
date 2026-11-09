@@ -17,7 +17,7 @@ class ReceiptUrlsTest {
         System.setProperty("aws.accessKeyId", "AKIATEST");
         System.setProperty("aws.secretAccessKey", "secret");
         try {
-            var urls = new ReceiptUrls("fcourt-test", "ap-southeast-1", "", false, Duration.ofMinutes(10));
+            var urls = new ReceiptUrls("fcourt-test", "ap-southeast-1", "", "", false, Duration.ofMinutes(10));
 
             assertThat(urls.view("receipts/abc.png")).startsWith("https://fcourt-test.s3.ap-southeast-1.amazonaws.com/receipts/abc.png?")
                     .contains("X-Amz-Signature=").contains("X-Amz-Expires=600");
@@ -28,21 +28,35 @@ class ReceiptUrlsTest {
     }
 
     @Test
+    void presignEndpointOverridesTheHostBakedIntoTheUrl() {
+        System.setProperty("aws.accessKeyId", "AKIATEST");
+        System.setProperty("aws.secretAccessKey", "secret");
+        try {
+            var urls = new ReceiptUrls("fcourt-test", "ap-southeast-1", "http://s3:9000", "http://localhost:9000", true, Duration.ofMinutes(10));
+
+            assertThat(urls.view("receipts/abc.png")).startsWith("http://localhost:9000/fcourt-test/receipts/abc.png?");
+        } finally {
+            System.clearProperty("aws.accessKeyId");
+            System.clearProperty("aws.secretAccessKey");
+        }
+    }
+
+    @Test
     void legacyUrlsAndNullPassThrough() {
-        var urls = new ReceiptUrls("fcourt-test", "ap-southeast-1", "", false, Duration.ofMinutes(10));
+        var urls = new ReceiptUrls("fcourt-test", "ap-southeast-1", "", "", false, Duration.ofMinutes(10));
         assertThat(urls.view(LEGACY)).isEqualTo(LEGACY);
         assertThat(urls.view((String) null)).isNull();
     }
 
     @Test
     void withoutABucketTheStoredValueIsReturnedUnchanged() {
-        var urls = new ReceiptUrls("", "ap-southeast-1", "", false, Duration.ofMinutes(10));
+        var urls = new ReceiptUrls("", "ap-southeast-1", "", "", false, Duration.ofMinutes(10));
         assertThat(urls.view("receipts/abc.png")).isEqualTo("receipts/abc.png");
     }
 
     @Test
     void viewsCarryTheSignedUrlForTheReceiptFieldOnly() {
-        var urls = new ReceiptUrls("", "ap-southeast-1", "", false, Duration.ofMinutes(10)) {
+        var urls = new ReceiptUrls("", "ap-southeast-1", "", "", false, Duration.ofMinutes(10)) {
             @Override String view(String stored) { return stored == null ? null : "signed:" + stored; }
         };
         var admin = new AdminBookingView(1, "B1", 2, "Branch", 3, "Court", LocalDate.EPOCH, "A", "0900000000", "CONFIRMED",
