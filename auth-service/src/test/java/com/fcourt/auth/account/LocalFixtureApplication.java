@@ -19,13 +19,23 @@ public class LocalFixtureApplication {
     @Primary
     DocumentStorage fixtureDocuments() {
       return new DocumentStorage() {
-        public String store(byte[] bytes, String folder) {
-          return "https://res.cloudinary.com/local-fixture/image/upload/"
-              + java.util.UUID.randomUUID()
-              + ".png";
+        public String storePublic(byte[] bytes, String folder) {
+          return folder + "/" + java.util.UUID.randomUUID() + ".png";
         }
 
-        public void delete(String url) {}
+        public String storePrivate(byte[] bytes, String folder) {
+          return folder + "/" + java.util.UUID.randomUUID() + ".png";
+        }
+
+        public String publicUrl(String stored) {
+          return "http://localhost/fixture/" + stored;
+        }
+
+        public String signedUrl(String stored) {
+          return "http://localhost/fixture/" + stored + "?signed";
+        }
+
+        public void delete(String stored) {}
       };
     }
   }

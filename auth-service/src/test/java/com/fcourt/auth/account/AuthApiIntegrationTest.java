@@ -200,10 +200,10 @@ class AuthApiIntegrationTest {
     @Test
     void courtOwnerRegistersPendingWithDocumentsAndCanSignInOnlyAfterApproval() throws Exception {
         String email = uniqueEmail();
-        when(storage.store(any(), org.mockito.ArgumentMatchers.startsWith("legal/")))
-                .thenReturn("https://res.cloudinary.com/legal.pdf");
-        when(storage.store(any(), org.mockito.ArgumentMatchers.startsWith("court/")))
-                .thenReturn("https://res.cloudinary.com/court.jpg");
+        when(storage.storePrivate(any(), org.mockito.ArgumentMatchers.startsWith("owner-documents/legal/")))
+                .thenReturn("owner-documents/legal/9/a.pdf");
+        when(storage.storePrivate(any(), org.mockito.ArgumentMatchers.startsWith("owner-documents/court/")))
+                .thenReturn("owner-documents/court/9/b.jpg");
 
         var registered = body(mvc.perform(multipart("/api/auth/register/court-owner")
                         .file(new MockMultipartFile("legalDocuments", "licence.pdf", "application/pdf", new byte[]{1}))
@@ -385,7 +385,7 @@ class AuthApiIntegrationTest {
     @Test
     void failedDocumentUploadLeavesNoHalfRegisteredOwner() throws Exception {
         String email = uniqueEmail();
-        when(storage.store(any(), org.mockito.ArgumentMatchers.anyString()))
+        when(storage.storePrivate(any(), org.mockito.ArgumentMatchers.anyString()))
                 .thenThrow(com.fcourt.auth.common.ApiException.unavailable("Document storage is unavailable"));
 
         mvc.perform(multipart("/api/auth/register/court-owner")
@@ -400,9 +400,9 @@ class AuthApiIntegrationTest {
     @Test
     void aRolledBackRegistrationDeletesTheFilesItAlreadyUploaded() throws Exception {
         String email = uniqueEmail();
-        when(storage.store(any(), org.mockito.ArgumentMatchers.startsWith("legal/")))
-                .thenReturn("https://res.cloudinary.com/demo/image/upload/v1/fcourt/legal/licence.pdf");
-        when(storage.store(any(), org.mockito.ArgumentMatchers.startsWith("court/")))
+        when(storage.storePrivate(any(), org.mockito.ArgumentMatchers.startsWith("owner-documents/legal/")))
+                .thenReturn("owner-documents/legal/9/licence.pdf");
+        when(storage.storePrivate(any(), org.mockito.ArgumentMatchers.startsWith("owner-documents/court/")))
                 .thenThrow(com.fcourt.auth.common.ApiException.unavailable("Document storage is unavailable"));
 
         mvc.perform(multipart("/api/auth/register/court-owner")
@@ -414,7 +414,7 @@ class AuthApiIntegrationTest {
 
         assertThat(jdbc.queryForObject("SELECT count(*) FROM users WHERE email = ?", Integer.class, email)).isZero();
         org.mockito.Mockito.verify(storage)
-                .delete("https://res.cloudinary.com/demo/image/upload/v1/fcourt/legal/licence.pdf");
+                .delete("owner-documents/legal/9/licence.pdf");
     }
 
     @Test

@@ -13,6 +13,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fcourt.auth.common.ApiException;
+import com.fcourt.auth.account.DocumentStorage;
 import com.fcourt.auth.outbox.OutboxWriter;
 import com.fcourt.auth.superadmin.SuperAdminDtos.DocumentResponse;
 import com.fcourt.auth.superadmin.SuperAdminRepository.UserRecord;
@@ -33,13 +34,16 @@ class SuperAdminServiceTest {
 
     SuperAdminRepository users;
     OutboxWriter outbox;
+    DocumentStorage storage;
     SuperAdminService service;
 
     @BeforeEach
     void setUp() {
         users = mock(SuperAdminRepository.class);
         outbox = mock(OutboxWriter.class);
-        service = new SuperAdminService(users, outbox, Clock.fixed(NOW, ZoneOffset.UTC));
+        storage = mock(DocumentStorage.class);
+        when(storage.signedUrl(any())).thenAnswer(call -> "https://signed.test/" + call.getArgument(0));
+        service = new SuperAdminService(users, outbox, Clock.fixed(NOW, ZoneOffset.UTC), storage);
         when(users.find(ACTOR)).thenReturn(Optional.of(user(ACTOR, "SUPER_ADMIN", "ACTIVE")));
         when(users.documentsOf(any())).thenReturn(Map.of());
     }
@@ -48,13 +52,13 @@ class SuperAdminServiceTest {
     void pendingOwnersComeWithTheirDocuments() {
         when(users.findPendingOwners()).thenReturn(List.of(user(17, "ADMIN", "PENDING_APPROVAL")));
         when(users.documentsOf(List.of(17L))).thenReturn(
-                Map.of(17L, List.of(new DocumentResponse(1, "https://x/licence.jpg", "LEGAL"))));
+                Map.of(17L, List.of(new DocumentResponse(1, "owner-documents/legal/17/licence.jpg", "LEGAL"))));
 
         var pending = service.pendingCourtAdmins(ACTOR);
 
         assertThat(pending).singleElement().satisfies(owner -> {
             assertThat(owner.status()).isEqualTo("PENDING_APPROVAL");
-            assertThat(owner.documents()).extracting(DocumentResponse::url).containsExactly("https://x/licence.jpg");
+            assertThat(owner.documents()).extracting(DocumentResponse::url).containsExactly("https://signed.test/owner-documents/legal/17/licence.jpg");
         });
     }
 
