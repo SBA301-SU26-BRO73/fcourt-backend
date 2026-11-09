@@ -43,7 +43,7 @@ import org.testcontainers.junit.jupiter.*;
 class ReviewIntegrationTest {
     @Container static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>("postgres:16-alpine");
     static final String BUCKET="fcourt-discovery-test";
-    @Container static final org.testcontainers.containers.localstack.LocalStackContainer STORAGE = new org.testcontainers.containers.localstack.LocalStackContainer(org.testcontainers.utility.DockerImageName.parse("localstack/localstack:3.8.1")).withServices(org.testcontainers.containers.localstack.LocalStackContainer.Service.S3);
+    @Container static final org.testcontainers.containers.MinIOContainer STORAGE = new org.testcontainers.containers.MinIOContainer(org.testcontainers.utility.DockerImageName.parse("cgr.dev/chainguard/minio:latest").asCompatibleSubstituteFor("minio/minio"));
     static final ObjectMapper JSON = new ObjectMapper().findAndRegisterModules();
     static final RSAKey KEY = signingKey();
     static final String ISSUER = "http://reviews-test/auth";
@@ -105,10 +105,10 @@ class ReviewIntegrationTest {
         } catch(java.io.IOException error){throw new ExceptionInInitializerError(error);}
     }
     @DynamicPropertySource static void properties(DynamicPropertyRegistry registry) {
-        try(var admin=software.amazon.awssdk.services.s3.S3Client.builder().endpointOverride(STORAGE.getEndpoint()).region(software.amazon.awssdk.regions.Region.of(STORAGE.getRegion())).forcePathStyle(true).credentialsProvider(software.amazon.awssdk.auth.credentials.StaticCredentialsProvider.create(software.amazon.awssdk.auth.credentials.AwsBasicCredentials.create("test","test"))).build()){
+        try(var admin=software.amazon.awssdk.services.s3.S3Client.builder().endpointOverride(java.net.URI.create(STORAGE.getS3URL())).region(software.amazon.awssdk.regions.Region.of("us-east-1")).forcePathStyle(true).credentialsProvider(software.amazon.awssdk.auth.credentials.StaticCredentialsProvider.create(software.amazon.awssdk.auth.credentials.AwsBasicCredentials.create(STORAGE.getUserName(),STORAGE.getPassword()))).build()){
             admin.createBucket(b->b.bucket(BUCKET));
         }
-        System.setProperty("aws.accessKeyId","test");System.setProperty("aws.secretAccessKey","test");
+        System.setProperty("aws.accessKeyId",STORAGE.getUserName());System.setProperty("aws.secretAccessKey",STORAGE.getPassword());
         registry.add("spring.datasource.url",DB::getJdbcUrl);registry.add("spring.datasource.username",DB::getUsername);
         registry.add("spring.datasource.password",DB::getPassword);
         registry.add("discovery.slots.booking-url",()->"http://127.0.0.1:"+SOURCE.getAddress().getPort());
@@ -116,8 +116,8 @@ class ReviewIntegrationTest {
         registry.add("discovery.auth.jwk-set-uri",()->"http://127.0.0.1:"+SOURCE.getAddress().getPort()+"/.well-known/jwks.json");
         registry.add("discovery.auth.issuer",()->ISSUER);
         registry.add("discovery.auth.base-url",()->"http://127.0.0.1:"+SOURCE.getAddress().getPort());
-        registry.add("storage.s3.bucket",()->BUCKET);registry.add("storage.s3.region",STORAGE::getRegion);
-        registry.add("storage.s3.endpoint",()->STORAGE.getEndpoint().toString());registry.add("storage.public-base-url",()->"https://cdn.fcourt.test");
+        registry.add("storage.s3.bucket",()->BUCKET);registry.add("storage.s3.region",()->"us-east-1");
+        registry.add("storage.s3.endpoint",()->java.net.URI.create(STORAGE.getS3URL()).toString());registry.add("storage.public-base-url",()->"https://cdn.fcourt.test");
     }
     @AfterAll static void stop(){SOURCE.stop(0);}
     @Autowired JdbcTemplate jdbc;
