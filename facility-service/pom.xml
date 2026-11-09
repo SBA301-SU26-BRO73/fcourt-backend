@@ -16,7 +16,7 @@
         <java.version>21</java.version>
         <!-- 1.21.4+ negotiates a Docker API version accepted by Docker Engine 29 -->
         <testcontainers.version>1.21.4</testcontainers.version>
-        <awssdk.version>2.57.5</awssdk.version>
+        <awssdk.version>2.57.5</awssdk.version><spring-cloud.version>2025.0.3</spring-cloud.version>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -27,9 +27,9 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-        </dependencies>
+        <dependency><groupId>org.springframework.cloud</groupId><artifactId>spring-cloud-dependencies</artifactId><version>${spring-cloud.version}</version><type>pom</type><scope>import</scope></dependency></dependencies>
     </dependencyManagement>
-    <dependencies>
+    <dependencies><dependency><groupId>org.springframework.cloud</groupId><artifactId>spring-cloud-starter-netflix-eureka-client</artifactId></dependency>
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>s3</artifactId>
