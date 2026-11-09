@@ -537,7 +537,7 @@ class FacilityApiIntegrationTest {
     }
 
     @Test
-    void imageUploadAnswers503WhenCloudinaryIsNotConfiguredButServiceStillWorks() throws Exception {
+    void imageUploadAnswers503WhenStorageIsNotConfiguredButServiceStillWorks() throws Exception {
         long owner = 9390;
         long branchId = id(postJson("/api/admin/branches", branchBody("No cloud", "06:00", "22:00"), owner)
                 .andExpect(status().isCreated()));
