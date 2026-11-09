@@ -12,5 +12,6 @@ public record HoldRequest(
         @NotNull @Positive Long courtId,
         @NotNull LocalDate date,
         @NotEmpty @Size(max = 48) List<@NotNull @Positive Long> slotIds,
-        @NotNull @Pattern(regexp = "0[35789][0-9]{8}") String guestPhone) {
+        /** Required for guests; a logged-in customer may omit it (booking-service enforces the rule at claim time). */
+        @Pattern(regexp = "0[35789][0-9]{8}") String guestPhone) {
 }
