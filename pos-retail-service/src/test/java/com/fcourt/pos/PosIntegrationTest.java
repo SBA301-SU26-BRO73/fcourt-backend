@@ -225,6 +225,38 @@ class PosIntegrationTest {
         assertThat(sell(UUID.randomUUID(), "CASH", null, List.of(item(id, 1))).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
+    @Test void ownerListsAllProductsIncludingInactiveWithFiltersAndPaging() {
+        long water = product(5); long other = product(3);
+        call(HttpMethod.PUT, "/api/admin/pos/products/" + other, Map.of("name", "Tea", "unit", "cup", "category", "drinks", "price", 5000, "active", false), token("1", "ADMIN"), UUID.randomUUID());
+        var all = call(HttpMethod.GET, "/api/admin/pos/products?branchId=7", null, token("1", "ADMIN"), null);
+        assertThat(all.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(all.getBody().path("total").asInt()).isEqualTo(2);
+        assertThat(all.getBody().path("items").size()).isEqualTo(2);
+        assertThat(all.getBody().path("page").asInt()).isZero();
+        assertThat(all.getBody().path("size").asInt()).isEqualTo(20);
+        assertThat(all.getHeaders().getCacheControl()).contains("no-store");
+        var inactive = call(HttpMethod.GET, "/api/admin/pos/products?branchId=7&active=false", null, token("1", "ADMIN"), null);
+        assertThat(inactive.getBody().path("total").asInt()).isEqualTo(1);
+        assertThat(inactive.getBody().path("items").get(0).path("id").asLong()).isEqualTo(other);
+        var active = call(HttpMethod.GET, "/api/admin/pos/products?branchId=7&active=true&query=WAT", null, token("1", "ADMIN"), null);
+        assertThat(active.getBody().path("items").size()).isEqualTo(1);
+        assertThat(active.getBody().path("items").get(0).path("id").asLong()).isEqualTo(water);
+        var paged = call(HttpMethod.GET, "/api/admin/pos/products?branchId=7&size=1&page=1", null, token("1", "ADMIN"), null);
+        assertThat(paged.getBody().path("items").size()).isEqualTo(1);
+        assertThat(paged.getBody().path("total").asInt()).isEqualTo(2);
+    }
+
+    @Test void ownerListRejectsForeignOwnerStaffAndBadParameters() {
+        product(5);
+        assertThat(call(HttpMethod.GET, "/api/admin/pos/products?branchId=7", null, token("2", "ADMIN"), null).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(call(HttpMethod.GET, "/api/admin/pos/products?branchId=8", null, token("1", "ADMIN"), null).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(call(HttpMethod.GET, "/api/admin/pos/products?branchId=7", null, token("100", "STAFF"), null).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(call(HttpMethod.GET, "/api/admin/pos/products?branchId=7", null, null, null).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(call(HttpMethod.GET, "/api/admin/pos/products", null, token("1", "ADMIN"), null).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(call(HttpMethod.GET, "/api/admin/pos/products?branchId=7&size=101", null, token("1", "ADMIN"), null).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(call(HttpMethod.GET, "/api/admin/pos/products?branchId=7&page=-1", null, token("1", "ADMIN"), null).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
     @Test void foreignOwnerCannotCreateOrAdjustStock() {
         var request = new HashMap<>(productBody(5)); request.put("branchId", 8);
         assertThat(call(HttpMethod.POST, "/api/admin/pos/products", request, token("1", "ADMIN"), UUID.randomUUID()).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
