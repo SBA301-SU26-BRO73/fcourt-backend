@@ -70,4 +70,4 @@ Web (Vite dev, port 5173): `/`, `/lookup`, `/auth/login`, `/branches` trả 200.
 
 ## Chưa kiểm tra
 
-Thanh toán thật (PayOS, upload biên lai), gửi mail qua Mailpit, đăng nhập Google, push, STOMP realtime, ảnh public từ S3 (bucket local private nên URL ảnh public không mở được trực tiếp).
+Thanh toán thật (PayOS, upload biên lai), gửi mail qua Mailpit, đăng nhập Google, push, STOMP realtime, ảnh public và presigned từ S3 (đã có bucket policy local, xem docs/docker-compose.md).

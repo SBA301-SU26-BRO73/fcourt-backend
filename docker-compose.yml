@@ -46,6 +46,9 @@ x-env: &env
   STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET:-fcourt-local}
   STORAGE_S3_REGION: ap-southeast-1
   STORAGE_S3_ENDPOINT: http://s3:9000
+  # Host ghi vao presigned URL (receipts, refund-proofs, owner-documents): trinh duyet khong phan giai duoc `s3`, nen dung
+  # localhost:9000 (cong MinIO da publish). Chu ky gan voi host, vi vay phai dat luc ky, khong sua URL sau do.
+  STORAGE_S3_PRESIGN_ENDPOINT: ${STORAGE_S3_PRESIGN_ENDPOINT:-http://localhost:${S3_PORT:-9000}}
   STORAGE_S3_PATH_STYLE: "true"
   STORAGE_PUBLIC_BASE_URL: ${STORAGE_PUBLIC_BASE_URL:-http://localhost:9000/fcourt-local}
   AWS_ACCESS_KEY_ID: test
@@ -158,10 +161,37 @@ services:
   s3-init:
     image: busybox:1.37
     profiles: [infra, core, all]
-    command: ["sh", "-c", "mkdir -p /data/${STORAGE_S3_BUCKET:-fcourt-local} && chmod -R 777 /data"]
+    # Cung ghi bucket policy (public-read theo prefix, giong docs/storage-s3.md 6.3) de s3-policy ap vao MinIO.
+    command:
+      - sh
+      - -c
+      - |
+        mkdir -p /data/$${B} && chmod -R 777 /data
+        sed "s/__BUCKET__/$${B}/g" /policy-template/public-read.json > /policy/public-read.json
+    environment:
+      B: ${STORAGE_S3_BUCKET:-fcourt-local}
     volumes:
       - fcourt_s3_data:/data
+      - fcourt_s3_policy:/policy
+      - ./docker/minio/public-read.json:/policy-template/public-read.json:ro
     restart: "no"
+
+  # Ap bucket policy: chi avatars/*, branches/*, reviews/* doc an danh; receipts/, refund-proofs/, owner-documents/ van private.
+  # MC_HOST_<alias> thay cho `mc alias set` (anh Chainguard khong co shell); chay lai den khi MinIO san sang.
+  s3-policy:
+    image: cgr.dev/chainguard/minio-client:latest
+    profiles: [infra, core, all]
+    networks: [fcourt]
+    mem_limit: 64m
+    depends_on:
+      s3-init: {condition: service_completed_successfully}
+      s3: {condition: service_started}
+    environment:
+      MC_HOST_local: http://test:testtest1234@s3:9000
+    command: ["anonymous", "set-json", "/policy/public-read.json", "local/${STORAGE_S3_BUCKET:-fcourt-local}"]
+    volumes:
+      - fcourt_s3_policy:/policy:ro
+    restart: on-failure:10
 
   s3:
     image: cgr.dev/chainguard/minio:latest
@@ -394,6 +424,7 @@ volumes:
   fcourt_postgres_data:
   fcourt_kafka_data:
   fcourt_s3_data:
+  fcourt_s3_policy:
 
 networks:
   fcourt:
