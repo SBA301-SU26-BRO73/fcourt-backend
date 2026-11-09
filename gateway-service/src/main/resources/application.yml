@@ -35,7 +35,7 @@ spring:
               uri: lb://booking-service
               order: 5
               predicates:
-                - Path=/api/public/bookings/lookup
+                - Path=/api/public/bookings/lookup,/api/public/bookings/cancel
                 - Method=POST
               filters:
                 - name: RequestRateLimiter
@@ -85,7 +85,7 @@ spring:
               uri: lb://booking-service
               order: 10
               predicates:
-                # Guest booking lookup (public, no token).
+                # Guest booking lookup and cancel (public, no token).
                 - Path=/api/public/bookings/**
             - id: discovery-service-branches
               uri: lb://discovery-service
