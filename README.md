@@ -13,9 +13,9 @@ fcourt-backend/
 │       ├── V1__init_schema.sql
 │       └── V2__seed_sample_data.sql
 ├── docker/postgres/
-│   ├── init-databases.sh       # tạo database và chạy script của từng service
+│   ├── init-databases.sh       # tạo database cho từng service (schema do Flyway tạo)
 │   └── services.txt            # danh sách service và tên database
-├── docker-compose.yml          # PostgreSQL và LocalStack S3 local
+├── docker-compose.yml          # cả hệ thống (profile infra/core/all), xem docs/docker-compose.md
 └── .env.example
 ```
 
@@ -49,7 +49,7 @@ cp .env.example .env          # đổi mật khẩu nếu muốn
 docker compose up -d
 ```
 
-Lần chạy đầu tiên sẽ tạo mỗi service một database và chạy các script trong `<service>/database/` theo thứ tự `V1`, `V2`, ... Chạy lại từ đầu (xóa toàn bộ dữ liệu):
+Lần chạy đầu tiên sẽ tạo mỗi service một database; schema và dữ liệu mẫu do Flyway của service tạo khi service khởi động. Chạy cả hệ thống bằng một lệnh: xem [docs/docker-compose.md](docs/docker-compose.md). Chạy lại từ đầu (xóa toàn bộ dữ liệu):
 
 ```bash
 docker compose down -v && docker compose up -d
