@@ -53,7 +53,6 @@ auth:
     key-id: ${AUTH_JWT_KEY_ID:}
     access-ttl: ${AUTH_JWT_ACCESS_TTL:15m}
     refresh-ttl: ${AUTH_JWT_REFRESH_TTL:30d}
-  cloudinary-url: ${AUTH_CLOUDINARY_URL:}
   password-reset:
     ttl: ${AUTH_PASSWORD_RESET_TTL:30m}
   # Wrong passwords per email (login) or per user (change password) before a temporary 429 lock.
@@ -74,3 +73,16 @@ management:
   endpoint:
     health:
       show-details: never
+
+storage:
+  # Private S3 bucket. Credentials come from the default AWS chain (EKS Pod Identity, AWS profile): no keys here.
+  # Empty bucket = file upload disabled (503); legacy absolute URLs in the database still render.
+  s3:
+    bucket: ${STORAGE_S3_BUCKET:}
+    region: ${STORAGE_S3_REGION:ap-southeast-1}
+    # LocalStack / MinIO only (for example http://localhost:4566); setting it also turns on path-style addressing.
+    endpoint: ${STORAGE_S3_ENDPOINT:}
+    path-style: ${STORAGE_S3_PATH_STYLE:false}
+    presign-ttl: ${STORAGE_S3_PRESIGN_TTL:10m}
+  # Base of public object URLs (avatars), for example the CloudFront domain. Default: endpoint/bucket or the bucket host.
+  public-base-url: ${STORAGE_PUBLIC_BASE_URL:}

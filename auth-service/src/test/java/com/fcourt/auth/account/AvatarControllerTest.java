@@ -57,12 +57,12 @@ class AvatarControllerTest {
 
     @Test
     void putUsesTheTokenSubjectAndReturnsTheProfileWithTheAvatar() throws Exception {
-        when(auth.profile(7)).thenReturn(profile("https://res.cloudinary.com/demo/image/upload/v1/fcourt/avatars/7/a.png"));
+        when(auth.profile(7)).thenReturn(profile("https://cdn.example.test/avatars/7/a.png"));
         var file = new MockMultipartFile("file", "a.png", "image/png", new byte[] {1, 2, 3});
         mvc.perform(multipart("/api/auth/profile/avatar").file(file).with(request -> {
             request.setMethod("PUT");
             return request;
-        })).andExpect(status().isOk()).andExpect(jsonPath("$.avatarUrl").value("https://res.cloudinary.com/demo/image/upload/v1/fcourt/avatars/7/a.png"));
+        })).andExpect(status().isOk()).andExpect(jsonPath("$.avatarUrl").value("https://cdn.example.test/avatars/7/a.png"));
         verify(avatars).set(eq(7L), any());
     }
 

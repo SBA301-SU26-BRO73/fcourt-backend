@@ -12,7 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 /**
  * Lets an authenticated user set or clear their own avatar. The file type is read from the content (JPEG, PNG, WebP),
  * the size is capped, and the folder is derived from the token subject, never from client input.
- * Storage goes through the DocumentStorage port (Cloudinary is the only adapter today; the key is the provider-neutral {@code avatars/{userId}}). Replacing or clearing removes the previous file we hosted; avatars from Google sign-in live on another host and
+ * Storage goes through the DocumentStorage port (S3 adapter): the database keeps the object key {@code avatars/{userId}/{uuid}.{ext}} and the public URL is derived on read. Replacing or clearing removes the previous file we hosted; avatars from Google sign-in live on another host and
  * are only unlinked. Reviews keep their own snapshot URL, so an old review may show the generic icon after a change.
  */
 @Service
@@ -41,8 +41,8 @@ class AvatarService {
         }
         if (!isImage(content)) throw ApiException.badRequest("Avatar accepts only JPEG, PNG or WebP images");
         String previous = accounts.avatarUrl(userId);
-        String url = storage.store(content, folder(userId));
-        accounts.updateAvatar(userId, url);
+        String key = storage.storePublic(content, folder(userId));
+        accounts.updateAvatar(userId, key);
         deleteOwned(userId, previous);
     }
 
@@ -59,10 +59,10 @@ class AvatarService {
     }
 
     /** Only files we uploaded for this user are deleted; anything else (Google photo) is merely unlinked. */
-    private void deleteOwned(long userId, String url) {
-        if (url != null && url.contains("/" + folder(userId) + "/")) {
-            storage.delete(url);
-        } else if (url != null) {
+    private void deleteOwned(long userId, String stored) {
+        if (stored != null && stored.startsWith(folder(userId) + "/")) {
+            storage.delete(stored);
+        } else if (stored != null) {
             log.debug("Avatar of user {} is not hosted by us, unlinked only", userId);
         }
     }

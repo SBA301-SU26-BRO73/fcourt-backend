@@ -22,8 +22,8 @@ import org.springframework.mock.web.MockMultipartFile;
 
 class AvatarServiceTest {
     static final byte[] PNG = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0};
-    static final String OWN = "https://res.cloudinary.com/demo/image/upload/v1/fcourt/avatars/7/old.png";
-    static final String NEW = "https://res.cloudinary.com/demo/image/upload/v2/fcourt/avatars/7/new.png";
+    static final String OWN = "avatars/7/old.png";
+    static final String NEW = "avatars/7/new.png";
     AccountRepository accounts;
     DocumentStorage storage;
     AvatarService service;
@@ -51,7 +51,7 @@ class AvatarServiceTest {
     @Test
     void setStoresUnderTheUsersOwnFolderSavesTheUrlAndDeletesOnlyTheOldOwnedFile() {
         when(accounts.avatarUrl(7)).thenReturn(OWN);
-        when(storage.store(any(), eq("avatars/7"))).thenReturn(NEW);
+        when(storage.storePublic(any(), eq("avatars/7"))).thenReturn(NEW);
         service.set(7, file(PNG, "text/plain"));
         verify(accounts).updateAvatar(7, NEW);
         verify(storage).delete(OWN);
@@ -59,9 +59,9 @@ class AvatarServiceTest {
 
     @Test
     void googleOrForeignPreviousAvatarIsUnlinkedButNeverDeleted() {
-        for (String previous : new String[] {"https://lh3.googleusercontent.com/a.jpg", "https://res.cloudinary.com/demo/image/upload/v1/fcourt/avatars/8/x.png", null}) {
+        for (String previous : new String[] {"https://lh3.googleusercontent.com/a.jpg", "https://res.cloudinary.com/demo/image/upload/v1/fcourt/avatars/7/legacy.png", "avatars/8/x.png", null}) {
             when(accounts.avatarUrl(7)).thenReturn(previous);
-            when(storage.store(any(), anyString())).thenReturn(NEW);
+            when(storage.storePublic(any(), anyString())).thenReturn(NEW);
             service.set(7, file(PNG, "image/png"));
         }
         verify(storage, never()).delete(anyString());
@@ -72,7 +72,7 @@ class AvatarServiceTest {
         for (byte[] bad : new byte[][] {"<svg/>".getBytes(), "GIF89a....".getBytes(), "%PDF-1.4....".getBytes(), "MZ\u0090\u0000".getBytes()}) {
             assertThatThrownBy(() -> service.set(7, file(bad, "image/png"))).satisfies(AvatarServiceTest::assertBadRequest);
         }
-        verify(storage, never()).store(any(), anyString());
+        verify(storage, never()).storePublic(any(), anyString());
         verify(accounts, never()).updateAvatar(anyLong(), any());
     }
 
@@ -83,7 +83,7 @@ class AvatarServiceTest {
         assertThatThrownBy(() -> service.set(7, file(new byte[0], "image/png"))).satisfies(AvatarServiceTest::assertBadRequest);
         assertThatThrownBy(() -> service.set(7, null)).satisfies(AvatarServiceTest::assertBadRequest);
         assertThatThrownBy(() -> service.set(7, file(big, "image/png"))).satisfies(AvatarServiceTest::assertBadRequest);
-        verify(storage, never()).store(any(), anyString());
+        verify(storage, never()).storePublic(any(), anyString());
     }
 
     @Test
@@ -92,7 +92,7 @@ class AvatarServiceTest {
         assertThatThrownBy(() -> service.set(7, file(PNG, "image/png"))).isInstanceOf(ApiException.class);
         when(accounts.findById(7)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.clear(7)).isInstanceOf(ApiException.class);
-        verify(storage, never()).store(any(), anyString());
+        verify(storage, never()).storePublic(any(), anyString());
         verify(accounts, never()).updateAvatar(anyLong(), any());
     }
 

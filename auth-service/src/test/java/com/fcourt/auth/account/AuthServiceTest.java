@@ -120,8 +120,8 @@ class AuthServiceTest {
         var created = account(9, "owner@demo.com", "ADMIN", "PENDING_APPROVAL");
         when(accounts.insert(any(), any(), any(), any(), any(), any(), any())).thenReturn(9L);
         when(accounts.findById(9)).thenReturn(Optional.of(created));
-        when(storage.store(any(), eq("legal/9"))).thenReturn("https://res.cloudinary.com/legal.pdf");
-        when(storage.store(any(), eq("court/9"))).thenReturn("https://res.cloudinary.com/court.jpg");
+        when(storage.storePrivate(any(), eq("owner-documents/legal/9"))).thenReturn("owner-documents/legal/9/a.pdf");
+        when(storage.storePrivate(any(), eq("owner-documents/court/9"))).thenReturn("owner-documents/court/9/b.jpg");
 
         var response = service.registerCourtOwner(owner(
                 List.of(file("licence.pdf", "application/pdf", 10)), List.of(file("front.jpg", "image/jpeg", 10))));
@@ -130,8 +130,8 @@ class AuthServiceTest {
         assertThat(response.status()).isEqualTo("PENDING_APPROVAL");
         verify(accounts).insert(eq("owner@demo.com"), anyString(), eq("Chu San"), eq("0909000003"),
                 eq("ADMIN"), eq("PENDING_APPROVAL"), eq(NOW));
-        verify(accounts).insertDocument(9, "https://res.cloudinary.com/legal.pdf", "LEGAL", NOW);
-        verify(accounts).insertDocument(9, "https://res.cloudinary.com/court.jpg", "COURT_IMAGE", NOW);
+        verify(accounts).insertDocument(9, "owner-documents/legal/9/a.pdf", "LEGAL", NOW);
+        verify(accounts).insertDocument(9, "owner-documents/court/9/b.jpg", "COURT_IMAGE", NOW);
         verifyNoInteractions(sessions);
     }
 
@@ -140,7 +140,7 @@ class AuthServiceTest {
         var created = account(9, "owner@demo.com", "ADMIN", "PENDING_APPROVAL");
         when(accounts.insert(any(), any(), any(), any(), any(), any(), any())).thenReturn(9L);
         when(accounts.findById(9)).thenReturn(Optional.of(created));
-        when(storage.store(any(), anyString())).thenReturn("https://res.cloudinary.com/legal.png");
+        when(storage.storePrivate(any(), anyString())).thenReturn("owner-documents/legal/9/a.png");
 
         service.registerCourtOwner(owner(List.of(file("id.png", "image/png", 10)), null));
 
@@ -192,7 +192,7 @@ class AuthServiceTest {
     void storageOutageSurfacesAsServiceUnavailable() {
         when(accounts.insert(any(), any(), any(), any(), any(), any(), any())).thenReturn(9L);
         when(accounts.findById(9)).thenReturn(Optional.of(account(9, "owner@demo.com", "ADMIN", "PENDING_APPROVAL")));
-        when(storage.store(any(), anyString())).thenThrow(ApiException.unavailable("Document storage is unavailable"));
+        when(storage.storePrivate(any(), anyString())).thenThrow(ApiException.unavailable("Document storage is unavailable"));
 
         assertThatThrownBy(() -> service.registerCourtOwner(owner(List.of(file("a.pdf", "application/pdf", 10)), null)))
                 .satisfies(error -> assertApi(error, HttpStatus.SERVICE_UNAVAILABLE, "Document storage is unavailable"));
@@ -202,8 +202,8 @@ class AuthServiceTest {
     void filesUploadedBeforeARollbackAreDeletedFromStorage() {
         when(accounts.insert(any(), any(), any(), any(), any(), any(), any())).thenReturn(9L);
         when(accounts.findById(9)).thenReturn(Optional.of(account(9, "owner@demo.com", "ADMIN", "PENDING_APPROVAL")));
-        when(storage.store(any(), eq("legal/9"))).thenReturn("https://res.cloudinary.com/legal.pdf");
-        when(storage.store(any(), eq("court/9"))).thenThrow(ApiException.unavailable("Document storage is unavailable"));
+        when(storage.storePrivate(any(), eq("owner-documents/legal/9"))).thenReturn("owner-documents/legal/9/a.pdf");
+        when(storage.storePrivate(any(), eq("owner-documents/court/9"))).thenThrow(ApiException.unavailable("Document storage is unavailable"));
 
         assertThatThrownBy(() -> service.registerCourtOwner(owner(
                 List.of(file("licence.pdf", "application/pdf", 10)), List.of(file("front.jpg", "image/jpeg", 10)))))
@@ -211,14 +211,14 @@ class AuthServiceTest {
         verify(storage, never()).delete(anyString());
 
         completeTransaction(TransactionSynchronization.STATUS_ROLLED_BACK);
-        verify(storage).delete("https://res.cloudinary.com/legal.pdf");
+        verify(storage).delete("owner-documents/legal/9/a.pdf");
     }
 
     @Test
     void filesOfACommittedRegistrationAreKept() {
         when(accounts.insert(any(), any(), any(), any(), any(), any(), any())).thenReturn(9L);
         when(accounts.findById(9)).thenReturn(Optional.of(account(9, "owner@demo.com", "ADMIN", "PENDING_APPROVAL")));
-        when(storage.store(any(), anyString())).thenReturn("https://res.cloudinary.com/legal.pdf");
+        when(storage.storePrivate(any(), anyString())).thenReturn("owner-documents/legal/9/a.pdf");
 
         service.registerCourtOwner(owner(List.of(file("licence.pdf", "application/pdf", 10)), null));
 
@@ -317,8 +317,10 @@ class AuthServiceTest {
         when(accounts.findById(7)).thenReturn(Optional.of(account(7, "customer@demo.com", "CUSTOMER", "ACTIVE")));
         assertThat(service.profile(7).avatarUrl()).isNull();
 
-        when(accounts.avatarUrl(7)).thenReturn("https://lh3.googleusercontent.com/a.jpg");
-        assertThat(service.profile(7).avatarUrl()).isEqualTo("https://lh3.googleusercontent.com/a.jpg");
+        when(storage.publicUrl(null)).thenReturn(null);
+        when(storage.publicUrl("avatars/7/a.png")).thenReturn("https://cdn.example.test/avatars/7/a.png");
+        when(accounts.avatarUrl(7)).thenReturn("avatars/7/a.png");
+        assertThat(service.profile(7).avatarUrl()).isEqualTo("https://cdn.example.test/avatars/7/a.png");
     }
 
     @Test

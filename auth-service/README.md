@@ -29,7 +29,9 @@ stable key once with
 | `AUTH_JWT_ISSUER` / `AUTH_JWT_AUDIENCE` | `http://localhost:8081` / `fcourt` |
 | `AUTH_JWT_PRIVATE_KEY` / `AUTH_JWT_KEY_ID` | PKCS8 PEM RSA key (ephemeral when blank) / thumbprint of the key |
 | `AUTH_JWT_ACCESS_TTL` / `AUTH_JWT_REFRESH_TTL` | `15m` / `30d` |
-| `AUTH_CLOUDINARY_URL` | `cloudinary://key:secret@cloud` for court owner documents; uploads give 503 when blank |
+| `STORAGE_S3_BUCKET` / `STORAGE_S3_REGION` | private S3 bucket / `ap-southeast-1`; blank bucket disables uploads (503). Credentials come from the default AWS chain (EKS Pod Identity), never from config |
+| `STORAGE_S3_ENDPOINT` / `STORAGE_S3_PATH_STYLE` | LocalStack/MinIO endpoint (for example `http://localhost:4566`) / path-style addressing |
+| `STORAGE_PUBLIC_BASE_URL` / `STORAGE_S3_PRESIGN_TTL` | base of public object URLs (CloudFront) / lifetime of presigned document URLs, `10m` |
 | `AUTH_PASSWORD_RESET_TTL` | `30m` |
 | `AUTH_GOOGLE_CLIENT_ID` | Google OAuth Web client ID used as the ID token audience; required for Google sign-in |
 | `AUTH_GOOGLE_JWK_SET_URI` | Google public keys at `https://www.googleapis.com/oauth2/v3/certs` |
@@ -58,7 +60,7 @@ comes from the `roles` array or a single `role` claim. `/api/super-admin/**` req
 | POST | `/api/auth/logout` | `{refreshToken}` | `204`, idempotent |
 | GET | `/api/auth/profile` | | `UserResponse` (needs a Bearer token) |
 | PATCH | `/api/auth/profile` | `{fullName, phone}` | `UserResponse` |
-| PUT | `/api/auth/profile/avatar` | multipart `file` (JPEG/PNG/WebP by content, max 2 MB) | `UserResponse` with `avatarUrl`; stored through the `DocumentStorage` port under the neutral key `avatars/{userId}` (Cloudinary adapter today, S3 planned), the previous own file is deleted |
+| PUT | `/api/auth/profile/avatar` | multipart `file` (JPEG/PNG/WebP by content, max 2 MB) | `UserResponse` with `avatarUrl`; the S3 key `avatars/{userId}/{uuid}.{ext}` is stored and `avatarUrl` is `${STORAGE_PUBLIC_BASE_URL}/{key}` (legacy absolute URLs are returned unchanged), the previous own file is deleted |
 | DELETE | `/api/auth/profile/avatar` | | `UserResponse` with `avatarUrl` null; deletes our own file, a Google photo is only unlinked |
 | POST | `/api/auth/password/forgot` | `{email}` | `202 {message}`, the same answer for any email |
 | POST | `/api/auth/password/reset` | `{token, newPassword}` | `200 {message}`; 400 when the token is unknown, used or expired |
@@ -73,9 +75,9 @@ Rules:
   digits. Password: 8 to 72 characters and at most 72 UTF-8 bytes, BCrypt's limit (a Vietnamese accented
   letter takes 2 to 3 bytes), otherwise 400.
 - Customers register `ACTIVE` and get a session straight away. Court owners (`ADMIN`) register
-  `PENDING_APPROVAL`, their files go to Cloudinary and into `user_documents` (`LEGAL` / `COURT_IMAGE`), and
+  `PENDING_APPROVAL`, their files go to the private S3 bucket (`owner-documents/legal/{userId}/...`, `owner-documents/court/{userId}/...`, content type read from the bytes) and into `user_documents` (`LEGAL` / `COURT_IMAGE`), and
   they cannot sign in until a super admin approves them. Documents: JPEG, PNG, WebP or PDF, 5 MB each; a failed
-  upload rolls the whole registration back, and files already uploaded are then deleted from Cloudinary
+  upload rolls the whole registration back, and files already uploaded are then deleted from S3
   (best effort: a failed delete is only logged).
 - Login gives the same 401 for an unknown email and a wrong password (and spends the same hashing time).
 - 5 wrong passwords for one email within 15 minutes lock that email for 15 minutes: login answers 429 with
@@ -120,6 +122,7 @@ Rules:
 | PUT | `/api/super-admin/users/{id}/toggle-status` | `{reason}` (required when locking, optional when unlocking) | `{id, status}`: `ACTIVE` to `LOCKED` and back |
 
 `CourtAdminResponse`: `{id, email, fullName, phone, role, status, createdAt, documents:[{id, url, docType}]}`,
+`documents[].url` is a presigned GET URL valid for 10 minutes (`STORAGE_S3_PRESIGN_TTL`), issued at read time; legacy absolute URLs are returned unchanged.
 where `docType` is `LEGAL` (business licence or identity document) or `COURT_IMAGE`.
 
 Rules:

@@ -75,8 +75,8 @@ public class AuthService {
         var account = createAccount(request.email(), request.password(), request.fullName(), request.phone(),
                 UserRole.ADMIN, UserStatus.PENDING_APPROVAL);
         List<String> uploaded = deleteUploadsIfRolledBack();
-        saveDocuments(account.id(), legal, LEGAL, "legal/" + account.id(), uploaded);
-        saveDocuments(account.id(), images, COURT_IMAGE, "court/" + account.id(), uploaded);
+        saveDocuments(account.id(), legal, LEGAL, "owner-documents/legal/" + account.id(), uploaded);
+        saveDocuments(account.id(), images, COURT_IMAGE, "owner-documents/court/" + account.id(), uploaded);
         return new RegistrationResponse(account.id(), account.status(),
                 "Registration submitted. You can sign in once a super admin approves it.");
     }
@@ -105,7 +105,7 @@ public class AuthService {
     @Transactional(readOnly = true)
     public UserResponse profile(long userId) {
         var account = activeAccount(userId);
-        return withAvatar(toResponse(account), accounts.avatarUrl(userId));
+        return withAvatar(toResponse(account), storage.publicUrl(accounts.avatarUrl(userId)));
     }
 
     @Transactional
@@ -122,7 +122,7 @@ public class AuthService {
             throw ApiException.conflict("Phone number is already registered");
         }
         return withAvatar(toResponse(new AccountRecord(account.id(), account.email(), account.passwordHash(), fullName, phone,
-                account.role(), account.status(), account.createdAt())), accounts.avatarUrl(userId));
+                account.role(), account.status(), account.createdAt())), storage.publicUrl(accounts.avatarUrl(userId)));
     }
 
     private AccountRecord activeAccount(long userId) {
@@ -172,7 +172,7 @@ public class AuthService {
     }
 
     /**
-     * Files reach Cloudinary before the registration commits. If the transaction rolls back (a later upload
+     * Files reach S3 before the registration commits. If the transaction rolls back (a later upload
      * or insert fails, or the commit itself), the files already stored are deleted again, best effort.
      */
     private List<String> deleteUploadsIfRolledBack() {
@@ -197,9 +197,9 @@ public class AuthService {
             } catch (IOException error) {
                 throw ApiException.badRequest("Uploaded file could not be read");
             }
-            String url = storage.store(content, folder);
-            uploaded.add(url);
-            accounts.insertDocument(userId, url, docType, clock.instant());
+            String key = storage.storePrivate(content, folder);
+            uploaded.add(key);
+            accounts.insertDocument(userId, key, docType, clock.instant());
         }
     }
 
