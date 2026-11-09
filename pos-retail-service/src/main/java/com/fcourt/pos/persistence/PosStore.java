@@ -37,6 +37,18 @@ public class PosStore {
                 AND (?::boolean IS NULL OR active = ?::boolean)
                 """, Long.class, branch, query, active, active);
     }
+    public List<PosViews.Product> allProducts(Long branch, String query, Boolean active, int limit, int offset) {
+        return jdbc.query("""
+                SELECT * FROM products WHERE (?::bigint IS NULL OR branch_id = ?::bigint) AND position(lower(?) in lower(name)) > 0
+                AND (?::boolean IS NULL OR active = ?::boolean) ORDER BY branch_id, name, id LIMIT ? OFFSET ?
+                """, this::productRow, branch, branch, query, active, active, limit, offset);
+    }
+    public long allProductCount(Long branch, String query, Boolean active) {
+        return jdbc.queryForObject("""
+                SELECT count(*) FROM products WHERE (?::bigint IS NULL OR branch_id = ?::bigint) AND position(lower(?) in lower(name)) > 0
+                AND (?::boolean IS NULL OR active = ?::boolean)
+                """, Long.class, branch, branch, query, active, active);
+    }
     public PosViews.Order order(long id, boolean lock) {
         var rows = jdbc.query("SELECT * FROM orders WHERE id = ?" + (lock ? " FOR UPDATE" : ""), this::orderRow, id);
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found");

@@ -39,6 +39,12 @@ public class PosUpstreams {
         return assignment.branchId();
     }
 
+    public void superAdmin(Jwt jwt) {
+        User user = execute(() -> auth.get().uri("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(jwt)).retrieve().body(User.class));
+        if (user == null || user.id() != Long.parseLong(jwt.getSubject())) throw unavailable();
+        if (!"ACTIVE".equals(user.status()) || !"SUPER_ADMIN".equals(user.role())) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Inactive super admin");
+    }
+
     public void adminBranch(Jwt jwt, long branch) {
         User user = execute(() -> auth.get().uri("/api/auth/me").header(HttpHeaders.AUTHORIZATION, bearer(jwt)).retrieve().body(User.class));
         if (user == null || user.id() != Long.parseLong(jwt.getSubject())) throw unavailable();
