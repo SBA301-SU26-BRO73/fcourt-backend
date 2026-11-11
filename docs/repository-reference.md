@@ -80,3 +80,4 @@ not the effective values of a running deployment.
 | ci | [counter-hold-support workflow](../.github/workflows/counter-hold-support.yml) | Inspect this GitHub Actions workflow and its configured triggers. |
 | ci | [demo-seed workflow](../.github/workflows/demo-seed.yml) | Inspect this GitHub Actions workflow and its configured triggers. |
 | ci | [discovery-service workflow](../.github/workflows/discovery-service.yml) | Inspect this GitHub Actions workflow and its configured triggers. |
+| ci | [facility-service workflow](../.github/workflows/facility-service.yml) | Inspect this GitHub Actions workflow and its configured triggers. |
