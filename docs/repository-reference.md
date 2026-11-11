@@ -18,3 +18,4 @@ not the effective values of a running deployment.
 | docs | [docker-compose guide](docker-compose.md) | Read the existing guide for docker compose. |
 | docs | [gateway guide](gateway.md) | Read the existing guide for gateway. |
 | docs | [smoke-test-local guide](smoke-test-local.md) | Read the existing guide for smoke test local. |
+| docs | [spring-cloud guide](spring-cloud.md) | Read the existing guide for spring cloud. |
