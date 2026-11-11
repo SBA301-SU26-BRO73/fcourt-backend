@@ -57,7 +57,7 @@ docker compose down -v && docker compose up -d
 
 Kết nối: `localhost:${POSTGRES_PORT}` (mặc định 5432), user và mật khẩu lấy từ `.env`.
 
-LocalStack (S3 giả lập, không cần tài khoản AWS) chạy ở `http://localhost:4566`, tự tạo bucket private `fcourt-local`. Chạy riêng bằng `docker compose up -d localstack`. Cách trỏ service vào đó nằm trong [docs/storage-s3.md](docs/storage-s3.md).
+Compose dùng bucket S3 thật cho local (không còn MinIO/LocalStack): đặt bucket và access key của IAM user `fcourt-local-s3` trong `.env`, xem [docs/storage-s3.md](docs/storage-s3.md) mục 5.
 
 ## Về script database
 

@@ -65,7 +65,7 @@ Web (Vite dev, port 5173): `/`, `/lookup`, `/auth/login`, `/branches` trả 200.
 - 403 `No active staff assignment` ở `/api/staff/me`: seed Flyway của staff-operations không có dòng staff. `compose-seed.sh` thêm bằng SQL.
 - Tạo staff bằng API: mật khẩu tối thiểu 12 ký tự, `Idempotency-Key` phải là UUID. Vì vậy mật khẩu chung là `Fcourt@123456`.
 - Gateway giới hạn đăng nhập 10 lần/phút/IP, quá chặt khi thử nhiều role từ một máy. Compose đặt `RATE_LIMIT_AUTH_REQUESTS=120`.
-- LocalStack 3.8.1 không chạy được trên Docker Desktop của máy dev này (`File name too long`), nên Compose dùng MinIO (cùng ảnh với Testcontainers của backend).
+- Compose dùng bucket S3 thật cho local (key IAM user `fcourt-local-s3` trong `.env`), không còn MinIO/LocalStack.
 - booking-service cần `SPRING_DATA_REDIS_HOST/PORT` (không đọc `REDIS_HOST`).
 
 ## Chưa kiểm tra

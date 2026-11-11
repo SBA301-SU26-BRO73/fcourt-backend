@@ -1,6 +1,6 @@
 # FCourt: chay ca he thong local bang Docker Compose. Huong dan day du: docs/docker-compose.md
 #
-#   docker compose --profile infra up -d     # chi ha tang: postgres, redis, kafka, s3 (MinIO)
+#   docker compose --profile infra up -d     # chi ha tang: postgres, redis, kafka
 #   docker compose --profile core up -d      # infra + eureka + gateway + auth, facility, booking, slot-hold, payment
 #   docker compose --profile all up -d       # toan bo 12 service + mailpit
 #
@@ -42,18 +42,13 @@ x-env: &env
   HOLD_GRPC_TARGET: slot-hold-engine:9087
   BOOKING_GRPC_TARGET: booking-service:9088
   STAFF_GRPC_PLAINTEXT: "true"
-  # S3 (MinIO), xem docs/storage-s3.md. Credential test / testtest1234.
-  STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET:-fcourt-local}
-  STORAGE_S3_REGION: ap-southeast-1
-  STORAGE_S3_ENDPOINT: http://s3:9000
-  # Host ghi vao presigned URL (receipts, refund-proofs, owner-documents): trinh duyet khong phan giai duoc `s3`, nen dung
-  # localhost:9000 (cong MinIO da publish). Chu ky gan voi host, vi vay phai dat luc ky, khong sua URL sau do.
-  STORAGE_S3_PRESIGN_ENDPOINT: ${STORAGE_S3_PRESIGN_ENDPOINT:-http://localhost:${S3_PORT:-9000}}
-  STORAGE_S3_PATH_STYLE: "true"
-  STORAGE_PUBLIC_BASE_URL: ${STORAGE_PUBLIC_BASE_URL:-http://localhost:9000/fcourt-local}
-  AWS_ACCESS_KEY_ID: test
-  AWS_SECRET_ACCESS_KEY: testtest1234
-  AWS_REGION: ap-southeast-1
+  # S3 that tren AWS (bucket local rieng, IAM user fcourt-local-s3), xem docs/storage-s3.md. Khoa lay tu .env (khong commit).
+  STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET:?set STORAGE_S3_BUCKET in .env}
+  STORAGE_S3_REGION: ${STORAGE_S3_REGION:-ap-southeast-1}
+  STORAGE_PUBLIC_BASE_URL: https://${STORAGE_S3_BUCKET}.s3.${STORAGE_S3_REGION:-ap-southeast-1}.amazonaws.com
+  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?set AWS_ACCESS_KEY_ID in .env}
+  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?set AWS_SECRET_ACCESS_KEY in .env}
+  AWS_REGION: ${STORAGE_S3_REGION:-ap-southeast-1}
   # Token noi bo giua cac service: gia tri DEV, chi dung local. Doi trong .env neu muon.
   BOOKING_HOLD_SERVICE_TOKEN: ${BOOKING_HOLD_SERVICE_TOKEN:-dev-booking-hold-token-0123456789abcdef}
   BOOKING_INTEGRATION_TOKEN: ${BOOKING_INTEGRATION_TOKEN:-dev-booking-integration-token-0123456789}
@@ -75,7 +70,6 @@ x-app: &app
     redis: {condition: service_healthy}
     kafka: {condition: service_healthy}
     eureka-server: {condition: service_healthy}
-    s3: {condition: service_started}
   healthcheck: &app-health
     # Anh eclipse-temurin khong chac co curl; dung bash /dev/tcp + HTTP/1.0 tren cong SERVER_PORT cua container.
     test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/$${SERVER_PORT} && printf 'GET /actuator/health HTTP/1.0\\r\\n\\r\\n' >&3 && head -n1 <&3 | grep -q ' 200'"]
@@ -154,61 +148,6 @@ services:
       timeout: 15s
       retries: 15
       start_period: 20s
-    restart: unless-stopped
-
-  # S3 local (MinIO, khong can tai khoan AWS). LocalStack 3.8.1 khong chay duoc tren Docker Desktop cua may nay;
-  # cung anh MinIO (Chainguard, khong co shell) voi Testcontainers cua backend. Bucket tao boi s3-init (mkdir trong volume).
-  s3-init:
-    image: busybox:1.37
-    profiles: [infra, core, all]
-    # Cung ghi bucket policy (public-read theo prefix, giong docs/storage-s3.md 6.3) de s3-policy ap vao MinIO.
-    command:
-      - sh
-      - -c
-      - |
-        mkdir -p /data/$${B} && chmod -R 777 /data
-        sed "s/__BUCKET__/$${B}/g" /policy-template/public-read.json > /policy/public-read.json
-    environment:
-      B: ${STORAGE_S3_BUCKET:-fcourt-local}
-    volumes:
-      - fcourt_s3_data:/data
-      - fcourt_s3_policy:/policy
-      - ./docker/minio/public-read.json:/policy-template/public-read.json:ro
-    restart: "no"
-
-  # Ap bucket policy: chi avatars/*, branches/*, reviews/* doc an danh; receipts/, refund-proofs/, owner-documents/ van private.
-  # MC_HOST_<alias> thay cho `mc alias set` (anh Chainguard khong co shell); chay lai den khi MinIO san sang.
-  s3-policy:
-    image: cgr.dev/chainguard/minio-client:latest
-    profiles: [infra, core, all]
-    networks: [fcourt]
-    mem_limit: 64m
-    depends_on:
-      s3-init: {condition: service_completed_successfully}
-      s3: {condition: service_started}
-    environment:
-      MC_HOST_local: http://test:testtest1234@s3:9000
-    command: ["anonymous", "set-json", "/policy/public-read.json", "local/${STORAGE_S3_BUCKET:-fcourt-local}"]
-    volumes:
-      - fcourt_s3_policy:/policy:ro
-    restart: on-failure:10
-
-  s3:
-    image: cgr.dev/chainguard/minio:latest
-    profiles: [infra, core, all]
-    networks: [fcourt]
-    mem_limit: 256m
-    depends_on:
-      s3-init: {condition: service_completed_successfully}
-    environment:
-      MINIO_ROOT_USER: test
-      MINIO_ROOT_PASSWORD: testtest1234
-    command: ["server", "/data", "--console-address", ":9001"]
-    ports:
-      - "${S3_PORT:-9000}:9000"
-      - "${S3_CONSOLE_PORT:-9001}:9001"
-    volumes:
-      - fcourt_s3_data:/data
     restart: unless-stopped
 
   # SMTP gia cho notification-service: web UI http://localhost:8025. Chi chay voi profile all hoac mail.
@@ -428,8 +367,6 @@ services:
 volumes:
   fcourt_postgres_data:
   fcourt_kafka_data:
-  fcourt_s3_data:
-  fcourt_s3_policy:
 
 networks:
   fcourt:

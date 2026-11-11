@@ -57,12 +57,12 @@ storage:
   s3:
     bucket: ${STORAGE_S3_BUCKET:}
     region: ${STORAGE_S3_REGION:ap-southeast-1}
-    # LocalStack/MinIO only (for example http://localhost:4566); also turns on path-style addressing.
+    # Only for S3-compatible stores such as MinIO (used by tests); leave empty for real AWS S3. Setting it also turns on path-style addressing.
     endpoint: ${STORAGE_S3_ENDPOINT:}
     path-style: ${STORAGE_S3_PATH_STYLE:false}
     presign-ttl: ${STORAGE_S3_PRESIGN_TTL:10m}
     # Host baked into presigned URLs when the browser reaches the bucket by another address than the service does
-    # (Compose: service uses http://s3:9000, browser http://localhost:9000). Empty = same as endpoint. Signing is offline.
+    # (S3-compatible stores only, for example MinIO). Empty = same as endpoint. Signing is offline.
     presign-endpoint: ${STORAGE_S3_PRESIGN_ENDPOINT:}
 
 springdoc:
