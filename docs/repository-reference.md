@@ -73,3 +73,4 @@ not the effective values of a running deployment.
 | slot-hold-engine | [slot-hold-engine image build](../slot-hold-engine/Dockerfile) | Inspect the container image build definition for this module. |
 | staff-operations-service | [staff-operations-service image build](../staff-operations-service/Dockerfile) | Inspect the container image build definition for this module. |
 | subscription-service | [subscription-service image build](../subscription-service/Dockerfile) | Inspect the container image build definition for this module. |
+| voucher-service | [voucher-service image build](../voucher-service/Dockerfile) | Inspect the container image build definition for this module. |
