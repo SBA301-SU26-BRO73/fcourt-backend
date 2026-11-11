@@ -28,3 +28,4 @@ not the effective values of a running deployment.
 | payment-service | [payment-service readme](../payment-service/README.md) | Read the README maintained alongside this component. |
 | pos-retail-service | [pos-retail-service readme](../pos-retail-service/README.md) | Read the README maintained alongside this component. |
 | reporting-service | [reporting-service readme](../reporting-service/README.md) | Read the README maintained alongside this component. |
+| slot-hold-engine | [slot-hold-engine readme](../slot-hold-engine/README.md) | Read the README maintained alongside this component. |
