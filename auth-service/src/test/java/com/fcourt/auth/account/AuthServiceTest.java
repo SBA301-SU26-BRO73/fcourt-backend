@@ -293,6 +293,20 @@ class AuthServiceTest {
     }
 
     @Test
+    void rejectedOwnerLoginCarriesTheRejectionReason() {
+        when(accounts.findByEmail("owner@demo.com"))
+                .thenReturn(Optional.of(accountWithPassword(9, "owner@demo.com", "ADMIN", "REJECTED")));
+        when(accounts.rejectionReason(9)).thenReturn(Optional.of("Documents are unreadable"));
+
+        assertThatThrownBy(() -> service.login(new LoginRequest("owner@demo.com", PASSWORD)))
+                .satisfies(error -> {
+                    assertApi(error, HttpStatus.FORBIDDEN, "Account registration was rejected");
+                    assertThat(((ApiException) error).properties()).containsEntry("reason", "Documents are unreadable");
+                });
+        verifyNoInteractions(sessions);
+    }
+
+    @Test
     void statusIsNotRevealedToSomeoneWhoDoesNotKnowThePassword() {
         when(accounts.findByEmail("owner@demo.com"))
                 .thenReturn(Optional.of(accountWithPassword(9, "owner@demo.com", "ADMIN", "LOCKED")));

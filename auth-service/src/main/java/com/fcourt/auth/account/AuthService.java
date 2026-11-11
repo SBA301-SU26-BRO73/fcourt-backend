@@ -98,7 +98,7 @@ public class AuthService {
         }
         throttle.recordSuccess(attemptKey);
         // Status is only revealed after the password proved who is asking.
-        AccountPolicy.requireActive(account);
+        AccountPolicy.requireActive(account, accounts);
         return sessions.open(account);
     }
 
