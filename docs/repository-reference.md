@@ -68,3 +68,4 @@ not the effective values of a running deployment.
 | gateway-service | [gateway-service image build](../gateway-service/Dockerfile) | Inspect the container image build definition for this module. |
 | notification-service | [notification-service image build](../notification-service/Dockerfile) | Inspect the container image build definition for this module. |
 | payment-service | [payment-service image build](../payment-service/Dockerfile) | Inspect the container image build definition for this module. |
+| pos-retail-service | [pos-retail-service image build](../pos-retail-service/Dockerfile) | Inspect the container image build definition for this module. |
