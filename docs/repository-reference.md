@@ -70,3 +70,4 @@ not the effective values of a running deployment.
 | payment-service | [payment-service image build](../payment-service/Dockerfile) | Inspect the container image build definition for this module. |
 | pos-retail-service | [pos-retail-service image build](../pos-retail-service/Dockerfile) | Inspect the container image build definition for this module. |
 | reporting-service | [reporting-service image build](../reporting-service/Dockerfile) | Inspect the container image build definition for this module. |
+| slot-hold-engine | [slot-hold-engine image build](../slot-hold-engine/Dockerfile) | Inspect the container image build definition for this module. |
