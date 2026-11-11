@@ -40,3 +40,4 @@ not the effective values of a running deployment.
 | payment-service | [payment-service build](../payment-service/pom.xml) | Inspect Maven dependencies and build settings. |
 | pos-retail-service | [pos-retail-service build](../pos-retail-service/pom.xml) | Inspect Maven dependencies and build settings. |
 | reporting-service | [reporting-service build](../reporting-service/pom.xml) | Inspect Maven dependencies and build settings. |
+| slot-hold-engine | [slot-hold-engine build](../slot-hold-engine/pom.xml) | Inspect Maven dependencies and build settings. |
