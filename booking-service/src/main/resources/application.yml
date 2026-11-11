@@ -40,14 +40,6 @@ management:
         include: health
 # Opt in only after configuring the same Redis instance as slot-hold-engine.
 # Public schedule hints; financial commands remain authenticated HTTP operations.
-eureka:
-  client:
-    enabled: ${EUREKA_ENABLED:true}
-    service-url:
-      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
-  instance:
-    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:true}
-
 springdoc:
   api-docs:
     enabled: ${SWAGGER_ENABLED:true}

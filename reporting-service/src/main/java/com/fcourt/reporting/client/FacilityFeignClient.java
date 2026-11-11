@@ -14,9 +14,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 /**
  * OpenFeign contract of facility-service (synchronous call 1 of the MSS301 requirement).
  *
- * <p>{@code name} is the Eureka service id. {@code reporting.facility-url} (env {@code FACILITY_URL}) is a fixed
- * URL used when Eureka is disabled (tests, local); set it to an empty value to resolve {@code facility-service}
- * through Eureka and Spring Cloud LoadBalancer. The caller's Bearer token is forwarded unchanged.
+ * <p>{@code reporting.facility-url} (env {@code FACILITY_URL}) is the fixed URL of facility-service (there is no service registry). The caller's Bearer token is forwarded unchanged.
  * Resilience (retry, circuit breaker, error mapping) is applied by {@code FacilityClient}.
  */
 @FeignClient(name = "facility-service", url = "${reporting.facility-url:}")

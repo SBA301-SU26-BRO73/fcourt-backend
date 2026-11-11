@@ -16,7 +16,7 @@ echo "VITE_API_URL=http://localhost:8080/api" > .env.local
 npm ci && npm run dev           # http://localhost:5173, gọi thẳng gateway (CORS đã mở cho 5173 và 3000)
 ```
 
-Gateway cần 30 đến 60 giây sau khi lên mới thấy các service trong Eureka (lúc đó trả 503). `compose-seed.sh` tự chờ.
+Gateway trả 503 cho tới khi service đích lên (gateway tìm service bằng DNS của Compose, không có registry). `compose-seed.sh` tự chờ.
 
 ## Tài khoản (chỉ dùng local, mật khẩu chung `Fcourt@123456`)
 
