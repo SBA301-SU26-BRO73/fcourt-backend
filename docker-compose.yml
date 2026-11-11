@@ -27,7 +27,6 @@ x-env: &env
   AUTH_URL: http://auth-service:8081
   AUTH_SERVICE_URL: http://auth-service:8081
   SUBSCRIPTION_URL: http://subscription-service:8082
-  SUBSCRIPTION_BASE_URL: http://subscription-service:8082
   FACILITY_URL: http://facility-service:8083
   DISCOVERY_URL: http://discovery-service:8085
   DISCOVERY_BASE_URL: http://discovery-service:8085
