@@ -31,3 +31,4 @@ documentation. This index is a navigation aid, not an execution runbook.
 | voucher-service | [V2__seed_sample_data.sql](../voucher-service/database/V2__seed_sample_data.sql) | Inspect the checked-in SQL seed script for this service. |
 | tools | [compose-seed.sh](../tools/compose-seed.sh) | Inspect this shell script and its prerequisites before running it. |
 | tools | [compose-smoke.sh](../tools/compose-smoke.sh) | Inspect this shell script and its prerequisites before running it. |
+| tools | [k8s-seed.sh](../tools/k8s-seed.sh) | Inspect this shell script and its prerequisites before running it. |
