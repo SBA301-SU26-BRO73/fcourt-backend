@@ -29,3 +29,4 @@ documentation. This index is a navigation aid, not an execution runbook.
 | subscription-service | [V2__seed_sample_data.sql](../subscription-service/database/V2__seed_sample_data.sql) | Inspect the checked-in SQL seed script for this service. |
 | voucher-service | [V1__init_schema.sql](../voucher-service/database/V1__init_schema.sql) | Inspect the checked-in SQL schema script for this service. |
 | voucher-service | [V2__seed_sample_data.sql](../voucher-service/database/V2__seed_sample_data.sql) | Inspect the checked-in SQL seed script for this service. |
+| tools | [compose-seed.sh](../tools/compose-seed.sh) | Inspect this shell script and its prerequisites before running it. |
