@@ -1,6 +1,6 @@
 # Gateway (Spring Cloud Gateway)
 
-`gateway-service` (cổng 8080) là điểm vào duy nhất của hệ thống. Web (nginx) và app Flutter chỉ gọi gateway; gateway tìm service qua Eureka (`lb://<tên-service>`), kiểm tra JWT rồi chuyển tiếp, giữ nguyên header `Authorization`. Các service vẫn tự kiểm tra JWT (phòng thủ nhiều lớp).
+`gateway-service` (cổng 8080) là điểm vào duy nhất của hệ thống. Web (nginx) và app Flutter chỉ gọi gateway; gateway tìm service qua danh sách DNS tĩnh (`lb://<tên-service>`, xem [spring-cloud.md](spring-cloud.md)), kiểm tra JWT rồi chuyển tiếp, giữ nguyên header `Authorization`. Các service vẫn tự kiểm tra JWT (phòng thủ nhiều lớp).
 
 - Spring Boot 4.0.9, Spring Cloud 2025.1.4, WebFlux (reactive), springdoc 3.0.3.
 - Health: `GET /actuator/health` (gateway tự trả lời, không chuyển tiếp). Mọi `/actuator/**` khác bị chặn.
@@ -15,9 +15,7 @@ Chỉ dùng một base URL: `http://<gateway>:8080` (trong cluster: ALB/nginx tr
 | Biến | Mặc định | Ý nghĩa |
 |---|---|---|
 | `SERVER_PORT` | `8080` | Cổng HTTP |
-| `EUREKA_URL` | `http://localhost:8761/eureka` | Địa chỉ Eureka |
-| `EUREKA_ENABLED` | `true` | Tắt/bật Eureka client |
-| `EUREKA_INSTANCE_PREFER_IP_ADDRESS` | `true` | Đăng ký bằng IP |
+| `<TÊN>_URI` (ví dụ `AUTH_SERVICE_URI`) | `http://<tên-service>:<cổng>` | Địa chỉ service đích của `lb://<tên>`; mặc định là tên Service của Compose/Kubernetes |
 | `AUTH_JWK_SET_URI` | `http://localhost:8081/.well-known/jwks.json` | JWKS của auth-service |
 | `AUTH_JWT_ISSUER` | `http://localhost:8081` | Issuer hợp lệ |
 | `AUTH_JWT_AUDIENCE` | `fcourt` | Audience hợp lệ |
@@ -104,6 +102,5 @@ Gateway liệt kê trong dropdown mỗi service ở `GATEWAY_SWAGGER_SERVICES` v
 ## Chạy local
 
 ```bash
-(cd eureka-server && sh mvnw spring-boot:run)     # cổng 8761
 (cd gateway-service && sh mvnw spring-boot:run)   # cổng 8080
 ```

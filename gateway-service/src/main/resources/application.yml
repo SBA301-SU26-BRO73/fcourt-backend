@@ -11,6 +11,38 @@ spring:
       password: ${REDIS_PASSWORD:}
       timeout: ${REDIS_TIMEOUT_MS:300}ms
   cloud:
+    # No service registry: lb://<name> resolves through this static list (SimpleDiscoveryClient). Compose and Kubernetes
+    # Service names are identical (<name>:<port>), so the defaults work in both; override <NAME>_URI to point elsewhere
+    # (for example http://localhost:8081 when running a service from the IDE). Load balancing across pods is done by the
+    # Kubernetes Service, so one URI per service is enough.
+    discovery:
+      client:
+        simple:
+          instances:
+            auth-service:
+              - uri: ${AUTH_SERVICE_URI:http://auth-service:8081}
+            subscription-service:
+              - uri: ${SUBSCRIPTION_SERVICE_URI:http://subscription-service:8082}
+            facility-service:
+              - uri: ${FACILITY_SERVICE_URI:http://facility-service:8083}
+            reporting-service:
+              - uri: ${REPORTING_SERVICE_URI:http://reporting-service:8084}
+            discovery-service:
+              - uri: ${DISCOVERY_SERVICE_URI:http://discovery-service:8085}
+            voucher-service:
+              - uri: ${VOUCHER_SERVICE_URI:http://voucher-service:8086}
+            slot-hold-engine:
+              - uri: ${SLOT_HOLD_ENGINE_URI:http://slot-hold-engine:8087}
+            booking-service:
+              - uri: ${BOOKING_SERVICE_URI:http://booking-service:8088}
+            payment-service:
+              - uri: ${PAYMENT_SERVICE_URI:http://payment-service:8089}
+            staff-operations-service:
+              - uri: ${STAFF_OPERATIONS_SERVICE_URI:http://staff-operations-service:8090}
+            notification-service:
+              - uri: ${NOTIFICATION_SERVICE_URI:http://notification-service:8091}
+            pos-retail-service:
+              - uri: ${POS_RETAIL_SERVICE_URI:http://pos-retail-service:8092}
     gateway:
       server:
         webflux:
@@ -154,15 +186,6 @@ spring:
               order: 20
               predicates:
                 - Path=/api/staff/pos/**,/api/admin/pos/**,/api/super-admin/pos/**
-
-eureka:
-  client:
-    enabled: ${EUREKA_ENABLED:true}
-    service-url:
-      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
-    registry-fetch-interval-seconds: ${EUREKA_FETCH_INTERVAL_SECONDS:10}
-  instance:
-    prefer-ip-address: true
 
 fcourt:
   gateway:

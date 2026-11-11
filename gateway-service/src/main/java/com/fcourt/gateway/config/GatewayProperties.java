@@ -33,7 +33,7 @@ public record GatewayProperties(
             @DefaultValue({"/api/internal/**", "/actuator/**"}) List<String> blockedPaths,
             @DefaultValue({"/actuator/health", "/actuator/health/**"}) List<String> localPaths) {}
 
-    /** Aggregated Swagger UI. {@code services}: Eureka service names whose {@code /v3/api-docs} is listed. */
+    /** Aggregated Swagger UI. {@code services}: service names (static discovery instances) whose {@code /v3/api-docs} is listed. */
     public record Swagger(@DefaultValue("true") boolean enabled, @DefaultValue List<String> services) {}
 
     /** Empty means no CORS handling (clients are same-origin through nginx). */
