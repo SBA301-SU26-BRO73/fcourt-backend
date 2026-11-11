@@ -52,3 +52,4 @@ not the effective values of a running deployment.
 | notification-service | [notification-service config](../notification-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
 | payment-service | [payment-service config](../payment-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
 | pos-retail-service | [pos-retail-service config](../pos-retail-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
+| reporting-service | [reporting-service config](../reporting-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
