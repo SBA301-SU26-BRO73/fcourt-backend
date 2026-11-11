@@ -31,3 +31,4 @@ not the effective values of a running deployment.
 | slot-hold-engine | [slot-hold-engine readme](../slot-hold-engine/README.md) | Read the README maintained alongside this component. |
 | staff-operations-service | [staff-operations-service readme](../staff-operations-service/README.md) | Read the README maintained alongside this component. |
 | subscription-service | [subscription-service readme](../subscription-service/README.md) | Read the README maintained alongside this component. |
+| auth-service | [auth-service build](../auth-service/pom.xml) | Inspect Maven dependencies and build settings. |
