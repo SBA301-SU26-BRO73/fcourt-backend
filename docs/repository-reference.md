@@ -16,3 +16,4 @@ not the effective values of a running deployment.
 | docs | [ci-image-build guide](ci-image-build.md) | Read the existing guide for ci image build. |
 | docs | [code-structure guide](code-structure.md) | Read the existing guide for code structure. |
 | docs | [docker-compose guide](docker-compose.md) | Read the existing guide for docker compose. |
+| docs | [gateway guide](gateway.md) | Read the existing guide for gateway. |
