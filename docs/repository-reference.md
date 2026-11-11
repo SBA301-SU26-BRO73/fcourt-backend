@@ -14,3 +14,4 @@ not the effective values of a running deployment.
 | docs | [business-gap-b guide](BUSINESS_GAP_B.md) | Read the existing guide for business gap b. |
 | docs | [scrum-108 guide](SCRUM-108.md) | Read the existing guide for scrum 108. |
 | docs | [ci-image-build guide](ci-image-build.md) | Read the existing guide for ci image build. |
+| docs | [code-structure guide](code-structure.md) | Read the existing guide for code structure. |
