@@ -32,3 +32,4 @@ documentation. This index is a navigation aid, not an execution runbook.
 | tools | [compose-seed.sh](../tools/compose-seed.sh) | Inspect this shell script and its prerequisites before running it. |
 | tools | [compose-smoke.sh](../tools/compose-smoke.sh) | Inspect this shell script and its prerequisites before running it. |
 | tools | [k8s-seed.sh](../tools/k8s-seed.sh) | Inspect this shell script and its prerequisites before running it. |
+| tools/k8s-seed | [01-accounts.sh](../tools/k8s-seed/01-accounts.sh) | Inspect this shell script and its prerequisites before running it. |
