@@ -36,3 +36,4 @@ not the effective values of a running deployment.
 | discovery-service | [discovery-service build](../discovery-service/pom.xml) | Inspect Maven dependencies and build settings. |
 | facility-service | [facility-service build](../facility-service/pom.xml) | Inspect Maven dependencies and build settings. |
 | gateway-service | [gateway-service build](../gateway-service/pom.xml) | Inspect Maven dependencies and build settings. |
+| notification-service | [notification-service build](../notification-service/pom.xml) | Inspect Maven dependencies and build settings. |
