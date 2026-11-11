@@ -22,3 +22,4 @@ not the effective values of a running deployment.
 | docs | [storage-s3 guide](storage-s3.md) | Read the existing guide for storage s3. |
 | auth-service | [auth-service readme](../auth-service/README.md) | Read the README maintained alongside this component. |
 | booking-service | [booking-service readme](../booking-service/README.md) | Read the README maintained alongside this component. |
+| discovery-service | [discovery-service readme](../discovery-service/README.md) | Read the README maintained alongside this component. |
