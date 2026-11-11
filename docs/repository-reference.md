@@ -88,3 +88,4 @@ not the effective values of a running deployment.
 | ci | [pos-retail-service workflow](../.github/workflows/pos-retail-service.yml) | Inspect this GitHub Actions workflow and its configured triggers. |
 | ci | [production-smoke-runner workflow](../.github/workflows/production-smoke-runner.yml) | Inspect this GitHub Actions workflow and its configured triggers. |
 | ci | [reporting-service workflow](../.github/workflows/reporting-service.yml) | Inspect this GitHub Actions workflow and its configured triggers. |
+| ci | [slot-hold-engine workflow](../.github/workflows/slot-hold-engine.yml) | Inspect this GitHub Actions workflow and its configured triggers. |
