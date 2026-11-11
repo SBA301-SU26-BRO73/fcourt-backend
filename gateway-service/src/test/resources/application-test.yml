@@ -1,0 +1,4 @@
+gateway:
+  rate-limit:
+    # Other tests have no Redis; the rate limit tests turn it back on.
+    enabled: false

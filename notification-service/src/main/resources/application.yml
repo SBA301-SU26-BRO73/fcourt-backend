@@ -1,0 +1,92 @@
+server:
+  port: ${SERVER_PORT:8091}
+  error:
+    include-message: never
+    include-stacktrace: never
+
+spring:
+  application:
+    name: notification-service
+  datasource:
+    url: ${NOTIFICATION_DATABASE_URL:jdbc:postgresql://localhost:5432/notification_db}
+    username: ${NOTIFICATION_DATABASE_USER:postgres}
+    password: ${NOTIFICATION_DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 3000
+  jdbc:
+    template:
+      query-timeout: 3s
+  flyway:
+    baseline-on-migrate: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: notification-service
+      # A new deployment still sends the mails for events published before it started.
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      # Only used to publish records that could not be processed to <topic>.DLT.
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  mail:
+    host: ${NOTIFICATION_SMTP_HOST:localhost}
+    port: ${NOTIFICATION_SMTP_PORT:587}
+    username: ${NOTIFICATION_SMTP_USER:}
+    password: ${NOTIFICATION_SMTP_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${NOTIFICATION_SMTP_AUTH:true}
+      mail.smtp.starttls.enable: ${NOTIFICATION_SMTP_STARTTLS:true}
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 10000
+      mail.smtp.writetimeout: 10000
+
+notification:
+  enabled: ${NOTIFICATION_ENABLED:true}
+  topics: ${NOTIFICATION_TOPICS:fcourt.auth.events,fcourt.payment.events,fcourt.booking.events}
+  jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+  jwt-issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
+  jwt-audience: ${AUTH_JWT_AUDIENCE:fcourt}
+  push:
+    region: ${PUSH_AWS_REGION:ap-southeast-1}
+    platform-application-arn: ${PUSH_SNS_PLATFORM_APPLICATION_ARN:}
+    reminder:
+      enabled: ${PUSH_REMINDER_ENABLED:false}
+      queue-url: ${PUSH_REMINDER_QUEUE_URL:}
+      queue-arn: ${PUSH_REMINDER_QUEUE_ARN:}
+      scheduler-group: ${PUSH_REMINDER_SCHEDULER_GROUP:fcourt-reminders}
+      role-arn: ${PUSH_REMINDER_ROLE_ARN:}
+      visibility-timeout-seconds: ${PUSH_REMINDER_VISIBILITY_TIMEOUT_SECONDS:120}
+  mail:
+    from: ${NOTIFICATION_MAIL_FROM:FCOURT <no-reply@fcourt.example>}
+  links:
+    # Deep link or web page of the app that takes ?token=... to finish a password reset.
+    reset-password-url: ${NOTIFICATION_RESET_PASSWORD_URL:https://fcourt.example/reset-password}
+  retry:
+    attempts: ${NOTIFICATION_RETRY_ATTEMPTS:3}
+    interval-ms: ${NOTIFICATION_RETRY_INTERVAL_MS:2000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+  health:
+    # Readiness must not depend on the SMTP server being reachable.
+    mail:
+      enabled: false
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
+    path: /swagger-ui.html
+  paths-to-exclude: /api/internal/**,/error

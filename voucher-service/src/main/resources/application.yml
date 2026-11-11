@@ -1,0 +1,66 @@
+server:
+  port: ${SERVER_PORT:8086}
+spring:
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: voucher-service
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    listener:
+      ack-mode: record
+  jackson:
+    deserialization:
+      accept-float-as-int: false
+      fail-on-numbers-for-enums: true
+  application:
+    name: voucher-service
+  # OpenFeign client to facility-service (client/FacilityFeignClient). Timeouts are the former RestClient ones.
+  cloud:
+    openfeign:
+      client:
+        config:
+          facility-service:
+            connect-timeout: 2000
+            read-timeout: 3000
+    circuitbreaker:
+      resilience4j:
+        # The breaker runs on the calling thread; the HTTP timeouts above bound each attempt.
+        disable-time-limiter: true
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5486/voucher_db}
+    username: ${DATABASE_USER:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+  mvc:
+    problemdetails:
+      enabled: true
+voucher:
+  facility-url: ${FACILITY_URL:http://localhost:8083}
+  jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+  jwt-issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
+  jwt-audience: ${AUTH_JWT_AUDIENCE:fcourt}
+  grpc:
+    enabled: ${VOUCHER_GRPC_ENABLED:true}
+    host: ${VOUCHER_GRPC_HOST:127.0.0.1}
+    port: ${VOUCHER_GRPC_PORT:9086}
+    token: ${VOUCHER_GRPC_TOKEN:}
+    certificate: ${VOUCHER_GRPC_CERTIFICATE:}
+    private-key: ${VOUCHER_GRPC_PRIVATE_KEY:}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
+    path: /swagger-ui.html
+  paths-to-exclude: /api/internal/**,/error

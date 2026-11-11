@@ -1,0 +1,68 @@
+server:
+  port: ${SERVER_PORT:8082}
+  error:
+    include-message: never
+    include-stacktrace: never
+
+spring:
+  application:
+    name: subscription-service
+  mvc:
+    problemdetails:
+      enabled: true
+  datasource:
+    url: ${SUBSCRIPTION_DATABASE_URL:jdbc:postgresql://localhost:5432/subscription_db}
+    username: ${SUBSCRIPTION_DATABASE_USER:postgres}
+    password: ${SUBSCRIPTION_DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 3000
+  jdbc:
+    template:
+      query-timeout: 3s
+  flyway:
+    baseline-on-migrate: false
+  http:
+    client:
+      connect-timeout: 5s
+      read-timeout: 10s
+
+subscription:
+  # Subscriptions run on calendar dates in this zone.
+  time-zone: ${SUBSCRIPTION_TIME_ZONE:Asia/Ho_Chi_Minh}
+
+payos:
+  # Secrets come from the environment only. Checkout stays disabled (503) until all of them are set.
+  client-id: ${PAYOS_CLIENT_ID:}
+  api-key: ${PAYOS_API_KEY:}
+  checksum-key: ${PAYOS_CHECKSUM_KEY:}
+  api-url: ${PAYOS_API_URL:https://api-merchant.payos.vn}
+  return-url: ${PAYOS_RETURN_URL:}
+  cancel-url: ${PAYOS_CANCEL_URL:}
+  link-ttl: ${PAYOS_LINK_TTL:15m}
+  # Sandbox only: charge this fixed amount (VND) instead of the plan price. Leave empty in production.
+  amount-override: ${PAYOS_AMOUNT_OVERRIDE:}
+
+auth:
+  jwt:
+    # Tokens are issued by auth-service; this service only validates them against its JWKS.
+    jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+    issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
+    audience: ${AUTH_JWT_AUDIENCE:fcourt}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
+    path: /swagger-ui.html
+  paths-to-exclude: /api/internal/**,/error

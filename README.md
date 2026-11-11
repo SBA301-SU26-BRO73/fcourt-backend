@@ -13,9 +13,9 @@ fcourt-backend/
 │       ├── V1__init_schema.sql
 │       └── V2__seed_sample_data.sql
 ├── docker/postgres/
-│   ├── init-databases.sh       # tạo database và chạy script của từng service
+│   ├── init-databases.sh       # tạo database cho từng service (schema do Flyway tạo)
 │   └── services.txt            # danh sách service và tên database
-├── docker-compose.yml          # PostgreSQL local
+├── docker-compose.yml          # cả hệ thống (profile infra/core/all), xem docs/docker-compose.md
 └── .env.example
 ```
 
@@ -25,8 +25,8 @@ fcourt-backend/
 |---|---|---|---|
 | `auth-service` | `auth_db` | `users`, `user_documents`, `user_account_action_logs` | _chưa điền_ |
 | `subscription-service` | `subscription_db` | `subscription_plans`, `plan_features`, `subscriptions`, `subscription_payments`, `court_types` | _chưa điền_ |
-| `facility-service` | `facility_db` | `branches`, `courts`, `time_slot_templates` | _chưa điền_ |
-| `reporting-service` | `reporting_db` | chưa có, owner tự thiết kế | _chưa điền_ |
+| `facility-service` | `facility_db` | `branches`, `courts`, `time_slot_templates` (+ `facility_outbox`, xem `facility-service/README.md`) | Tuấn |
+| `reporting-service` | `reporting_db` | read model `booking_facts`, `branch_snapshots`, `processed_events` (Flyway trong service) | Tuấn |
 | `discovery-service` | `discovery_db` | chưa có, owner tự thiết kế | _chưa điền_ |
 | `voucher-service` | `voucher_db` | `vouchers` | _chưa điền_ |
 | `slot-hold-engine` | `slot_hold_db` | `slot_holds` | _chưa điền_ |
@@ -34,7 +34,11 @@ fcourt-backend/
 | `payment-service` | `payment_db` | `payments`, `refund_requests` | _chưa điền_ |
 | `staff-operations-service` | `staff_db` | `staff` | _chưa điền_ |
 | `pos-retail-service` | `pos_retail_db` | `products`, `orders`, `order_items` | _chưa điền_ |
-| `notification-service` | `notification_db` | chưa có, owner tự thiết kế | _chưa điền_ |
+| `notification-service` | `notification_db` | `processed_events` (Flyway trong service, xem `notification-service/README.md`) | _chưa điền_ |
+
+## Spring Cloud (Gateway)
+
+Không có service registry (đã bỏ Eureka): gateway tìm service bằng DNS tĩnh. Xem [`docs/spring-cloud.md`](docs/spring-cloud.md).
 
 ## Chạy database local
 
@@ -45,13 +49,15 @@ cp .env.example .env          # đổi mật khẩu nếu muốn
 docker compose up -d
 ```
 
-Lần chạy đầu tiên sẽ tạo mỗi service một database và chạy các script trong `<service>/database/` theo thứ tự `V1`, `V2`, ... Chạy lại từ đầu (xóa toàn bộ dữ liệu):
+Lần chạy đầu tiên sẽ tạo mỗi service một database; schema và dữ liệu mẫu do Flyway của service tạo khi service khởi động. Chạy cả hệ thống bằng một lệnh: xem [docs/docker-compose.md](docs/docker-compose.md). Chạy lại từ đầu (xóa toàn bộ dữ liệu):
 
 ```bash
 docker compose down -v && docker compose up -d
 ```
 
 Kết nối: `localhost:${POSTGRES_PORT}` (mặc định 5432), user và mật khẩu lấy từ `.env`.
+
+Compose dùng bucket S3 thật cho local (không còn MinIO/LocalStack): đặt bucket và access key của IAM user `fcourt-local-s3` trong `.env`, xem [docs/storage-s3.md](docs/storage-s3.md) mục 5.
 
 ## Về script database
 
@@ -67,6 +73,10 @@ Dữ liệu mẫu là dữ liệu demo (tài khoản `@demo.com`, số tài kho�
 2. Thêm một dòng `<ten-service> <ten_database>` vào `docker/postgres/services.txt`.
 3. Nếu có script khởi tạo, đặt vào `<ten-service>/database/` với tên `V<số>__<mô-tả>.sql`.
 4. Cập nhật bảng danh sách service ở trên.
+
+## Gateway
+
+`gateway-service` (cổng 8080) là điểm vào duy nhất: web và app chỉ gọi gateway, gateway kiểm tra JWT và chuyển tiếp tới service theo DNS tĩnh. Bảng route, danh sách path công khai, biến môi trường: xem [`docs/gateway.md`](docs/gateway.md).
 
 ## Quy ước làm việc
 

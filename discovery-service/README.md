@@ -1,0 +1,143 @@
+# Discovery service
+
+Independent Spring Boot 3 / Java 21 service on port **8085**. Public branch search reads only `discovery_db`; it never queries facility tables or requires a JWT. PostgreSQL `pg_trgm` provides fuzzy matching and `unaccent` normalizes Vietnamese text.
+
+## Source structure
+
+Packages follow the original backend's layer-based organization:
+
+```text
+src/main/java/com/fcourt/discovery/
+|-- DiscoveryApplication.java
+|-- component/          # Kafka event listener
+|-- config/             # Kafka retry and dead-letter configuration
+|-- controller/         # Public HTTP endpoints
+|-- dto/
+|   |-- request/        # Search parameters and validation
+|   `-- response/       # Paginated branch summaries
+|-- exception/          # HTTP exception handling
+|-- model/
+|   `-- event/          # Kafka snapshots and projection change events
+|-- repository/         # JDBC search and transactional read-model writes
+`-- service/            # Search orchestration and cache consistency
+```
+
+Tests for components and services mirror their packages; the full integration test stays at the application root. PostgreSQL read models are managed by JDBC/Flyway, so no JPA entity layer is introduced.
+
+## Run locally
+
+From this directory, with Docker Desktop running:
+
+```powershell
+docker compose up -d postgres kafka topics redis
+$env:DISCOVERY_DB_URL = 'jdbc:postgresql://localhost:5545/discovery_db'
+$env:DISCOVERY_DB_USER = 'discovery'
+$env:DISCOVERY_DB_PASSWORD = 'discovery_local'
+.\mvnw.cmd spring-boot:run
+```
+
+Alternatively, run the entire stack: `docker compose --profile app up -d --build`.
+The separate Compose project uses PostgreSQL port 5545 to avoid the repository database on 5432. Kafka uses port 9092. These are local development credentials only. Production must supply credentials and broker security separately. Flyway installs the read model and extensions; its database role needs extension creation permission, or an administrator must preinstall `pg_trgm` and `unaccent`.
+
+Publish the sample snapshot from PowerShell (the key is branch ID):
+
+```powershell
+$event = Get-Content -Raw examples/branch-updated.json
+"1|$($event.Trim())" | docker compose exec -T kafka /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server kafka:19092 --topic facility.branch-updated.v1 --property parse.key=true --property key.separator='|'
+curl.exe 'http://localhost:8085/api/public/branches?query=sunrize'
+```
+
+Import `examples/discovery.postman_collection.json` into Postman; the collection includes normal, fuzzy, combined-filter, GPS and invalid-request examples. No authorization header is needed. The service is eventually consistent: wait for Kafka consumption before searching. Increment `version` when republishing modified sample data.
+
+## Public API
+
+`GET /api/public/branches`
+
+| Parameter | Meaning |
+| --- | --- |
+| `query` | Name/address substring or fuzzy word match; case/accent insensitive; max 200 characters |
+| `city`, `district` | Exact comparison after trimming, lowercasing and removing accents |
+| `courtTypeId` | Positive court type ID |
+| `minPrice`, `maxPrice` | Inclusive overlap with one court's published price range; nonnegative, up to 2 decimal places |
+| `latitude`, `longitude` | Optional coordinate pair, ranges -90..90 and -180..180 |
+| `page`, `size` | Zero-based page, default 0; size 1..100, default 20 |
+| `hasAvailableSlotsToday` | Optional boolean, default false; require at least one actual available slot today |
+| `timeSlot` | Optional `HH:mm - HH:mm` (spaces around hyphen optional); require continuous availability on one court for the entire interval today; implies availability even if the flag is false |
+
+Type and price filters must match the **same court**. Summaries always show the whole branch's active court count and overall min/max price. A court without pricing still counts, but does not match a price filter. Price ranges summarize active slot templates, not real-time availability or a guaranteed booking quote.
+
+### Advanced availability filters (SCRUM-57 / Flutter SCRUM-58)
+
+With either availability parameter, `minPrice` and `maxPrice` instead apply inclusively to each actual available slot's price. Every slot covering the requested interval must meet these bounds on the same court of the selected type. Template prices do not establish availability and do not exclude a court whose actual slot price qualifies. Branch summaries retain their existing template-based price aggregates.
+
+Today uses `Asia/Ho_Chi_Minh`. Start must precede end; overnight intervals, seconds, empty and malformed ranges return HTTP 400. A range may start/end within a 30-minute slot, but all covering slots must be available with no gaps. Without `timeSlot`, one qualifying slot is enough. HOLD, BOOKED, OUT_OF_SERVICE and EXPIRED slots are excluded through the existing SCRUM-22 service (facility schedule, booking occupancy, Redis holds).
+
+Availability queries bypass the search cache and return `Cache-Control: no-store`. Filtering happens before SQL ranking, pagination and counting; `totalElements`/`totalPages` reflect qualifying branches, including when the requested page is empty. Basic searches preserve their cache and existing contract. Dependency errors propagate rather than returning false availability; a stale projected court missing from the facility source can return HTTP 404, while unavailable/invalid sources or Redis return HTTP 503.
+
+Example (URL-encode the time range in clients):
+
+```text
+GET /api/public/branches?city=ho%20chi%20minh&district=quan%201&courtTypeId=1&minPrice=50000&maxPrice=150000&hasAvailableSlotsToday=true&timeSlot=18%3A00%20-%2020%3A00&page=0&size=20
+```
+
+Flutter should omit unset filters; resetting availability means removing `timeSlot` and removing/setting `hasAvailableSlotsToday=false`. Prices are per 30-minute slot, not the sum for the interval. No new upper price bound is imposed. Availability is a live observation, not a reservation; the hold/booking flow must still recheck.
+
+The current upstream APIs operate per court. Search scans candidate branches in batches of 100 and queries matching courts live before final pagination. Cost grows with the candidate set; source requests retain their existing timeouts. A future bulk availability API is needed for large-scale discovery. No cross-service database access or schema migration is introduced.
+
+Response fields: `content`, `page`, `size`, `totalElements`, `totalPages`. Each item includes `id`, `name`, `address`, `city`, `district`, `latitude`, `longitude`, `minPrice`, `maxPrice`, `courtCount`, `distanceKm`. Empty branches have count 0 and null prices. Missing GPS yields null distance.
+
+With user GPS, sort by Haversine distance (Earth radius 6371.0088 km), unknown branch locations last. Otherwise sort by fuzzy relevance when a query is present, or branch ID. Branch ID breaks ties for stable pagination. Invalid parameters return HTTP 400 with a problem detail. Inactive/deleted branches never appear.
+
+## Facility event contract
+
+Topic: `facility.branch-updated.v1` (override `BRANCH_UPDATED_TOPIC`). Key: decimal branch ID string. Value: UTF-8 JSON, see `examples/branch-updated.json` and `src/main/java/com/fcourt/discovery/model/event/BranchUpdatedEvent.java`.
+
+- Full snapshot fields: `branchId`, strictly increasing per-branch `version`, `name`, `address`, `city`, optional `district`, optional coordinate pair, `active`, `deleted`, `courts`.
+- `courts` contains every ACTIVE, non-deleted court; IDs must be unique. Each entry includes `id`, `courtTypeId`, and either an ordered `minPrice`/`maxPrice` pair or both null. Derive prices from active, non-deleted `time_slot_templates` across days/times. Do not publish private bank/admin data.
+- Emit after branch, court, pricing, status or deletion changes. Facility owns durable outbox delivery, aggregate version allocation and initial/recovery snapshot replay. A timestamp alone is not a safe version allocator.
+- Projection atomically replaces court rows only for newer versions. Replays/old versions are ignored; a deleted branch leaves an inactive version tombstone so older data cannot resurrect it. A later, higher version may explicitly restore it.
+- Consumer commits record offsets after processing; transient failures retry twice at one-second intervals. Invalid JSON/validation failures skip retries and go to `<topic>.DLT`; failed DLT publication must not acknowledge recovery. Provision the DLT with at least the source partition count. Inspect/fix/replay DLT records operationally.
+- Keep branch events keyed by branch ID for partition ordering. The SQL version guard also handles out-of-order delivery. Do not delete version tombstones without a replay strategy.
+
+**Dependency boundary:** the supplied legacy backend has `ward`, but no district/GPS fields and no `BranchUpdatedEvent` producer. The target facility service currently has SQL only. This implementation supplies the consumer/read model and a runnable sample publisher; automatic upstream publication requires SCRUM-14/SCRUM-16 owners to adopt this contract. Do not infer district from ward or query another service's database. Missing district/GPS remain null.
+
+## Search cache and consistency
+
+The application layer keeps at most 1,000 query/page results in Caffeine, expiring 5 seconds after load (`DISCOVERY_CACHE_TTL_SECONDS`). Equal concurrent requests share a load. A successful projection commit advances the cache revision and invalidates local entries. A database rollback never invalidates; an old in-flight read cannot populate the new revision. With multiple instances in the same Kafka consumer group, only the consuming instance gets the local invalidation, so other instances can serve cached data until TTL expiration. Discovery remains eventually consistent.
+
+Repeated popular searches are fast, but a cold broad fuzzy search can exceed 80 ms on this machine. The benchmark reports a cold request separately from warmed p50/p95/max. A strict <80 ms SLA for every cold query and production concurrency remains an acceptance/load-test item; do not infer it from warmed local measurements.
+
+## Verify
+
+```powershell
+.\mvnw.cmd verify
+.\mvnw.cmd verify '-Ddiscovery.benchmark=true'
+```
+
+On Linux/macOS use `sh mvnw`. Tests launch isolated PostgreSQL and Kafka processes on random ports and Redis 7 through Testcontainers; Docker must be running. The first run downloads Maven, dependencies and platform-specific PostgreSQL binaries. Avoid running as root on Linux because PostgreSQL initdb rejects root.
+
+Coverage includes real Flyway/PostgreSQL queries, anonymous HTTP and validation, Vietnamese/fuzzy matching, price/type correlation, aggregate counts, Haversine ordering, pagination, cache invalidation and racing reads, atomic rollback, stale/deleted events and Kafka poison-message DLT recovery. The optional benchmark seeds 10,000 branches / 50,000 courts, warms 20 requests and measures 100 sequential HTTP requests per scenario, asserting warmed p95 <80 ms and reporting cold requests separately. It is a local single-client check, not a production concurrency SLA; see `VALIDATION.md` for measured evidence.
+
+## Configuration
+
+`SERVER_PORT` (8085), `DISCOVERY_DB_URL` (localhost:5432/discovery_db), `DISCOVERY_DB_USER`, `DISCOVERY_DB_PASSWORD`, `KAFKA_BOOTSTRAP_SERVERS` (localhost:9092), `BRANCH_UPDATED_TOPIC`, and `DISCOVERY_INTERNAL_SLOT_TOKEN` (required for facility-service lock validation). Consumer group is `discovery-service-v1`, with earliest offset for a new group. Health endpoint: `/actuator/health`. No cross-service foreign keys or shared entity module.
+
+Set `DISCOVERY_INTERNAL_SLOT_TOKEN` in the environment before starting the `app` profile. The compose file passes it to discovery-service; set the same value for facility-service. Keep the token private and restrict the discovery container to trusted service networks.
+
+## Review photos and reviewer identity (SCRUM-105 follow-up)
+
+- `POST /api/reviews/images` (CUSTOMER, multipart field `files`, 1-5 files, JPEG/PNG/WebP detected from magic bytes, 5 MB each) stores each file through the `ImageStorage` port under a server-generated, provider-neutral key `reviews/{userId}/{uuid}.{ext}` (user id from the JWT) and returns `201 {"urls":["https://..."]}`.
+- `POST /api/reviews` accepts `imageUrls` only when each URL starts with the configured public base (HTTPS, or HTTP on localhost for an S3-compatible store) (`storage.public-base-url`, or the one the adapter derives) and its key part is `reviews/{caller id}/...`: no query, fragment, port, userinfo, `%`, `..` or `//`. Anything else gets `400` before any remote call. Rows written before this change are never re-validated and still read normally.
+- Storage is pluggable: `ImageStorage` (upload, delete, listByPrefix, publicBaseUrl) with an S3 adapter (AWS SDK v2, default credential chain, no keys in config). Objects are stored under the key `reviews/{userId}/{uuid}.{ext}` in a private bucket and served at `STORAGE_PUBLIC_BASE_URL/{key}` (the bucket's virtual-hosted S3 URL). Settings: `STORAGE_S3_BUCKET`, `STORAGE_S3_REGION` (default `ap-southeast-1`), `STORAGE_S3_ENDPOINT` + `STORAGE_S3_PATH_STYLE` (S3-compatible stores such as MinIO, tests only), `STORAGE_PUBLIC_BASE_URL`. Without a bucket the service starts, uploads answer `503` and reviews with photos are rejected. Review rows created before the S3 move keep their Cloudinary URLs and still render; the cleanup job and deletes skip them.
+- Reviewer identity: at creation the service calls `GET {AUTH_URL}/api/auth/profile` (default `http://localhost:8081`) with the caller's own bearer token and stores a snapshot in `reviews.reviewer_display_name` (masked, e.g. `Nguyễn Văn An` -> `An N.`) and `reviews.reviewer_avatar_url` (HTTPS only). The raw full name is never stored. If auth-service is unreachable the review is still saved with no name/avatar; old rows return `reviewerName` `Khách hàng` and a null `reviewerAvatarUrl`.
+- Public review JSON no longer contains `userId` (nor `bookingId`); it exposes `reviewerName` and `reviewerAvatarUrl`.
+- Avatars come from `users.avatar_url` in auth-service: Google sign-in fills it, and a customer can set or clear it with `PUT`/`DELETE /api/auth/profile/avatar` (see auth-service README). The snapshot is taken per review, so an avatar changed later does not rewrite old reviews, and a deleted avatar file shows the generic icon on those old reviews.
+- Upload rate limit: `DISCOVERY_REVIEW_UPLOAD_MAX_FILES` (default 20) files per `DISCOVERY_REVIEW_UPLOAD_WINDOW_SECONDS` (default 600) per user, answered with `429`. It is a fixed window kept in memory per instance (no Redis call on the upload path), so with N instances the real cap is up to N times higher; memory is bounded by purging expired windows.
+- Cleanup of unattached photos: a daily job (`DISCOVERY_REVIEW_CLEANUP_CRON`, default 03:30) asks the storage port for objects under `reviews/` older than `DISCOVERY_REVIEW_CLEANUP_MIN_AGE_HOURS` (default 24) and deletes those whose key is in no review. Idempotent, safe on several instances, it runs in DRY-RUN by default (logs what it would delete, deletes nothing); set `DISCOVERY_REVIEW_CLEANUP_DRY_RUN=false` explicitly to delete for real, `DISCOVERY_REVIEW_CLEANUP_ENABLED=false` turns it off. Looks at most 2000 objects per run. A photo older than the minimum age that a customer attaches at the very moment it is deleted would lose its image; that window is a few milliseconds a day.
+
+## Realtime court slots (SCRUM-22)
+
+See [SCRUM-22_AVAILABLE_SLOTS.md](SCRUM-22_AVAILABLE_SLOTS.md) for the public API,
+proposed upstream contracts, local fixtures, Redis setup and validation evidence.
+Slots read the upstream HTTP contracts and Redis on every request; the branch
+search cache does not apply to them.

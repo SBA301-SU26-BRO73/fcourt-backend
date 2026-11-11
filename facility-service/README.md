@@ -1,0 +1,214 @@
+# facility-service
+
+Branches, courts and 30-minute time slot templates of court owners (SCRUM-14, SCRUM-16, SCRUM-18).
+Spring Boot 3.5, Java 21, JdbcTemplate + Flyway on `facility_db`, port **8083**.
+
+## Run locally
+
+Needs PostgreSQL with a `facility_db` database, Kafka, and a JWKS endpoint (auth-service, or the
+dev token tool used by the team).
+
+```powershell
+$env:FACILITY_DB_URL = 'jdbc:postgresql://localhost:5432/facility_db'
+$env:AUTH_JWK_SET_URI = 'http://localhost:8081/.well-known/jwks.json'
+.\mvnw.cmd spring-boot:run
+```
+
+| Variable | Default |
+|---|---|
+| `SERVER_PORT` | `8083` |
+| `FACILITY_DB_URL` / `FACILITY_DB_USER` / `FACILITY_DB_PASSWORD` | `jdbc:postgresql://localhost:5432/facility_db` / `postgres` / `postgres` |
+| `AUTH_JWK_SET_URI` / `AUTH_JWT_ISSUER` / `AUTH_JWT_AUDIENCE` | `http://localhost:8081/.well-known/jwks.json` / `http://localhost:8081` / `fcourt` |
+| `KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092` |
+| `BRANCH_UPDATED_TOPIC` / `BRANCH_UPDATED_TOPIC_PARTITIONS` | `facility.branch-updated.v1` / `3` |
+| `FACILITY_EVENTS_ENABLED` | `true` (outbox relay + topic creation + initial snapshots) |
+| `FACILITY_OUTBOX_DELAY_MS` | `1000` |
+| `FACILITY_BOOTSTRAP_SNAPSHOTS` | `true` |
+| `SUBSCRIPTION_BASE_URL` | empty (use default limits below) |
+| `DISCOVERY_BASE_URL` | empty (court locks answer 503 until set; used to detect bookings/holds) |
+| `DISCOVERY_INTERNAL_SLOT_TOKEN` | empty (must match discovery-service; court locks answer 503 until configured) |
+| `FACILITY_RESERVATION_TOKEN` | empty (min 32 chars, shared with booking-service; full-court reservation endpoints answer 503 until set) |
+| `FACILITY_RESERVATION_SWEEP_MS` | `15000` (expiry sweeper for uncommitted reservations) |
+| `SUBSCRIPTION_DEFAULT_MAX_BRANCHES` / `SUBSCRIPTION_DEFAULT_MAX_COURTS` | `3` / `15` |
+
+### Schema
+
+`src/main/resources/db/migration` holds `V1__init_schema.sql` and `V2__seed_sample_data.sql`
+(JDBC versions of `database/V1`, `database/V2` without psql meta commands) and the additive
+`V3__facility_management.sql`: `branches.district/latitude/longitude/bank_bin/event_version`,
+`courts.default_price_per_hour`, unique live court name per branch, one live template per
+court/day/start, checks (close > open, end > start) and the `facility_outbox` table.
+V1 columns are unchanged, so `tools/demo_seed` keeps working.
+
+A database created by the root `docker-compose.yml` already contains V1+V2 without Flyway
+history: Flyway baselines it at version 2 and applies only V3+. An empty database runs V1..V3.
+
+## Security
+
+RS256 JWT through `AUTH_JWK_SET_URI`, exact issuer, audience `fcourt`, `exp` required, positive
+numeric `sub`; role from `roles` array or `role` claim. Errors are RFC 7807 ProblemDetail
+(`detail` is user-safe, validation errors add `errors: ["field: message"]`).
+
+| Path | Access |
+|---|---|
+| `/api/admin/**` | ADMIN (court owner); the owner is always `sub`, other owners' rows answer 404 |
+| `/api/staff/**` | STAFF (assignment is checked by staff-operations-service before it calls) |
+| `GET /api/public/**` | anonymous (payment-service VietQR) |
+| `GET /api/internal/**` | anonymous; for discovery-service only — restrict at the network/gateway |
+
+## API
+
+Times are `"HH:mm"` (requests also accept `"HH:mm:ss"`); money is a JSON number (VND).
+
+**Branches (SCRUM-14)**
+
+- `GET /api/admin/branches` → own, not deleted
+- `POST /api/admin/branches` → 201; **403** when the subscription branch limit is reached
+- `GET|PUT|DELETE /api/admin/branches/{id}` (DELETE = soft delete, 204)
+- `GET /api/public/branches/{id}` → `{id,name,address,ward,district,city,latitude,longitude,phone,openTime,closeTime,bankName,bankBin,bankAccountNumber,bankAccountName,status}` (times are `HH:mm`)
+- `GET /api/public/branches/{branchId}/courts` → `[{id,name,courtTypeId,defaultPricePerHour,imageUrl,description}]`; anonymous, active and non-deleted branch/courts only, ordered by court name then id; **404** for unknown, inactive, or deleted branch, `[]` when no active courts remain
+- `GET /api/staff/branches/{id}` → `{id,status}`
+
+Request: `name*, address*, ward, district, city*, latitude, longitude (pair), phone, openTime*,
+closeTime* (> openTime, else 400), slotDurationMinutes (30|60, default 30), bankName*, bankBin*
+(6 digits), bankAccountNumber* (6–20 digits), bankAccountName*, status (optional ACTIVE|INACTIVE)`.
+
+**Courts (SCRUM-16)**
+
+- `GET|POST /api/admin/branches/{branchId}/courts` (POST 201; **403** when the court limit is reached)
+- `GET|PUT|DELETE /api/admin/courts/{id}`, `PATCH /api/admin/courts/{id}/status` `{status}`
+- `GET /api/staff/courts/{id}` → `{id,branchId,status}`
+- `GET /api/staff/branches/{branchId}/courts` → `[{id,branchId,name,status}]` live courts by id, `Cache-Control: no-store`; **404** unknown/deleted branch, **409** inactive branch. No assignment check here: staff-operations/booking verify it first
+
+Request: `name*, courtTypeId*, description, imageUrl, defaultPricePerHour* (> 0), status
+(ACTIVE|MAINTENANCE|INACTIVE)`. A duplicate name in the same branch (case-insensitive, trimmed)
+or a price ≤ 0 is **400**. Courts seeded by SQL have `defaultPricePerHour = null`.
+
+The public court listing exposes only the four listed fields. `defaultPricePerHour` comes from
+`courts.default_price_per_hour`; it is null for legacy SQL-seeded courts whose price was not set.
+
+**Time slot templates (SCRUM-18)** — day of week `0 = Sunday … 6 = Saturday`.
+
+- `POST /api/admin/courts/{courtId}/time-slot-templates/preview` → `{courtId, slots:[{startTime,endTime,price}], totalSlots}`
+- `POST /api/admin/courts/{courtId}/apply-template` → `{courtId, daysOfWeek, totalSlots, slots:[TemplateSlot]}`
+- `GET /api/admin/courts/{courtId}/time-slot-templates?dayOfWeek=`
+- `POST /api/admin/courts/{courtId}/time-slot-templates` `{dayOfWeek,startTime,endTime,price}` → 201 (exactly 30 minutes, inside branch hours, overlap → 409)
+- `DELETE /api/admin/time-slot-templates/{id}` → 204
+
+`ApplyTemplateRequest`: `startTime` (default branch openTime), `endTime` (default closeTime),
+`durationMinutes` (only 30), `price`, `priceMultiplier` (default 1.0), `daysOfWeek` (default 0..6).
+`SlotTemplateEngine` splits the range into back-to-back 30-minute blocks (06:00–06:30, 06:30–07:00, …).
+End ≤ start, a range outside branch hours, or a range not divisible by 30 minutes is 400, so
+no partial block is ever created. Applying replaces (soft-deletes) every live template of the
+given days in the same transaction, so a day never mixes old and new layouts.
+Slot price = `price ?? defaultPricePerHour × 30/60 × priceMultiplier` (2 decimals, HALF_UP).
+
+**Court locks / out of service / private events (SCRUM-49, SCRUM-111)** — one model (`court_locks`, migration
+`V40`), one window `[startAt, endAt)` per court in venue-local time (`yyyy-MM-ddTHH:mm:ss`, minutes `00`/`30`,
+may cross midnight or span up to 31 days, must end in the future).
+
+- `POST /api/admin/courts/lock-slots` `{courtId*, startAt*, endAt*, type (OUT_OF_SERVICE default | PRIVATE_EVENT),
+  reason*, notes, publicReason, contactName, contactPhone}` → 201 `LockResponse`
+- `GET /api/admin/courts/lock-slots?branchId=&courtId=&from=&to=` → active locks, ordered by start
+- `DELETE /api/admin/courts/lock-slots/{id}` → 204 (unlock; the row is kept as cancelled for audit)
+- `POST /api/admin/courts/out-of-service` `{branchId*, allCourts | courtIds[], startAt*, endAt*, type, reason*, ...}` →
+  201 `{groupId, branchId, totalLocks, locks[]}`; one lock per court, all-or-nothing in one transaction
+- `DELETE /api/admin/courts/out-of-service/{groupId}` → 204 (unlock every court of that request)
+
+`reason` and `notes` are internal (admin API only). `publicReason` (≤500), `contactName` (≤100) and `contactPhone`
+(`+?` 9–15 digits) are the only fields exposed to customers (as `restriction` below). Errors: **400** invalid window
+or scope, **404** unknown/foreign court, branch or lock, **409** `code=LOCK_OVERLAP` (an active lock already covers
+part of the window, `lockIds` listed) or `code=BOOKING_CONFLICT` (`conflicts:[{courtId,date,slotId,startTime,
+endTime,status BOOKED|HOLD}]`, nothing is created), **503** bookings/holds cannot be verified. Before inserting,
+the service reads `GET {DISCOVERY_BASE_URL}/api/internal/courts/{id}/slot-conflicts?date=` for every court and date of the
+window, using `DISCOVERY_INTERNAL_SLOT_TOKEN` shared with discovery-service; if either setting is empty, locking
+answers 503 (fail closed). A booking or hold created between that
+check and the commit is not detected (point-in-time check, same limitation as SCRUM-22).
+
+**Discovery read API**: `GET /api/internal/courts/{courtId}/slot-schedule?date=YYYY-MM-DD`, shape of
+`discovery-service/SCRUM-22_AVAILABLE_SLOTS.md`. `slotId` = template id (stable),
+`outOfService` = court not ACTIVE, branch INACTIVE, or an active court lock covers any part of the slot (then each slot also
+carries the optional public `restriction:{type,publicReason,contactName,contactPhone}`, omitted when null). 404 for a missing/deleted court, 200 with
+`slots: []` when the court has no template for that weekday, `Cache-Control: no-store`.
+
+## Pricing rules (SCRUM-80 peak, SCRUM-82 weekday/weekend)
+
+Migration `V30__court_pricing_rules.sql` (`court_pricing_rules`). Day numbers `0 = Sunday .. 6 = Saturday`.
+
+- `GET|POST /api/admin/courts/{courtId}/pricing-rules` (POST 201)
+- `PUT|DELETE /api/admin/courts/{courtId}/pricing-rules/{ruleId}` (DELETE = soft delete, 204)
+- `POST /api/admin/courts/{courtId}/pricing-rules/copy-weekday-to-weekend` `{priceMultiplier?}` -> replaces every
+  weekend rule (Sat/Sun only) with a copy of each weekday rule (Mon-Fri only), price x multiplier, atomically
+- `GET /api/internal/courts/{courtId}/price-quote?date=&startTime=&endTime=` -> `{courtId,date,total,slots:[{startTime,endTime,price,source,ruleId}]}`;
+  `source` is `WEEKEND|PEAK|OFF_PEAK|DEFAULT`; 409 when the court is out of service or a slot has no template
+
+Rule: `ruleName*, startTime*, endTime*, pricePerHour* (> 0), peakHour (default false), daysOfWeek (default 0..6)`;
+response adds `id, courtId, dayType (WEEKDAY|WEEKEND|ALL)`. Times must be on the 30-minute grid and `endTime > startTime`
+(400). A rule overlapping another rule of the same scope on a shared day is 409; weekend rules (days subset of {0,6})
+form their own scope and may overlap weekday rules because they win.
+
+Price of a 30-minute slot, first match wins (`PricingEngine`): weekend rule > peak rule > off-peak rule > the slot's
+template price (the "default"). Maintenance/inactive court or branch is `outOfService` (not priced). A holiday tier is
+not implemented: there is no holiday calendar in the system yet. `slot-schedule` and `price-quote` both use this engine,
+so a booking crossing a rule boundary is the sum of its slots, each at its own price. The `facility.branch-updated.v1`
+snapshot `minPrice/maxPrice` use the effective prices; `PricingRuleUpdatedEvent` is not a separate event for the same
+reason as `CourtCreatedEvent` above.
+
+## Branch events (`facility.branch-updated.v1`)
+
+Implements the consumer contract in discovery-service's README ("Facility event contract").
+`CourtCreatedEvent` / `SlotTemplateAppliedEvent` from the Jira texts are intentionally **not**
+produced: nothing consumes them; this full snapshot plus the slot-schedule read API replace them.
+
+- Every branch/court/status/template/delete change writes one full snapshot into `facility_outbox`
+  in the same transaction. Key = branch id; value = `{branchId, version, name, address, city,
+  district, latitude, longitude, active, deleted, courts:[{id, courtTypeId, minPrice, maxPrice}]}`.
+- `version` comes from `branches.event_version`, incremented under the branch row lock: strictly
+  increasing per branch, never a timestamp. A deleted branch publishes `deleted=true, active=false,
+  courts=[]` (tombstone).
+- `courts` = ACTIVE, non-deleted courts; min/max price over live templates (both null if none).
+  No bank/owner data is published.
+- `OutboxRelay` publishes pending rows in id order (acks=all, idempotent producer), marks a row only
+  after the broker acknowledged it and stops at the first failure (at-least-once; consumers drop
+  old versions). An advisory lock keeps one relay active across instances.
+- Initial/recovery snapshot: on startup every branch whose `event_version` is 0 (rows inserted by
+  SQL seeds) gets version 1. To force a full replay, set `event_version` back to 0 for the wanted
+  branches and restart.
+- The producer declares the topic (3 partitions) because discovery runs with `missing-topics-fatal`.
+
+## Pending dependencies
+
+- **subscription-service (SCRUM-10)** is not implemented. `SubscriptionLimitClient` uses
+  `SUBSCRIPTION_DEFAULT_MAX_BRANCHES/COURTS` (3/15, the seed plan). With `SUBSCRIPTION_BASE_URL`
+  set it calls the proposed `GET /api/internal/subscriptions/admins/{adminId}/limits` (Bearer
+  forwarded) → `{maxBranches, maxCourts}`; 404 → 403 "No active subscription plan", other
+  failures → 503. Wire it to the real contract when SCRUM-10 lands. Limits are enforced under a
+  per-owner advisory lock, so concurrent creates cannot exceed them.
+- **auth-service (SCRUM-6)**: only the JWT contract is used; the owner's account status is not rechecked.
+- Court types (SCRUM-10/11) are not validated against subscription-service (`courtTypeId` > 0 only).
+- Changing branch hours does not trim existing templates outside the new hours.
+
+## Tests
+
+`.\mvnw.cmd clean verify` (Java 21, Docker running): unit tests for the template engine and
+request validation; `FacilityApiIntegrationTest` runs the full app against PostgreSQL 16
+(Testcontainers) and embedded Kafka — owner scoping, 400/403/404/409 cases, plan limits,
+template apply/replace, slot-schedule contract and the published snapshots/versions.
+
+## Full-court reservation protocol (SCRUM-241 / SCRUM-114)
+
+Internal, service-to-service (`X-Internal-Service-Token` = `FACILITY_RESERVATION_TOKEN`; 503 when unset, 403 when wrong).
+booking-service picks a `reservationId` (UUID) and drives:
+
+| Call | Result |
+|---|---|
+| `POST /api/internal/court-reservations` `{reservationId, branchId, adminId, courtIds[], startAt, endAt, ttlSeconds?, publicReason?}` | `201` new / `200` idempotent replay; `409` `LOCK_OVERLAP`, `BOOKING_CONFLICT`, `IDEMPOTENCY_MISMATCH` (same id, other payload), `RESERVATION_CLOSED`, `RESERVATION_EXPIRED` |
+| `POST /api/internal/court-reservations/{id}/commit` | `200` COMMITTED (idempotent); `409` once cancelled or when the lease passed |
+| `POST /api/internal/court-reservations/{id}/rollback` | `200` CANCELLED (idempotent; an unknown id leaves a tombstone so a late reserve fails) |
+| `GET /api/internal/court-reservations/{id}` | status after a network timeout |
+
+Reserve inserts one `PRIVATE_EVENT` lock per court (`court_locks.reservation_id`) in a single transaction under the
+branch row lock, so discovery, hold, counter and online booking read the slots as `outOfService` immediately. An
+uncommitted reservation expires after `ttlSeconds` (default 120, 30-600): readers ignore an expired lease at once and
+the sweeper cancels the rows. Commit clears the lease. Reservation locks cannot be removed with the admin unlock API.
+Each state change publishes a `ReservationService.CourtLocksChanged` Spring event after the transaction (hook for realtime).

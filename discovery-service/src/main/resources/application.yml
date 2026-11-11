@@ -1,0 +1,98 @@
+server:
+  port: ${SERVER_PORT:8085}
+spring:
+  application:
+    name: discovery-service
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6387}
+      password: ${REDIS_PASSWORD:}
+      connect-timeout: 1s
+      timeout: 1s
+  datasource:
+    url: ${DISCOVERY_DB_URL:jdbc:postgresql://localhost:5432/discovery_db}
+    username: ${DISCOVERY_DB_USER:postgres}
+    password: ${DISCOVERY_DB_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 10
+  jdbc:
+    template:
+      query-timeout: 3s
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: discovery-service-v1
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    listener:
+      ack-mode: record
+      missing-topics-fatal: true
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 26MB
+  jackson:
+    deserialization:
+      fail-on-null-for-primitives: true
+      accept-float-as-int: false
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+storage:
+  # Private S3 bucket; credentials come from the default AWS chain (EKS Pod Identity, AWS profile), never from config.
+  # Empty bucket = review photo upload disabled (503).
+  s3:
+    bucket: ${STORAGE_S3_BUCKET:}
+    region: ${STORAGE_S3_REGION:ap-southeast-1}
+    # Only for S3-compatible stores such as MinIO (used by tests); leave empty for real AWS S3. Setting it also turns on path-style addressing.
+    endpoint: ${STORAGE_S3_ENDPOINT:}
+    path-style: ${STORAGE_S3_PATH_STYLE:false}
+  # Base of every issued image URL (CloudFront). Default: endpoint/bucket or the bucket host.
+  public-base-url: ${STORAGE_PUBLIC_BASE_URL:}
+discovery:
+  auth:
+    jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+    issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
+    audience: ${AUTH_JWT_AUDIENCE:fcourt}
+    base-url: ${AUTH_URL:http://localhost:8081}
+  reviews:
+    images:
+      max-file-bytes: 5242880
+      rate-limit:
+        max-files: ${DISCOVERY_REVIEW_UPLOAD_MAX_FILES:20}
+        window-seconds: ${DISCOVERY_REVIEW_UPLOAD_WINDOW_SECONDS:600}
+      cleanup:
+        enabled: ${DISCOVERY_REVIEW_CLEANUP_ENABLED:true}
+        dry-run: ${DISCOVERY_REVIEW_CLEANUP_DRY_RUN:true}
+        min-age-hours: ${DISCOVERY_REVIEW_CLEANUP_MIN_AGE_HOURS:24}
+        cron: ${DISCOVERY_REVIEW_CLEANUP_CRON:0 30 3 * * *}
+  internal:
+    slot-token: ${DISCOVERY_INTERNAL_SLOT_TOKEN:}
+  slots:
+    facility-url: ${FACILITY_URL:http://localhost:8083}
+    booking-url: ${BOOKING_URL:http://localhost:8088}
+  search:
+    cache-ttl-seconds: ${DISCOVERY_CACHE_TTL_SECONDS:5}
+  kafka:
+    branch-topic: ${BRANCH_UPDATED_TOPIC:facility.branch-updated.v1}
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
+    path: /swagger-ui.html
+  paths-to-exclude: /api/internal/**,/error

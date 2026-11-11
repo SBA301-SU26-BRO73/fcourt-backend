@@ -1,0 +1,285 @@
+server:
+  port: ${SERVER_PORT:8080}
+spring:
+  application:
+    name: gateway-service
+  data:
+    redis:
+      # Rate limiting only. If Redis is unreachable the gateway allows requests (fail open).
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6387}
+      password: ${REDIS_PASSWORD:}
+      timeout: ${REDIS_TIMEOUT_MS:300}ms
+  cloud:
+    # No service registry: lb://<name> resolves through this static list (SimpleDiscoveryClient). Compose and Kubernetes
+    # Service names are identical (<name>:<port>), so the defaults work in both; override <NAME>_URI to point elsewhere
+    # (for example http://localhost:8081 when running a service from the IDE). Load balancing across pods is done by the
+    # Kubernetes Service, so one URI per service is enough.
+    discovery:
+      client:
+        simple:
+          instances:
+            auth-service:
+              - uri: ${AUTH_SERVICE_URI:http://auth-service:8081}
+            subscription-service:
+              - uri: ${SUBSCRIPTION_SERVICE_URI:http://subscription-service:8082}
+            facility-service:
+              - uri: ${FACILITY_SERVICE_URI:http://facility-service:8083}
+            reporting-service:
+              - uri: ${REPORTING_SERVICE_URI:http://reporting-service:8084}
+            discovery-service:
+              - uri: ${DISCOVERY_SERVICE_URI:http://discovery-service:8085}
+            voucher-service:
+              - uri: ${VOUCHER_SERVICE_URI:http://voucher-service:8086}
+            slot-hold-engine:
+              - uri: ${SLOT_HOLD_ENGINE_URI:http://slot-hold-engine:8087}
+            booking-service:
+              - uri: ${BOOKING_SERVICE_URI:http://booking-service:8088}
+            payment-service:
+              - uri: ${PAYMENT_SERVICE_URI:http://payment-service:8089}
+            staff-operations-service:
+              - uri: ${STAFF_OPERATIONS_SERVICE_URI:http://staff-operations-service:8090}
+            notification-service:
+              - uri: ${NOTIFICATION_SERVICE_URI:http://notification-service:8091}
+            pos-retail-service:
+              - uri: ${POS_RETAIL_SERVICE_URI:http://pos-retail-service:8092}
+    gateway:
+      server:
+        webflux:
+          httpclient:
+            connect-timeout: ${GATEWAY_CONNECT_TIMEOUT_MS:3000}
+            response-timeout: ${GATEWAY_RESPONSE_TIMEOUT:30s}
+          default-filters:
+            # Reserved for service-to-service calls: a client must never be able to supply it.
+            - RemoveRequestHeader=X-Internal-Service-Token
+            - name: RequestRateLimiter
+              args:
+                # Generous per-user (token sub) or per-IP limit on every route; see gateway.rate-limit.general.
+                rate-limiter: "#{@generalRateLimiter}"
+                key-resolver: "#{@generalKeyResolver}"
+          # Routes are matched by order (lower first), then by position. Specific paths come before the
+          # broad ones that contain them. /api/internal/** and /actuator/** have no route on purpose
+          # (BlockedPathsFilter answers 403). The Authorization header is forwarded unchanged.
+          routes:
+            # Strict, per-IP policies. Order 5 so they win over the broad routes below; the general
+            # limit from default-filters still applies on top.
+            - id: booking-guest-lookup-limited
+              uri: lb://booking-service
+              order: 5
+              predicates:
+                - Path=/api/public/bookings/lookup,/api/public/bookings/cancel
+                - Method=POST
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    rate-limiter: "#{@guestLookupRateLimiter}"
+                    key-resolver: "#{@guestLookupKeyResolver}"
+            # Guests may now hold and book without a token: cap creation per client (token subject when signed in, else IP).
+            - id: booking-create-limited
+              uri: lb://booking-service
+              order: 5
+              predicates:
+                - Path=/api/bookings
+                - Method=POST
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    rate-limiter: "#{@guestBookingRateLimiter}"
+                    key-resolver: "#{@guestBookingKeyResolver}"
+            - id: slot-hold-create-limited
+              uri: lb://slot-hold-engine
+              order: 5
+              predicates:
+                - Path=/api/bookings/hold-slots
+                - Method=POST
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    rate-limiter: "#{@guestBookingRateLimiter}"
+                    key-resolver: "#{@guestBookingKeyResolver}"
+            - id: auth-service-sensitive-limited
+              uri: lb://auth-service
+              order: 5
+              predicates:
+                - Path=/api/auth/login,/api/auth/password/forgot,/api/auth/register/**
+                - Method=POST
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    rate-limiter: "#{@authRateLimiter}"
+                    key-resolver: "#{@authKeyResolver}"
+            - id: slot-hold-engine
+              uri: lb://slot-hold-engine
+              order: 10
+              predicates:
+                - Path=/api/bookings/hold-slots/**
+            - id: booking-service-public
+              uri: lb://booking-service
+              order: 10
+              predicates:
+                # Guest booking lookup and cancel (public, no token).
+                - Path=/api/public/bookings/**
+            - id: discovery-service-branches
+              uri: lb://discovery-service
+              order: 10
+              predicates:
+                # Exact list path, and the reviews of one branch. Both sit inside facility's /api/public/branches/**.
+                - Path=/api/public/branches,/api/public/branches/,/api/public/branches/*/reviews,/api/public/branches/*/reviews/**
+            - id: discovery-service
+              uri: lb://discovery-service
+              order: 20
+              predicates:
+                - Path=/api/public/courts/**,/api/reviews/**,/api/admin/reviews/**
+            - id: auth-service
+              uri: lb://auth-service
+              order: 20
+              predicates:
+                - Path=/api/auth/**,/api/super-admin/court-admins/**,/api/super-admin/users/**,/api/super-admin/stats/accounts/**,/api/super-admin/stats/owner-names/**
+            - id: subscription-service
+              uri: lb://subscription-service
+              order: 20
+              predicates:
+                - Path=/api/subscriptions/**,/api/subscription-plans/**,/api/court-types/**,/api/super-admin/stats/saas-revenue/**
+            - id: facility-service
+              uri: lb://facility-service
+              order: 20
+              predicates:
+                - Path=/api/public/branches/**,/api/admin/branches/**,/api/admin/courts/**,/api/admin/time-slot-templates/**,/api/staff/branches/**,/api/staff/courts/**
+            - id: reporting-service
+              uri: lb://reporting-service
+              order: 20
+              predicates:
+                - Path=/api/admin/dashboard/**,/api/super-admin/dashboard/**
+            - id: voucher-service
+              uri: lb://voucher-service
+              order: 20
+              predicates:
+                - Path=/api/vouchers/**,/api/admin/vouchers/**
+            - id: booking-service
+              uri: lb://booking-service
+              order: 20
+              predicates:
+                - Path=/api/bookings/**,/api/admin/bookings/**
+            - id: booking-service-ws
+              uri: lb:ws://booking-service
+              order: 20
+              predicates:
+                # STOMP over WebSocket (lb:ws:// = load-balanced, ws scheme).
+                - Path=/ws-fcourt/**
+            - id: payment-service
+              uri: lb://payment-service
+              order: 20
+              predicates:
+                - Path=/api/payments/**,/api/refunds/**,/api/admin/payments/**,/api/admin/refunds/**
+            - id: staff-operations-service
+              uri: lb://staff-operations-service
+              order: 20
+              predicates:
+                - Path=/api/staff/schedule/**,/api/staff/check-in/**,/api/staff/offline/**,/api/staff/me/**,/api/staff/walk-in/**,/api/staff/bookings/**,/api/admin/staff/**
+            - id: notification-service
+              uri: lb://notification-service
+              order: 20
+              predicates:
+                - Path=/devices/**
+            - id: pos-retail-service
+              uri: lb://pos-retail-service
+              order: 20
+              predicates:
+                - Path=/api/staff/pos/**,/api/admin/pos/**,/api/super-admin/pos/**
+
+fcourt:
+  gateway:
+    jwt:
+      jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+      issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
+      audience: ${AUTH_JWT_AUDIENCE:fcourt}
+    cors:
+      # Comma separated origins. Empty (default): no CORS handling, clients are same-origin through nginx.
+      allowed-origins: ${GATEWAY_ALLOWED_ORIGINS:}
+    swagger:
+      enabled: ${GATEWAY_SWAGGER_ENABLED:true}
+      # Services listed in the aggregated Swagger UI (each must expose /v3/api-docs). Override with
+      # GATEWAY_SWAGGER_SERVICES=booking-service,voucher-service
+      services: ${GATEWAY_SWAGGER_SERVICES:auth-service,subscription-service,facility-service,reporting-service,discovery-service,voucher-service,slot-hold-engine,booking-service,payment-service,staff-operations-service,pos-retail-service,notification-service}
+    security:
+      # Taken from each service's own security config. "METHOD /pattern", METHOD may be ANY.
+      # Everything not listed here needs a valid token.
+      authenticated-paths:
+        # Carve-outs inside broader public patterns below (checked first).
+        - ANY /api/bookings/my
+        - ANY /api/payments/my-transactions
+        - ANY /api/payments/*/confirm-free
+        - ANY /api/refunds/**
+      public-paths:
+        # auth-service
+        - ANY /api/auth/register/**
+        - ANY /api/auth/login
+        - ANY /api/auth/google
+        - ANY /api/auth/refresh
+        - ANY /api/auth/logout
+        - ANY /api/auth/password/forgot
+        - ANY /api/auth/password/reset
+        # facility-service, discovery-service: public reads
+        - GET /api/public/**
+        # subscription-service: catalogue reads and the PayOS webhook (authenticated by its signature)
+        - GET /api/court-types
+        - GET /api/court-types/*
+        - GET /api/subscription-plans/all
+        - POST /api/subscriptions/payment-webhook
+        # slot-hold-engine: guest hold and release
+        - ANY /api/bookings/hold-slots/**
+        - ANY /api/public/bookings/**
+        # booking-service: guest booking creation (hold token + phone sealed in the hold), then view with X-Hold-Token
+        - POST /api/bookings
+        - GET /api/bookings/*
+        - ANY /ws-fcourt/**
+        # payment-service: customer and guest authorization is delegated to booking per request
+        - ANY /api/payments/**
+        # aggregated Swagger UI
+        - GET /swagger-ui.html
+        - GET /swagger-ui/**
+        - GET /webjars/**
+        - GET /v3/api-docs/**
+        - GET /docs/**
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: ${GATEWAY_SWAGGER_ENABLED:true}
+  api-docs:
+    enabled: ${GATEWAY_SWAGGER_ENABLED:true}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  health:
+    redis:
+      # Redis only backs rate limiting and fails open: its outage must not mark the gateway DOWN.
+      enabled: false
+
+gateway:
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    # true only behind the ALB, which sets X-Forwarded-For; the first hop is then the client IP.
+    trust-forwarded-for: ${RATE_LIMIT_TRUST_FORWARDED_FOR:false}
+    redis-timeout-ms: ${RATE_LIMIT_REDIS_TIMEOUT_MS:300}
+    # requests per window-seconds, burst = most requests at once.
+    general:
+      requests: ${RATE_LIMIT_GENERAL_REQUESTS:50}
+      window-seconds: ${RATE_LIMIT_GENERAL_WINDOW_SECONDS:1}
+      burst: ${RATE_LIMIT_GENERAL_BURST:100}
+    guest-lookup:
+      requests: ${RATE_LIMIT_LOOKUP_REQUESTS:5}
+      window-seconds: ${RATE_LIMIT_LOOKUP_WINDOW_SECONDS:60}
+      burst: ${RATE_LIMIT_LOOKUP_BURST:5}
+    # Creating a hold or a booking (guests included): per token subject, else per IP.
+    guest-booking:
+      requests: ${RATE_LIMIT_GUEST_BOOKING_REQUESTS:20}
+      window-seconds: ${RATE_LIMIT_GUEST_BOOKING_WINDOW_SECONDS:60}
+      burst: ${RATE_LIMIT_GUEST_BOOKING_BURST:20}
+    auth:
+      requests: ${RATE_LIMIT_AUTH_REQUESTS:10}
+      window-seconds: ${RATE_LIMIT_AUTH_WINDOW_SECONDS:60}
+      burst: ${RATE_LIMIT_AUTH_BURST:10}

@@ -1,0 +1,155 @@
+name: Build and push images
+# Builds only the services whose folder changed (or the ones named in a manual run) and pushes them to ECR.
+# Runs on push to dev and on manual dispatch only; never on pull requests, so a missing AWS role cannot fail a PR.
+# Setup (repository variables and secrets) is described in docs/ci-image-build.md.
+on:
+  push:
+    branches: [dev]
+    paths:
+      - '*-service/**'
+      - 'slot-hold-engine/**'
+  workflow_dispatch:
+    inputs:
+      services:
+        description: 'Services to build, comma separated (for example auth-service,booking-service) or "all"'
+        required: true
+        default: 'all'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-push-images-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ap-southeast-1
+  ECR_NAMESPACE: fcourt
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      services: ${{ steps.pick.outputs.services }}
+      tag: ${{ steps.pick.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: pick
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_SERVICES: ${{ inputs.services }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          all=$(for d in */Dockerfile; do dirname "$d"; done | sort)
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ "$INPUT_SERVICES" = "all" ]; then
+              wanted="$all"
+            else
+              wanted=$(printf '%s' "$INPUT_SERVICES" | tr ', ' '\n\n' | sed '/^$/d' | sort -u)
+            fi
+          else
+            base="$BEFORE_SHA"
+            if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+              base="$HEAD_SHA~1"
+            fi
+            wanted=$(git diff --name-only "$base" "$HEAD_SHA" | cut -d/ -f1 | sort -u)
+          fi
+          # Keep only folders that really have a Dockerfile (validates manual input too).
+          selected=$(comm -12 <(printf '%s\n' "$all") <(printf '%s\n' "$wanted") || true)
+          json=$(printf '%s\n' "$selected" | sed '/^$/d' | jq -R . | jq -sc .)
+          echo "Services to build: $json"
+          echo "services=$json" >> "$GITHUB_OUTPUT"
+          echo "tag=${HEAD_SHA::7}" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: detect
+    # Skipped until the ECR push role exists (repository variable AWS_ECR_PUSH_ROLE_ARN).
+    if: needs.detect.outputs.services != '[]' && vars.AWS_ECR_PUSH_ROLE_ARN != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        service: ${{ fromJson(needs.detect.outputs.services) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ECR_PUSH_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - uses: docker/setup-buildx-action@v3
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.service }}
+          file: ${{ matrix.service }}/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_NAMESPACE }}/${{ matrix.service }}:${{ needs.detect.outputs.tag }}
+            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_NAMESPACE }}/${{ matrix.service }}:latest
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,scope=${{ matrix.service }},mode=max
+
+  update-gitops:
+    # Disabled by default. Enable by setting repository variable GITOPS_UPDATE_ENABLED=true after the secret
+    # GITOPS_PUSH_TOKEN (fine-grained token, Contents read/write on fcourt-gitops) exists.
+    needs: [detect, build]
+    if: vars.GITOPS_UPDATE_ENABLED == 'true' && needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: SBA301-SU26-BRO73/fcourt-gitops
+          ref: main
+          token: ${{ secrets.GITOPS_PUSH_TOKEN }}
+      - name: Install kustomize if missing
+        run: |
+          if ! command -v kustomize >/dev/null; then
+            curl -fsSL "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/kustomize/v5.4.3/hack/install_kustomize.sh" | bash -s -- 5.4.3 /usr/local/bin
+          fi
+          kustomize version
+      - name: Set image tags
+        env:
+          SERVICES: ${{ needs.detect.outputs.services }}
+          TAG: ${{ needs.detect.outputs.tag }}
+          REGISTRY: ${{ vars.AWS_ACCOUNT_ID || '870853685410' }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+        run: |
+          set -euo pipefail
+          for svc in $(echo "$SERVICES" | jq -r '.[]'); do
+            if [ ! -d "services/$svc" ]; then
+              echo "Skip $svc: no services/$svc in gitops"
+              continue
+            fi
+            (cd "services/$svc" && kustomize edit set image "$REGISTRY/$ECR_NAMESPACE/$svc=$REGISTRY/$ECR_NAMESPACE/$svc:$TAG")
+          done
+      - name: Commit and push
+        env:
+          TAG: ${{ needs.detect.outputs.tag }}
+          SERVICES: ${{ needs.detect.outputs.services }}
+        run: |
+          set -euo pipefail
+          git config user.name "fcourt-ci"
+          git config user.email "fcourt-ci@users.noreply.github.com"
+          git add services
+          git diff --cached --quiet && { echo "No tag changes"; exit 0; }
+          git commit -m "chore(images): bump $(echo "$SERVICES" | jq -r 'join(", ")') to ${TAG}"
+          for attempt in 1 2 3; do
+            git push origin HEAD:main && exit 0
+            git pull --rebase origin main
+          done
+          exit 1

@@ -1,0 +1,342 @@
+package com.fcourt.hold;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.redisson.Redisson;
+import org.redisson.api.RedissonClient;
+import org.redisson.client.codec.StringCodec;
+import org.redisson.config.Config;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.client.RestClient;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+
+@Testcontainers
+class HoldIntegrationTest {
+    @Container
+    static final GenericContainer<?> REDIS = new GenericContainer<>("redis:7-alpine").withExposedPorts(6379);
+    static final List<RedissonClient> CLIENTS = new ArrayList<>();
+    static final ObjectMapper MAPPER = new ObjectMapper().findAndRegisterModules()
+            .disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    static final Clock CLOCK = Clock.fixed(Instant.parse("2030-01-01T00:00:00Z"), ZoneOffset.UTC);
+    RedissonClient redis;
+    RedisHoldStore store;
+    MockRestServiceServer discovery;
+    MockMvc mvc;
+
+    @BeforeEach
+    void setup() throws Exception {
+        redis = client();
+        redis.getKeys().flushdb();
+        store = new RedisHoldStore(redis, MAPPER);
+        var builder = RestClient.builder().baseUrl("http://discovery");
+        discovery = MockRestServiceServer.bindTo(builder).build();
+        mvc = MockMvcBuilders.standaloneSetup(new HoldController(
+                new HoldService(new DiscoveryGateway(builder.build(), CLOCK), store)))
+                .setMessageConverters(new org.springframework.http.converter.json.MappingJackson2HttpMessageConverter(MAPPER))
+                .build();
+    }
+
+    @Test
+    void holdAndReleasePublishOnlyPublicInvalidations() throws Exception {
+        var queue = new java.util.concurrent.LinkedBlockingQueue<String>();
+        var topic = redis.getTopic("fcourt:slot-changes", StringCodec.INSTANCE);
+        int listener = topic.addListener(String.class, (channel, message) -> queue.add(message));
+        try {
+            var request = new HoldRequest(21L, LocalDate.of(2030, 1, 2), List.of(1L), "0912345678");
+            assertThat(store.acquire(request, "private-token")).isNotNull();
+            var event = MAPPER.readTree(queue.poll(3, java.util.concurrent.TimeUnit.SECONDS));
+            assertThat(event.size()).isEqualTo(3);
+            assertThat(event.path("type").asText()).isEqualTo("HOLD_CREATED");
+            assertThat(event.path("courtId").asLong()).isEqualTo(21);
+            assertThat(event.path("date").asText()).isEqualTo("2030-01-02");
+            assertThat(store.acquire(request, "conflicting-token")).isNull();
+            assertThat(queue.poll(100, java.util.concurrent.TimeUnit.MILLISECONDS)).isNull();
+            store.release("private-token");
+            var released = MAPPER.readTree(queue.poll(3, java.util.concurrent.TimeUnit.SECONDS));
+            assertThat(released.path("type").asText()).isEqualTo("HOLD_RELEASED");
+            assertThat(released.path("courtId")).isEqualTo(event.path("courtId"));
+            assertThat(released.path("date")).isEqualTo(event.path("date"));
+            store.release("private-token");
+            assertThat(queue.poll(100, java.util.concurrent.TimeUnit.MILLISECONDS)).isNull();
+        } finally { topic.removeListener(listener); }
+    }
+
+    @Test
+    void ttlExpiryIsAnnouncedOnceWithPublicFieldsOnly() throws Exception {
+        var queue = new java.util.concurrent.LinkedBlockingQueue<String>();
+        var topic = redis.getTopic("fcourt:slot-changes", StringCodec.INSTANCE);
+        int listener = topic.addListener(String.class, (channel, message) -> queue.add(message));
+        try {
+            var request = new HoldRequest(21L, LocalDate.of(2030, 1, 2), List.of(1L), "0912345678");
+            assertThat(store.acquire(request, "expiring-token")).isNotNull();
+            assertThat(queue.poll(3, java.util.concurrent.TimeUnit.SECONDS)).contains("HOLD_CREATED");
+            // A live hold is not announced as expired.
+            assertThat(store.sweepExpired()).isZero();
+            assertThat(queue.poll(200, java.util.concurrent.TimeUnit.MILLISECONDS)).isNull();
+            // Make the hold due: expire its keys and move its index score into the past.
+            var index = redis.<String>getScoredSortedSet("fcourt:hold-expiry", StringCodec.INSTANCE);
+            assertThat(index.size()).isEqualTo(1);
+            String member = index.first();
+            assertThat(member).startsWith("21|2030-01-02|");
+            index.add(System.currentTimeMillis() - 1000, member);
+            redis.getBucket("fcourt:hold:21:2030-01-02:1").expire(Instant.now().minusSeconds(1));
+            assertThat(store.sweepExpired()).isEqualTo(1);
+            var event = MAPPER.readTree(queue.poll(3, java.util.concurrent.TimeUnit.SECONDS));
+            assertThat(event.size()).isEqualTo(3);
+            assertThat(event.path("courtId").asLong()).isEqualTo(21);
+            assertThat(event.path("date").asText()).isEqualTo("2030-01-02");
+            assertThat(event.path("type").asText()).isEqualTo("HOLD_EXPIRED");
+            assertThat(event.toString()).doesNotContain("expiring-token", "0912345678");
+            // Drained entries are never announced twice.
+            assertThat(store.sweepExpired()).isZero();
+            assertThat(queue.poll(200, java.util.concurrent.TimeUnit.MILLISECONDS)).isNull();
+        } finally { topic.removeListener(listener); }
+    }
+
+    @Test
+    void releasedHoldLeavesNoExpiryEntryAndNoExpiredEvent() throws Exception {
+        var request = new HoldRequest(21L, LocalDate.of(2030, 1, 2), List.of(1L), "0912345678");
+        assertThat(store.acquire(request, "short-lived")).isNotNull();
+        store.release("short-lived");
+        assertThat(redis.getScoredSortedSet("fcourt:hold-expiry", StringCodec.INSTANCE).size()).isZero();
+        assertThat(store.sweepExpired()).isZero();
+    }
+
+    @Test
+    void burstLargerThanOneBatchIsFullyDrained() {
+        var index = redis.<String>getScoredSortedSet("fcourt:hold-expiry", StringCodec.INSTANCE);
+        long past = System.currentTimeMillis() - 1000;
+        for (int court = 1; court <= 1200; court++) index.add(past, court + "|2030-01-02|fcourt:hold-token:t" + court);
+        index.add(System.currentTimeMillis() + 60_000, "9999|2030-01-02|fcourt:hold-token:live");
+        assertThat(store.sweepExpired()).isEqualTo(1200);
+        assertThat(index.size()).isEqualTo(1); // the live hold stays indexed
+        assertThat(store.sweepExpired()).isZero();
+    }
+
+    @Test
+    void malformedIndexMembersAreDroppedWithoutPublishing() throws Exception {
+        var queue = new java.util.concurrent.LinkedBlockingQueue<String>();
+        var topic = redis.getTopic("fcourt:slot-changes", StringCodec.INSTANCE);
+        int listener = topic.addListener(String.class, (channel, message) -> queue.add(message));
+        try {
+            var index = redis.<String>getScoredSortedSet("fcourt:hold-expiry", StringCodec.INSTANCE);
+            index.add(System.currentTimeMillis() - 1000, "not-a-member");
+            assertThat(store.sweepExpired()).isEqualTo(1);
+            assertThat(queue.poll(200, java.util.concurrent.TimeUnit.MILLISECONDS)).isNull();
+        } finally { topic.removeListener(listener); }
+    }
+
+    static RedissonClient client() {
+        var config = new Config();
+        config.useSingleServer().setAddress("redis://" + REDIS.getHost() + ":" + REDIS.getMappedPort(6379));
+        var result = Redisson.create(config);
+        CLIENTS.add(result);
+        return result;
+    }
+
+    String heldToken(Long... slots) throws Exception {
+        available();
+        var body = mvc.perform(post("/api/bookings/hold-slots").contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(request(slots)))).andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return MAPPER.readTree(body).get("holdToken").asText();
+    }
+
+    @Test
+    void releaseFreesOwnedSlotsAndToken() throws Exception {
+        String token = heldToken(1L, 2L);
+        mvc.perform(delete("/api/bookings/hold-slots/" + token)).andExpect(status().isNoContent());
+        assertThat(redis.getKeys().count()).isZero();
+        assertThat(store.acquire(request(1L, 2L), "next")).isNotNull();
+    }
+
+    @Test
+    void releaseNeverDeletesSlotNowOwnedBySomeoneElse() throws Exception {
+        String token = heldToken(1L, 2L);
+        redis.<String>getBucket("fcourt:hold:1:2030-01-01:2", StringCodec.INSTANCE).set("other");
+        mvc.perform(delete("/api/bookings/hold-slots/" + token)).andExpect(status().isNoContent());
+        assertThat(redis.getBucket("fcourt:hold:1:2030-01-01:1").isExists()).isFalse();
+        assertThat(redis.<String>getBucket("fcourt:hold:1:2030-01-01:2", StringCodec.INSTANCE).get()).isEqualTo("other");
+        assertThat(redis.getBucket("fcourt:hold-token:" + token).isExists()).isFalse();
+    }
+
+    @Test
+    void releaseIsIdempotentAndRejectsMalformedToken() throws Exception {
+        String token = heldToken(1L);
+        mvc.perform(delete("/api/bookings/hold-slots/" + token)).andExpect(status().isNoContent());
+        mvc.perform(delete("/api/bookings/hold-slots/" + token)).andExpect(status().isNoContent());
+        mvc.perform(delete("/api/bookings/hold-slots/" + java.util.UUID.randomUUID())).andExpect(status().isNoContent());
+        mvc.perform(delete("/api/bookings/hold-slots/not-a-token")).andExpect(status().isBadRequest());
+    }
+
+    @AfterAll
+    static void shutdown() { CLIENTS.forEach(RedissonClient::shutdown); }
+
+    HoldRequest request(Long... slots) {
+        return new HoldRequest(1L, LocalDate.parse("2030-01-01"), List.of(slots), "0912345678");
+    }
+
+    void available() {
+        discovery.expect(requestTo("http://discovery/api/public/courts/1/slots?date=2030-01-01"))
+                .andRespond(withSuccess("""
+                    [{"slotId":1,"status":"AVAILABLE","startTime":"18:00:00"},
+                     {"slotId":2,"status":"AVAILABLE","startTime":"18:30:00"}]
+                    """, MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    void createsHoldWithExactCommonExpiryAndTokenMetadata() throws Exception {
+        available();
+        var response = mvc.perform(post("/api/bookings/hold-slots").contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(request(1L, 2L)))).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.expiresInSeconds").value(300)).andReturn().getResponse();
+        var result = MAPPER.readTree(response.getContentAsString());
+        String token = result.get("holdToken").asText();
+        String key = "fcourt:hold:1:2030-01-01:1";
+        assertThat(redis.<String>getBucket(key, StringCodec.INSTANCE).get()).isEqualTo(token);
+        long ttl = redis.getBucket(key).remainTimeToLive();
+        assertThat(ttl).isBetween(295_000L, 300_000L);
+        String script = "return redis.call('pexpiretime',KEYS[1])";
+        Long expiry = redis.getScript().eval(org.redisson.api.RScript.Mode.READ_ONLY, script,
+                org.redisson.api.RScript.ReturnType.INTEGER, List.of(key));
+        assertThat(Instant.ofEpochMilli(expiry)).isEqualTo(Instant.parse(result.get("expiresAt").asText()));
+        Long tokenExpiry = redis.getScript().eval(org.redisson.api.RScript.Mode.READ_ONLY, script,
+                org.redisson.api.RScript.ReturnType.INTEGER, List.of("fcourt:hold-token:" + token));
+        assertThat(tokenExpiry).isEqualTo(expiry);
+        assertThat(redis.<String>getBucket("fcourt:hold-token:" + token, StringCodec.INSTANCE).get())
+                .contains("0912345678");
+        discovery.verify();
+    }
+
+    @Test
+    void onlyOneOfConcurrentClientsWins() throws Exception {
+        var second = new RedisHoldStore(client(), MAPPER);
+        try (var pool = Executors.newFixedThreadPool(20)) {
+            var gate = new CountDownLatch(1);
+            List<Callable<Instant>> attempts = new ArrayList<>();
+            for (int i = 0; i < 20; i++) {
+                var target = i % 2 == 0 ? store : second;
+                String token = "contender-" + i;
+                attempts.add(() -> { gate.await(); return target.acquire(request(1L, 2L), token); });
+            }
+            var futures = attempts.stream().map(pool::submit).toList();
+            gate.countDown();
+            int winners = 0;
+            for (var f : futures) if (f.get() != null) winners++;
+            assertThat(winners).isEqualTo(1);
+            assertThat(redis.getKeys().count()).isEqualTo(4); // 2 slots, token, expiry index
+        }
+    }
+
+    @Test
+    void conflictNeverWritesPartialSelectionOrToken() {
+        store.acquire(request(2L), "first");
+        assertThat(store.acquire(request(1L, 2L), "second")).isNull();
+        assertThat(redis.getBucket("fcourt:hold:1:2030-01-01:1").isExists()).isFalse();
+        assertThat(redis.getBucket("fcourt:hold-token:second").isExists()).isFalse();
+        assertThat(redis.<String>getBucket("fcourt:hold:1:2030-01-01:2", StringCodec.INSTANCE).get()).isEqualTo("first");
+    }
+
+    @Test
+    void expiredKeyCanBeAcquiredAgainWithoutCleanupJob() {
+        store.acquire(request(1L), "first");
+        redis.getBucket("fcourt:hold:1:2030-01-01:1").expire(Instant.now().minusSeconds(1));
+        assertThat(store.acquire(request(1L), "second")).isNotNull();
+    }
+
+    @Test
+    void heldSlotReturns409AndPreservesExistingOwner() throws Exception {
+        store.acquire(request(1L), "existing");
+        available();
+        mvc.perform(post("/api/bookings/hold-slots").contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(request(1L)))).andExpect(status().isConflict());
+        assertThat(redis.<String>getBucket("fcourt:hold:1:2030-01-01:1", StringCodec.INSTANCE).get()).isEqualTo("existing");
+    }
+
+    @Test
+    void unavailableDiscoveryFailsClosed() throws Exception {
+        discovery.expect(requestTo("http://discovery/api/public/courts/1/slots?date=2030-01-01"))
+                .andRespond(withServerError());
+        mvc.perform(post("/api/bookings/hold-slots").contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(request(1L)))).andExpect(status().isServiceUnavailable());
+        assertThat(redis.getKeys().count()).isZero();
+    }
+
+    @Test
+    void invalidDiscoveryPayloadNeverCreatesHolds() throws Exception {
+        for (String body : List.of("null", "{}", "[]", "[{\"slotId\":1}]", "invalid-json")) {
+            setup();
+            discovery.expect(requestTo("http://discovery/api/public/courts/1/slots?date=2030-01-01"))
+                    .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+            mvc.perform(post("/api/bookings/hold-slots").contentType(MediaType.APPLICATION_JSON)
+                    .content(MAPPER.writeValueAsString(request(1L)))).andExpect(status().isServiceUnavailable());
+            assertThat(redis.getKeys().count()).isZero();
+        }
+    }
+
+    @Test
+    void pastStartTimeIsRejectedEvenIfDiscoverySaysAvailable() throws Exception {
+        discovery.expect(requestTo("http://discovery/api/public/courts/1/slots?date=2030-01-01"))
+                .andRespond(withSuccess("[{\"slotId\":1,\"status\":\"AVAILABLE\",\"startTime\":\"06:30:00\"}]",
+                        MediaType.APPLICATION_JSON));
+        mvc.perform(post("/api/bookings/hold-slots").contentType(MediaType.APPLICATION_JSON)
+                .content(MAPPER.writeValueAsString(request(1L)))).andExpect(status().isConflict());
+        assertThat(redis.getKeys().count()).isZero();
+    }
+
+    @Test
+    void bookedOutOfServiceHeldAndExpiredSlotsAreRejected() throws Exception {
+        for (String state : List.of("BOOKED", "OUT_OF_SERVICE", "HOLD", "EXPIRED")) {
+            setup();
+            discovery.expect(requestTo("http://discovery/api/public/courts/1/slots?date=2030-01-01"))
+                    .andRespond(withSuccess("[{\"slotId\":1,\"status\":\"" + state
+                            + "\",\"startTime\":\"18:00:00\"}]", MediaType.APPLICATION_JSON));
+            mvc.perform(post("/api/bookings/hold-slots").contentType(MediaType.APPLICATION_JSON)
+                    .content(MAPPER.writeValueAsString(request(1L)))).andExpect(status().isConflict());
+            assertThat(redis.getKeys().count()).isZero();
+        }
+    }
+
+    @Test
+    void signedInCustomerMayHoldWithoutAPhone() throws Exception {
+        available();
+        mvc.perform(post("/api/bookings/hold-slots").contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer token-validated-by-booking-service")
+                .content("{\"courtId\":1,\"date\":\"2030-01-01\",\"slotIds\":[1]}"))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void rejectsInvalidRequestsWithoutCallingDiscovery() throws Exception {
+        for (String json : List.of("{}", "{\"courtId\":1,\"date\":\"2030-01-01\",\"slotIds\":[1],\"guestPhone\":\"123\"}",
+                "{\"courtId\":1,\"date\":\"2030-01-01\",\"slotIds\":[1]}",
+                MAPPER.writeValueAsString(request(1L, 1L)), MAPPER.writeValueAsString(request()))) {
+            mvc.perform(post("/api/bookings/hold-slots").contentType(MediaType.APPLICATION_JSON).content(json))
+                    .andExpect(status().isBadRequest());
+        }
+        assertThat(redis.getKeys().count()).isZero();
+    }
+}

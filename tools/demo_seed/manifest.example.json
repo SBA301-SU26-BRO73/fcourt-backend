@@ -1,0 +1,60 @@
+{
+  "seedKey": "fcourt-demo",
+  "idBase": 1000000,
+  "demoDate": "2026-10-31",
+  "demoOnly": true,
+  "slotPrice": "50000.00",
+  "subscriptionPlanId": 1,
+  "courtTypeIds": {
+    "badminton": 6,
+    "pickleball": 1
+  },
+  "branches": [
+    {
+      "name": "Venue 1",
+      "address": "DEMO address - replace with authorized venue",
+      "ward": "DEMO ward",
+      "city": "Ha Noi",
+      "bankName": "DEMO BANK",
+      "bankAccountNumber": "000000000001",
+      "bankAccountName": "DEMO OWNER",
+      "bankQrImageUrl": "https://cdn.example.test/demo/replace-qr-1.png",
+      "bankBin": "000000"
+    },
+    {
+      "name": "Venue 2",
+      "address": "DEMO address - replace with authorized venue",
+      "ward": "DEMO ward",
+      "city": "Ho Chi Minh City",
+      "bankName": "DEMO BANK",
+      "bankAccountNumber": "000000000002",
+      "bankAccountName": "DEMO OWNER",
+      "bankQrImageUrl": "https://cdn.example.test/demo/replace-qr-2.png",
+      "bankBin": "000000"
+    },
+    {
+      "name": "Venue 3",
+      "address": "DEMO address - replace with authorized venue",
+      "ward": "DEMO ward",
+      "city": "Ho Chi Minh City",
+      "bankName": "DEMO BANK",
+      "bankAccountNumber": "000000000003",
+      "bankAccountName": "DEMO OWNER",
+      "bankQrImageUrl": "https://cdn.example.test/demo/replace-qr-3.png",
+      "bankBin": "000000"
+    }
+  ],
+  "receiptImageUrl": "receipts/demo/replace-receipt.png",
+  "courtImages": [
+    "https://cdn.example.test/demo/replace-court-1.jpg",
+    "https://cdn.example.test/demo/replace-court-2.jpg",
+    "https://cdn.example.test/demo/replace-court-3.jpg",
+    "https://cdn.example.test/demo/replace-court-4.jpg",
+    "https://cdn.example.test/demo/replace-court-5.jpg",
+    "https://cdn.example.test/demo/replace-court-6.jpg",
+    "https://cdn.example.test/demo/replace-court-7.jpg",
+    "https://cdn.example.test/demo/replace-court-8.jpg",
+    "https://cdn.example.test/demo/replace-court-9.jpg",
+    "https://cdn.example.test/demo/replace-court-10.jpg"
+  ]
+}

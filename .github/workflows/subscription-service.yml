@@ -1,0 +1,29 @@
+name: Subscription service verification
+on:
+  pull_request:
+    paths:
+      - 'subscription-service/**'
+      - '.github/workflows/subscription-service.yml'
+  push:
+    branches: [dev]
+    paths:
+      - 'subscription-service/**'
+      - '.github/workflows/subscription-service.yml'
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: subscription-service/pom.xml
+      - run: mvn -B -ntp -f subscription-service/pom.xml clean verify

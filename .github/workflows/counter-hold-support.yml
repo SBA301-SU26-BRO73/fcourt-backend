@@ -1,0 +1,22 @@
+﻿name: counter-hold-support
+on:
+  pull_request:
+    paths: ['slot-hold-engine/**', '.github/workflows/counter-hold-support.yml']
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: slot-hold-engine/pom.xml
+      - run: mvn -B -f slot-hold-engine/pom.xml verify

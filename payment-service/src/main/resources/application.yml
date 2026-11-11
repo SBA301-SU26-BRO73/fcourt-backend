@@ -1,0 +1,75 @@
+server:
+  port: ${SERVER_PORT:8089}
+spring:
+  application:
+    name: payment-service
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5489/payment_db}
+    username: ${DATABASE_USER:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6399}
+      connect-timeout: 200ms
+      timeout: 200ms
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      ack-mode: record
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      properties:
+        max.block.ms: 5000
+        delivery.timeout.ms: 10000
+        request.timeout.ms: 5000
+  mvc:
+    problemdetails:
+      enabled: true
+payment:
+  jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+  jwt-issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
+  jwt-audience: ${AUTH_JWT_AUDIENCE:fcourt}
+  events-enabled: ${PAYMENT_EVENTS_ENABLED:true}
+  booking-url: ${BOOKING_URL:http://localhost:8088}
+  facility-url: ${FACILITY_URL:http://localhost:8083}
+  auth-url: ${AUTH_URL:http://localhost:8081}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+storage:
+  # Private S3 bucket (never public): receipts/ and refund-proofs/ are read only through presigned URLs.
+  # Credentials come from the default AWS chain (EKS Pod Identity, AWS profile), never from config.
+  # Empty bucket = receipt upload disabled (503).
+  s3:
+    bucket: ${STORAGE_S3_BUCKET:}
+    region: ${STORAGE_S3_REGION:ap-southeast-1}
+    # Only for S3-compatible stores such as MinIO (used by tests); leave empty for real AWS S3. Setting it also turns on path-style addressing.
+    endpoint: ${STORAGE_S3_ENDPOINT:}
+    path-style: ${STORAGE_S3_PATH_STYLE:false}
+    presign-ttl: ${STORAGE_S3_PRESIGN_TTL:10m}
+    # Host baked into presigned URLs when the browser reaches the bucket by another address than the service does
+    # (S3-compatible stores only, for example MinIO). Empty = same as endpoint. Signing is offline.
+    presign-endpoint: ${STORAGE_S3_PRESIGN_ENDPOINT:}
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
+    path: /swagger-ui.html
+  paths-to-exclude: /api/internal/**,/error

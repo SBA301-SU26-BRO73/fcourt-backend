@@ -1,0 +1,112 @@
+server:
+  port: ${SERVER_PORT:8083}
+  error:
+    include-message: never
+    include-stacktrace: never
+
+spring:
+  application:
+    name: facility-service
+  datasource:
+    url: ${FACILITY_DB_URL:jdbc:postgresql://localhost:5432/facility_db}
+    username: ${FACILITY_DB_USER:postgres}
+    password: ${FACILITY_DB_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 3000
+  flyway:
+    # The root docker-compose already applies database/V1+V2 without Flyway history.
+    # Baseline such a database at V2 so only V3+ run; an empty database runs V1..Vn.
+    baseline-on-migrate: true
+    baseline-version: 2
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 55MB
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+        max.block.ms: 5000
+        delivery.timeout.ms: 10000
+        request.timeout.ms: 5000
+  config:
+    import: optional:file:.env[.properties]
+  data:
+    redis:
+      # Only used when facility.realtime.enabled=true; same Redis as slot-hold-engine.
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6387}
+      password: ${REDIS_PASSWORD:}
+      connect-timeout: 1s
+      timeout: 1s
+
+facility:
+  realtime:
+    # SCRUM-108: publish LOCK_CREATED/LOCK_REMOVED schedule invalidations after lock commands commit.
+    enabled: ${FACILITY_REALTIME_ENABLED:false}
+  auth:
+    jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+    issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
+    audience: ${AUTH_JWT_AUDIENCE:fcourt}
+  subscription:
+    # Empty = subscription-service (SCRUM-10) not available: use the default limits below.
+    base-url: ${SUBSCRIPTION_BASE_URL:}
+    default-max-branches: ${SUBSCRIPTION_DEFAULT_MAX_BRANCHES:3}
+    default-max-courts: ${SUBSCRIPTION_DEFAULT_MAX_COURTS:15}
+  images:
+    max-per-branch: ${FACILITY_IMAGES_MAX_PER_BRANCH:10}
+    max-file-bytes: ${FACILITY_IMAGES_MAX_FILE_BYTES:5242880}
+  discovery:
+    # Needed to verify bookings/holds before locking; empty = locking answers 503 (fail closed).
+    base-url: ${DISCOVERY_BASE_URL:}
+    internal-token: ${DISCOVERY_INTERNAL_SLOT_TOKEN:}
+  reservations:
+    # Shared secret of booking-service for /api/internal/court-reservations (min 32 chars). Empty = 503 (fail closed).
+    internal-token: ${FACILITY_RESERVATION_TOKEN:}
+    sweep-delay-ms: ${FACILITY_RESERVATION_SWEEP_MS:15000}
+  events:
+    enabled: ${FACILITY_EVENTS_ENABLED:true}
+    topic: ${BRANCH_UPDATED_TOPIC:facility.branch-updated.v1}
+    topic-partitions: ${BRANCH_UPDATED_TOPIC_PARTITIONS:3}
+    relay-delay-ms: ${FACILITY_OUTBOX_DELAY_MS:1000}
+    # Publish an initial snapshot for branches that never had one (seed/demo rows).
+    bootstrap-snapshots: ${FACILITY_BOOTSTRAP_SNAPSHOTS:true}
+
+management:
+  health:
+    redis:
+      # Redis is advisory (realtime hints only): its outage must not mark the service DOWN.
+      enabled: false
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+storage:
+  # Private S3 bucket; credentials come from the default AWS chain (EKS Pod Identity, AWS profile), never from config.
+  # Empty bucket = branch image upload disabled (503).
+  s3:
+    bucket: ${STORAGE_S3_BUCKET:}
+    region: ${STORAGE_S3_REGION:ap-southeast-1}
+    # Only for S3-compatible stores such as MinIO (used by tests); leave empty for real AWS S3. Setting it also turns on path-style addressing.
+    endpoint: ${STORAGE_S3_ENDPOINT:}
+    path-style: ${STORAGE_S3_PATH_STYLE:false}
+  # Base of every issued image URL (CloudFront). Default: endpoint/bucket or the bucket host.
+  public-base-url: ${STORAGE_PUBLIC_BASE_URL:}
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
+    path: /swagger-ui.html
+  paths-to-exclude: /api/internal/**,/error
