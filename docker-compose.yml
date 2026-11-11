@@ -39,12 +39,12 @@ x-env: &env
   HOLD_GRPC_TARGET: slot-hold-engine:9087
   BOOKING_GRPC_TARGET: booking-service:9088
   STAFF_GRPC_PLAINTEXT: "true"
-  # S3 that tren AWS (bucket local rieng, IAM user fcourt-local-s3), xem docs/storage-s3.md. Khoa lay tu .env (khong commit).
-  STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET:?set STORAGE_S3_BUCKET in .env}
+  # S3 that tren AWS (bucket local rieng, IAM user fcourt-local-s3), xem docs/storage-s3.md. Khoa lay tu .env (khong commit); thieu khoa thi he thong van chay, chi upload/xem file loi.
+  STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET:-fcourt-local-media-870853685410}
   STORAGE_S3_REGION: ${STORAGE_S3_REGION:-ap-southeast-1}
-  STORAGE_PUBLIC_BASE_URL: https://${STORAGE_S3_BUCKET}.s3.${STORAGE_S3_REGION:-ap-southeast-1}.amazonaws.com
-  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?set AWS_ACCESS_KEY_ID in .env}
-  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?set AWS_SECRET_ACCESS_KEY in .env}
+  STORAGE_PUBLIC_BASE_URL: https://${STORAGE_S3_BUCKET:-fcourt-local-media-870853685410}.s3.${STORAGE_S3_REGION:-ap-southeast-1}.amazonaws.com
+  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
   AWS_REGION: ${STORAGE_S3_REGION:-ap-southeast-1}
   # Token noi bo giua cac service: gia tri DEV, chi dung local. Doi trong .env neu muon.
   BOOKING_HOLD_SERVICE_TOKEN: ${BOOKING_HOLD_SERVICE_TOKEN:-dev-booking-hold-token-0123456789abcdef}

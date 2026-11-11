@@ -64,7 +64,7 @@ Docker Compose và service chạy trên máy host đều dùng **bucket S3 thậ
 
 - Bucket: `fcourt-local-media-870853685410`, region `ap-southeast-1`, nằm ở `envs/shared` của `fcourt-infra` nên không bị xoá khi hạ cluster EKS. Không dùng chung với bucket của EKS: job dọn ảnh mồ côi của discovery xoá object không có trong DB của nó, nên hai môi trường dùng chung bucket sẽ xoá ảnh của nhau.
 - Credential: IAM user `fcourt-local-s3`, chỉ có quyền Get/Put/Delete/List trên bucket đó. Access key xin tech lead, đặt vào `.env` (đã gitignore, **không commit**). Xem khối S3 trong `.env.example`.
-- Compose tự đặt `STORAGE_PUBLIC_BASE_URL=https://<bucket>.s3.<region>.amazonaws.com`, `AWS_REGION`, và không đặt endpoint/path-style/presign-endpoint (mặc định của app đã đúng cho S3 thật). Thiếu bucket hoặc key thì `docker compose` báo lỗi ngay, kể cả profile `infra`, vì Compose nội suy toàn bộ file.
+- Compose tự đặt `STORAGE_PUBLIC_BASE_URL=https://<bucket>.s3.<region>.amazonaws.com`, `AWS_REGION`, và không đặt endpoint/path-style/presign-endpoint (mặc định của app đã đúng cho S3 thật). Bucket mặc định là `fcourt-local-media-870853685410`. Thiếu key thì service vẫn khởi động, chỉ lời gọi S3 lỗi (không tìm được credential).
 
 ```bash
 # .env: STORAGE_S3_BUCKET, STORAGE_S3_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
