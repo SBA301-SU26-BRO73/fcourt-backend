@@ -57,3 +57,4 @@ not the effective values of a running deployment.
 | staff-operations-service | [staff-operations-service config](../staff-operations-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
 | subscription-service | [subscription-service config](../subscription-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
 | voucher-service | [voucher-service config](../voucher-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
+| tools/demo_seed | [tools/demo_seed readme](../tools/demo_seed/README.md) | Read the README maintained alongside this component. |
