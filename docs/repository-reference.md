@@ -32,3 +32,4 @@ not the effective values of a running deployment.
 | staff-operations-service | [staff-operations-service readme](../staff-operations-service/README.md) | Read the README maintained alongside this component. |
 | subscription-service | [subscription-service readme](../subscription-service/README.md) | Read the README maintained alongside this component. |
 | auth-service | [auth-service build](../auth-service/pom.xml) | Inspect Maven dependencies and build settings. |
+| booking-service | [booking-service build](../booking-service/pom.xml) | Inspect Maven dependencies and build settings. |
