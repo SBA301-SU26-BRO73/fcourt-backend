@@ -76,3 +76,4 @@ not the effective values of a running deployment.
 | voucher-service | [voucher-service image build](../voucher-service/Dockerfile) | Inspect the container image build definition for this module. |
 | ci | [auth-service workflow](../.github/workflows/auth-service.yml) | Inspect this GitHub Actions workflow and its configured triggers. |
 | ci | [booking-service workflow](../.github/workflows/booking-service.yml) | Inspect this GitHub Actions workflow and its configured triggers. |
+| ci | [build-push-images workflow](../.github/workflows/build-push-images.yml) | Inspect this GitHub Actions workflow and its configured triggers. |
