@@ -1,7 +1,7 @@
 # FCourt: chay ca he thong local bang Docker Compose. Huong dan day du: docs/docker-compose.md
 #
 #   docker compose --profile infra up -d     # chi ha tang: postgres, redis, kafka
-#   docker compose --profile core up -d      # infra + eureka + gateway + auth, facility, booking, slot-hold, payment
+#   docker compose --profile core up -d      # infra + gateway + auth, facility, booking, slot-hold, payment
 #   docker compose --profile all up -d       # toan bo 12 service + mailpit
 #
 # Khong dat profile thi khong service nao chay (tranh vo tinh khoi dong 14 JVM tren may yeu).
@@ -12,10 +12,7 @@ x-java: &java
 
 x-env: &env
   <<: *java
-  # Service tim nhau qua Eureka (lb://<ten>), tu dang ky bang IP. Service nao chua la Eureka client thi bo qua cac bien nay.
-  EUREKA_ENABLED: "true"
-  EUREKA_URL: http://eureka-server:8761/eureka
-  EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+  # Gateway tim service bang DNS tinh (<ten>:<cong>, xem gateway-service application.yml): khong co service registry.
   KAFKA_BOOTSTRAP_SERVERS: kafka:9092
   REDIS_HOST: redis
   REDIS_PORT: "6379"
@@ -69,7 +66,6 @@ x-app: &app
     postgres: {condition: service_healthy}
     redis: {condition: service_healthy}
     kafka: {condition: service_healthy}
-    eureka-server: {condition: service_healthy}
   healthcheck: &app-health
     # Anh eclipse-temurin khong chac co curl; dung bash /dev/tcp + HTTP/1.0 tren cong SERVER_PORT cua container.
     test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/$${SERVER_PORT} && printf 'GET /actuator/health HTTP/1.0\\r\\n\\r\\n' >&3 && head -n1 <&3 | grep -q ' 200'"]
@@ -161,22 +157,7 @@ services:
       - "${MAILPIT_SMTP_PORT:-1025}:1025"
     restart: unless-stopped
 
-  # ---------------------------------------------------------------- eureka + gateway (profile core, all)
-  eureka-server:
-    build: ./eureka-server
-    profiles: [core, all]
-    networks: [fcourt]
-    restart: on-failure:5
-    mem_limit: 384m
-    environment:
-      <<: *java
-      SERVER_PORT: "8761"
-      EUREKA_HOSTNAME: eureka-server
-    ports:
-      - "${EUREKA_PORT:-8761}:8761"
-    healthcheck:
-      <<: *app-health
-      start_period: 30s
+  # ---------------------------------------------------------------- gateway (profile core, all)
 
   gateway-service:
     build: ./gateway-service
@@ -184,7 +165,6 @@ services:
     <<: *app
     depends_on:
       redis: {condition: service_healthy}
-      eureka-server: {condition: service_healthy}
       auth-service: {condition: service_healthy}
       facility-service: {condition: service_healthy}
       booking-service: {condition: service_healthy}
