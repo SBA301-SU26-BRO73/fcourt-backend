@@ -406,7 +406,7 @@ class PaymentDatabaseTest {
                 .isEqualByComparingTo("160000.00");
         assertThat(jdbc.queryForObject("SELECT status FROM payments", String.class)).isEqualTo("PENDING");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM refund_requests", Long.class)).isZero();
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success", Long.class)).isEqualTo(8);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success", Long.class)).isEqualTo(9);
     }
     @Autowired CustomerPayments customerPayments;
     @Test
