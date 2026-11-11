@@ -34,3 +34,4 @@ not the effective values of a running deployment.
 | auth-service | [auth-service build](../auth-service/pom.xml) | Inspect Maven dependencies and build settings. |
 | booking-service | [booking-service build](../booking-service/pom.xml) | Inspect Maven dependencies and build settings. |
 | discovery-service | [discovery-service build](../discovery-service/pom.xml) | Inspect Maven dependencies and build settings. |
+| facility-service | [facility-service build](../facility-service/pom.xml) | Inspect Maven dependencies and build settings. |
