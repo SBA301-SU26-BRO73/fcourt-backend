@@ -63,3 +63,4 @@ not the effective values of a running deployment.
 | repository | [repository readme](../README.md) | Read the README maintained alongside this component. |
 | auth-service | [auth-service image build](../auth-service/Dockerfile) | Inspect the container image build definition for this module. |
 | booking-service | [booking-service image build](../booking-service/Dockerfile) | Inspect the container image build definition for this module. |
+| discovery-service | [discovery-service image build](../discovery-service/Dockerfile) | Inspect the container image build definition for this module. |
