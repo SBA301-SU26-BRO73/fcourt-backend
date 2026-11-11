@@ -90,3 +90,4 @@ not the effective values of a running deployment.
 | ci | [reporting-service workflow](../.github/workflows/reporting-service.yml) | Inspect this GitHub Actions workflow and its configured triggers. |
 | ci | [slot-hold-engine workflow](../.github/workflows/slot-hold-engine.yml) | Inspect this GitHub Actions workflow and its configured triggers. |
 | ci | [staff-court-projection workflow](../.github/workflows/staff-court-projection.yml) | Inspect this GitHub Actions workflow and its configured triggers. |
+| ci | [staff-operations-service workflow](../.github/workflows/staff-operations-service.yml) | Inspect this GitHub Actions workflow and its configured triggers. |
