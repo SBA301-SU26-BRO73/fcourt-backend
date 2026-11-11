@@ -38,3 +38,4 @@ not the effective values of a running deployment.
 | gateway-service | [gateway-service build](../gateway-service/pom.xml) | Inspect Maven dependencies and build settings. |
 | notification-service | [notification-service build](../notification-service/pom.xml) | Inspect Maven dependencies and build settings. |
 | payment-service | [payment-service build](../payment-service/pom.xml) | Inspect Maven dependencies and build settings. |
+| pos-retail-service | [pos-retail-service build](../pos-retail-service/pom.xml) | Inspect Maven dependencies and build settings. |
