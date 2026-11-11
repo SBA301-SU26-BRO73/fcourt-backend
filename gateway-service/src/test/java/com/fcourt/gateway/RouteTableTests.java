@@ -112,6 +112,10 @@ class RouteTableTests {
                 // notification-service
                 Arguments.of("/devices", "notification-service"),
                 Arguments.of("/devices/abc", "notification-service"),
+                Arguments.of("/api/notifications/me", "notification-service"),
+                Arguments.of("/api/notifications/me/unread-count", "notification-service"),
+                Arguments.of("/api/notifications/5/read", "notification-service"),
+                Arguments.of("/api/notifications/me/read-all", "notification-service"),
                 // pos-retail-service
                 Arguments.of("/api/staff/pos/orders", "pos-retail-service"),
                 Arguments.of("/api/admin/pos/products", "pos-retail-service"),

@@ -38,6 +38,10 @@ class RefundService {
               INSERT INTO refund_requests(booking_id,amount,reason,refund_bank_name,bank_bin,refund_bank_account_number,refund_bank_account_name,customer_id,branch_id)
               VALUES(?,?,?,?,?,?,?,?,?) RETURNING id
               """,Long.class,request.bookingId(),booking.refundAmount(),request.reason().strip(),request.bankName().strip(),request.bankBin(),request.bankAccountNumber(),request.bankAccountName().strip(),owner,payment.branchId());
+            // Tells the branch owner (notification-service) a refund is waiting; only for a newly created request.
+            UUID eventId=UUID.randomUUID();
+            store.jdbc().update("INSERT INTO payment_outbox(event_id,booking_id,event_type,payload) VALUES (?,?,?,?::jsonb)",eventId,request.bookingId(),"RefundRequestedEvent",
+                store.encode(Map.of("eventId",eventId,"type","RefundRequestedEvent","refund",Map.of("id",id,"bookingId",request.bookingId(),"branchId",payment.branchId(),"customerId",owner,"amount",booking.refundAmount(),"status","PENDING"))));
             return row(store.jdbc().queryForMap("SELECT * FROM refund_requests WHERE id=?",id));
         });
     }

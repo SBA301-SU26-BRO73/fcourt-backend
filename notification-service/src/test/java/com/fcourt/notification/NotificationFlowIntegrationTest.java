@@ -10,11 +10,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import com.fcourt.notification.inapp.BranchDirectory;
 import com.fcourt.notification.mail.EmailDeliveryException;
 import com.fcourt.notification.mail.EmailSender;
 import java.time.Duration;
 import java.util.List;
+import java.util.OptionalLong;
 import java.util.Properties;
 import java.util.UUID;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -56,6 +59,7 @@ class NotificationFlowIntegrationTest {
     @Autowired KafkaTemplate<String, String> kafka;
     @Autowired JdbcTemplate jdbc;
     @MockitoBean EmailSender sender;
+    @MockitoBean BranchDirectory directory;
     @MockitoBean JwtDecoder jwtDecoder;
 
     @DynamicPropertySource
@@ -194,6 +198,44 @@ class NotificationFlowIntegrationTest {
 
         assertThat(deadLetters(AUTH + ".DLT", garbage)).isEqualTo(garbage);
         verify(sender, timeout(30_000)).send(argThat(sent -> sent.to().equals(email)));
+    }
+
+    @Test
+    void anEventWithACustomerIdWritesOneInAppRowEvenWithoutAnEmailAndAReplayAddsNothing() {
+        long customerId = 7_000_000 + (int) (Math.random() * 1_000_000);
+        long bookingId = customerId;
+        String payload = """
+                {"eventId":"%s","type":"PaymentConfirmedEvent",
+                 "payment":{"id":9,"bookingId":%d,"branchId":3,"customerId":%d,"amount":200000,
+                            "checkout":{"bookingCode":"BK-%d","date":"2026-11-05",
+                                        "slots":[{"startTime":"18:00:00","endTime":"18:30:00"}]},
+                            "checkInCode":"123"}}""".formatted(UUID.randomUUID(), bookingId, customerId, bookingId);
+
+        kafka.send(PAYMENT, "k", payload);
+        kafka.send(PAYMENT, "k", payload.replaceFirst("\"eventId\":\"[^\"]+\"", "\"eventId\":\"" + UUID.randomUUID() + "\""));
+
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> assertThat(inApp(customerId)).isEqualTo(1));
+        await().during(Duration.ofSeconds(3)).atMost(Duration.ofSeconds(10)).untilAsserted(() ->
+                assertThat(inApp(customerId)).isEqualTo(1));
+        verify(sender, never()).send(argThat(sent -> sent.model().containsValue("BK-" + bookingId)));
+    }
+
+    @Test
+    void aReceiptSubmittedToABranchNotifiesItsOwner() {
+        long owner = 8_000_000 + (int) (Math.random() * 1_000_000);
+        long branch = 9_000_000 + (int) (Math.random() * 1_000_000);
+        when(directory.ownerOf(branch)).thenReturn(OptionalLong.of(owner));
+        when(directory.staffOf(branch)).thenReturn(List.of());
+
+        kafka.send(PAYMENT, "k", """
+                {"eventId":"%s","type":"PaymentSubmittedEvent",
+                 "payment":{"id":9,"bookingId":42,"branchId":%d,"amount":200000}}""".formatted(UUID.randomUUID(), branch));
+
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> assertThat(inApp(owner)).isEqualTo(1));
+    }
+
+    private int inApp(long userId) {
+        return jdbc.queryForObject("SELECT count(*) FROM in_app_notifications WHERE user_id = ?", Integer.class, userId);
     }
 
     private String outcome(UUID eventId) {

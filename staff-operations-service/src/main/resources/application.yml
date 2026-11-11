@@ -56,6 +56,9 @@ staff:
     jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
     issuer: ${AUTH_JWT_ISSUER:http://localhost:8081}
     audience: ${AUTH_JWT_AUDIENCE:fcourt}
+  directory:
+    # Shared secret of notification-service for /api/internal/branches/{id}/staff-user-ids (min 32 chars). Empty = 503.
+    token: ${STAFF_DIRECTORY_TOKEN:}
   facility:
     url: ${FACILITY_URL:http://localhost:8083}
 

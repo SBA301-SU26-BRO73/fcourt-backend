@@ -4,7 +4,8 @@ Spring Boot 3.5 / Java 21 / JdbcTemplate / Flyway / Spring Kafka / JavaMail. Por
 **notification_db**.
 
 Scope: **SCRUM-42 / SCRUM-90**. Consumes Kafka events and sends Vietnamese emails (plain text and HTML): court owner
-approved, password reset, booking confirmed and booking cancelled. There is no REST API besides
+approved, password reset, booking confirmed and booking cancelled. It also keeps the **in-app notifications** shown by the
+web bell (see [In-app notifications](#in-app-notifications)): REST `/api/notifications/**` plus `/devices` and
 `/actuator/health`.
 
 ## Run locally
@@ -32,6 +33,9 @@ export NOTIFICATION_SMTP_AUTH=false NOTIFICATION_SMTP_STARTTLS=false
 | `NOTIFICATION_RETRY_ATTEMPTS` / `NOTIFICATION_RETRY_INTERVAL_MS` | `3` / `2000` |
 | `NOTIFICATION_ENABLED` | `true` (`false` stops the listeners) |
 | `NOTIFICATION_REMINDER_DELAY_MS` | `900000` (scan pending bookings every 15 minutes) |
+| `FACILITY_URL` | `http://facility-service:8083` (branch owner lookup for in-app notifications) |
+| `STAFF_URL` | `http://staff-operations-service:8090` (branch staff lookup) |
+| `STAFF_DIRECTORY_TOKEN` | blank (secret `fcourt-internal-tokens`; blank means branch staff get no in-app notification) |
 
 Tests: `./mvnw clean verify` (Docker required: Testcontainers Postgres and Kafka). Unit tests alone:
 `./mvnw test '-Dtest=!*IntegrationTest'`.
@@ -84,6 +88,81 @@ next scan retries. The confirmation producer must supply the `recipient` object 
 can run for authenticated checkout. Existing payments created before the recipient snapshot was added
 remain without email and cannot be backfilled from a booking ID alone.
 
+## In-app notifications
+
+The web bell reads rows of `in_app_notifications`. They are written by the same Kafka consumer as the emails
+(`NotificationService`: email transaction, then in-app transaction, then push), **addressed by user id** and
+independent of email: no recipient address is needed and a failed or skipped email does not matter. A guest (no
+account, no `customerId`) gets none.
+
+### Who gets what
+
+| Event (topic) | Recipient | Title / link | Dedupe key |
+|---|---|---|---|
+| `PaymentConfirmedEvent` (payment) | customer (`payment.customerId`) | Đặt sân thành công, `/my-bookings` | `booking-confirmed:<bookingId>` |
+| `PaymentRejectedEvent` (payment) | customer | Thanh toán bị từ chối, `/my-bookings` | `booking-cancelled:<bookingId>` |
+| `BookingCancelledEvent` (payment: unpaid checkout expired) | customer | Đơn đặt sân đã hết hạn, `/my-bookings` | `booking-cancelled:<bookingId>` |
+| `BookingCancelledEvent` (booking, `cancelledByRole` = `CUSTOMER`, `ADMIN`, `SYSTEM` or absent) | customer (`booking.customerId`), wording by role | Đã hủy đặt sân / Chủ sân đã hủy đơn / hết hạn, `/my-bookings` | `booking-cancelled:<bookingId>` |
+| same, only when `cancelledByRole` = `CUSTOMER` | branch owner and branch staff | Khách đã hủy đặt sân, `/admin/bookings` (owner) or `/staff/board` (staff) | `booking-cancelled:<bookingId>` |
+| `RefundCompletedEvent` (payment) | customer (`refund.customerId`) | Đã hoàn tiền, `/my-bookings` | `refund-completed:<refundId>` |
+| `PaymentSubmittedEvent` (payment) | branch owner | Biên lai chờ duyệt, `/admin/bookings` | `payment-submitted:<eventId>` |
+| `RefundRequestedEvent` (payment, new) | branch owner | Yêu cầu hoàn tiền mới, `/admin/refund-requests` | `refund-requested:<refundId>` |
+| `OwnerApprovedEvent` (auth) | the owner (`data.userId`) | Hồ sơ chủ sân đã được duyệt, `/admin/dashboard` | `owner-approved:<userId>:<approvedAt>` (same as the email) |
+| `OwnerRegisteredEvent` (auth, new) | every active super admin (`data.superAdminIds`) | Chủ sân mới chờ duyệt, `/super-admin/pending` | `owner-registered:<userId>` |
+
+Why some recipients are what they are:
+
+- Payment approval and refund decisions are ADMIN-only endpoints, so receipts and refund requests go to the owner
+  only. Staff are told about customer cancellations (they run the schedule).
+- Only an explicit `cancelledByRole = CUSTOMER` notifies the owner and staff. Events published before that field
+  existed, owner cancellations, package cancellations and hold expiry do not.
+- A rejected court owner can never sign in (login is refused), so there is no in-app notification for rejection.
+
+### Producer contract (additions, all backward compatible)
+
+- booking-service `BookingCancelledEvent.booking` gained `cancelledByRole` (`CUSTOMER` for the owner's own and the
+  guest cancellation, `ADMIN` for the branch owner, `SYSTEM` for hold expiry; absent for full-court package
+  cancellation).
+- payment-service publishes `RefundRequestedEvent` on `fcourt.payment.events` when a refund request is created
+  (not for a repeated identical request): `{"eventId","type","refund":{"id","bookingId","branchId","customerId","amount","status"}}`.
+- auth-service publishes `OwnerRegisteredEvent` on `fcourt.auth.events` when a court owner registers:
+  `data: {userId, email, fullName, registeredAt, superAdminIds[]}`, the active super admins at that moment.
+
+Other consumers of these topics ignore types they do not know.
+
+### Resolving the branch owner and staff
+
+Events carry `branchId`, not the owner. `HttpBranchDirectory` asks the services that own the data (in cluster,
+not routed by the gateway):
+
+- Owner: `GET facility-service /api/internal/branches/{id}/owner` returns `{branchId, ownerId}` (open like the other
+  internal GET routes of facility-service). An outage throws, so Kafka retries the event; an unknown branch (404)
+  just skips the owner.
+- Staff: `GET staff-operations-service /api/internal/branches/{id}/staff-user-ids` returns `{branchId, userIds[]}`
+  for active staff, with header `X-Internal-Service-Token` = `STAFF_DIRECTORY_TOKEN` (503 when the service has no token,
+  403 for a wrong one). Best effort: no token, an error or an outage means the staff are skipped and the owner is
+  still notified.
+
+### Idempotency
+
+`UNIQUE (user_id, dedupe_key)` with `INSERT ... ON CONFLICT DO NOTHING`: a redelivered or duplicated event adds
+nothing, and the same fact reported by two services (for example payment expiry and customer cancellation) is one
+row per user. The keys are the email business keys (`BusinessKeys`), so both channels agree on what "the same
+notification" is. An in-app failure (for example facility-service down) is retried by the Kafka error handler and
+never resends an already committed email.
+
+### REST API
+
+JWT required (through the gateway `/api/notifications/**`). The user is the token subject; a user only ever sees or
+changes their own rows (someone else's id answers 404).
+
+| Method and path | Result |
+|---|---|
+| `GET /api/notifications/me?page=0&size=10` | `{items:[{id,type,title,body,link,readAt,createdAt}], page, size, total}`, newest first (size 1..50) |
+| `GET /api/notifications/me/unread-count` | `{count}` |
+| `PATCH /api/notifications/{id}/read` | 204, or 404 when it is not yours |
+| `PATCH /api/notifications/me/read-all` | `{updated}` |
+
 ## Reliability
 
 - **Idempotency.** Each handled event is recorded in `processed_events` by its `eventId`, so a redelivered
@@ -118,6 +197,9 @@ remain without email and cannot be backfilled from a booking ID alone.
 - `V1`: `processed_events`. The database must be empty on first start (the `docker/postgres` init script
   only creates it, because `notification-service/database` has no scripts).
 - `V2`: `booking_reminders` and `cancelled_booking_reminders` projection tables.
+- `V3`, `V4`: `user_devices` and push delivery / reminder tables.
+- `V5`: `in_app_notifications` (`id`, `user_id`, `type`, `title`, `body`, `link`, `dedupe_key`, `read_at`, `created_at`),
+  `UNIQUE (user_id, dedupe_key)`, indexes `(user_id, created_at DESC, id DESC)` and a partial one on unread rows.
 
 ## Templates
 

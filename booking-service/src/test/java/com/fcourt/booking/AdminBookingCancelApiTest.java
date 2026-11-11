@@ -99,6 +99,7 @@ class AdminBookingCancelApiTest {
         assertThat(event.path("type").asText()).isEqualTo("BookingCancelledEvent");
         assertThat(event.path("booking").path("refundAmount").asInt()).isEqualTo(200000);
         assertThat(event.path("booking").path("paymentId").asInt()).isEqualTo(42);
+        assertThat(event.path("booking").path("cancelledByRole").asText()).isEqualTo("ADMIN");
         assertThat(jdbc.queryForObject("SELECT active FROM booking_slots WHERE booking_id=1", Boolean.class)).isFalse();
         assertThat(jdbc.queryForObject("SELECT cancelled_by FROM bookings WHERE id=1", Long.class)).isEqualTo(100L);
         assertThat(jdbc.queryForObject("SELECT cancelled_by_role FROM bookings WHERE id=1", String.class)).isEqualTo("ADMIN");

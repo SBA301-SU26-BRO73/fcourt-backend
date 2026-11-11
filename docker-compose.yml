@@ -54,6 +54,8 @@ x-env: &env
   POS_SETTLEMENT_SERVICE_TOKEN: ${POS_SETTLEMENT_SERVICE_TOKEN:-dev-pos-settlement-token-0123456789ab}
   FACILITY_RESERVATION_TOKEN: ${FACILITY_RESERVATION_TOKEN:-dev-facility-reservation-token-0123456789}
   DISCOVERY_INTERNAL_SLOT_TOKEN: ${DISCOVERY_INTERNAL_SLOT_TOKEN:-dev-discovery-slot-token-0123456789abc}
+  # staff-operations-service /api/internal/branches/{id}/staff-user-ids, called by notification-service (in-app notifications for branch staff).
+  STAFF_DIRECTORY_TOKEN: ${STAFF_DIRECTORY_TOKEN:-dev-staff-directory-token-0123456789abcd}
   STAFF_OFFLINE_SIGNING_KEY: ${STAFF_OFFLINE_SIGNING_KEY:-dev-staff-offline-signing-key-0123456789ab}
   SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: "5"
 

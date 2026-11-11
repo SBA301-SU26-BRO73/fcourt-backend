@@ -586,6 +586,9 @@ class PaymentDatabaseTest {
         var first=service.request(refundRequest(),admin());var retry=service.request(refundRequest(),admin());
         assertThat(first.amount()).isEqualByComparingTo("80000");assertThat(retry.id()).isEqualTo(first.id());
         assertThat(first.status()).isEqualTo("PENDING");assertThat(jdbc.queryForObject("SELECT count(*) FROM refund_requests",Long.class)).isEqualTo(1);
+        // One RefundRequestedEvent for the owner, none for the repeated request.
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM payment_outbox WHERE event_type='RefundRequestedEvent'",Long.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT payload->'refund'->>'branchId' FROM payment_outbox WHERE event_type='RefundRequestedEvent'",String.class)).isEqualTo("7");
         assertThat(service.state(42,admin()).request().id()).isEqualTo(first.id());
         var other=org.springframework.security.oauth2.jwt.Jwt.withTokenValue("other").header("alg","RS256").subject("20").build();
         org.assertj.core.api.Assertions.assertThatThrownBy(()->service.state(42,other)).hasMessageContaining("404");
