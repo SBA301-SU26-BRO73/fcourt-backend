@@ -43,3 +43,4 @@ not the effective values of a running deployment.
 | slot-hold-engine | [slot-hold-engine build](../slot-hold-engine/pom.xml) | Inspect Maven dependencies and build settings. |
 | staff-operations-service | [staff-operations-service build](../staff-operations-service/pom.xml) | Inspect Maven dependencies and build settings. |
 | subscription-service | [subscription-service build](../subscription-service/pom.xml) | Inspect Maven dependencies and build settings. |
+| voucher-service | [voucher-service build](../voucher-service/pom.xml) | Inspect Maven dependencies and build settings. |
