@@ -10,3 +10,4 @@ not the effective values of a running deployment.
 | Area | Reference | Use |
 | --- | --- | --- |
 | docs | [aws-architecture guide](AWS_ARCHITECTURE.md) | Read the existing guide for aws architecture. |
+| docs | [business-gap-a guide](BUSINESS_GAP_A.md) | Read the existing guide for business gap a. |
