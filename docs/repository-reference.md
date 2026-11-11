@@ -78,3 +78,4 @@ not the effective values of a running deployment.
 | ci | [booking-service workflow](../.github/workflows/booking-service.yml) | Inspect this GitHub Actions workflow and its configured triggers. |
 | ci | [build-push-images workflow](../.github/workflows/build-push-images.yml) | Inspect this GitHub Actions workflow and its configured triggers. |
 | ci | [counter-hold-support workflow](../.github/workflows/counter-hold-support.yml) | Inspect this GitHub Actions workflow and its configured triggers. |
+| ci | [demo-seed workflow](../.github/workflows/demo-seed.yml) | Inspect this GitHub Actions workflow and its configured triggers. |
