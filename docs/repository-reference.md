@@ -72,3 +72,4 @@ not the effective values of a running deployment.
 | reporting-service | [reporting-service image build](../reporting-service/Dockerfile) | Inspect the container image build definition for this module. |
 | slot-hold-engine | [slot-hold-engine image build](../slot-hold-engine/Dockerfile) | Inspect the container image build definition for this module. |
 | staff-operations-service | [staff-operations-service image build](../staff-operations-service/Dockerfile) | Inspect the container image build definition for this module. |
+| subscription-service | [subscription-service image build](../subscription-service/Dockerfile) | Inspect the container image build definition for this module. |
