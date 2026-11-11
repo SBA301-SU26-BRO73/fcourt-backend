@@ -46,3 +46,4 @@ not the effective values of a running deployment.
 | voucher-service | [voucher-service build](../voucher-service/pom.xml) | Inspect Maven dependencies and build settings. |
 | auth-service | [auth-service config](../auth-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
 | booking-service | [booking-service config](../booking-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
+| discovery-service | [discovery-service config](../discovery-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
