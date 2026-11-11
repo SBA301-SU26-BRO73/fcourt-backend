@@ -86,3 +86,4 @@ not the effective values of a running deployment.
 | ci | [notification-service workflow](../.github/workflows/notification-service.yml) | Inspect this GitHub Actions workflow and its configured triggers. |
 | ci | [payment-service workflow](../.github/workflows/payment-service.yml) | Inspect this GitHub Actions workflow and its configured triggers. |
 | ci | [pos-retail-service workflow](../.github/workflows/pos-retail-service.yml) | Inspect this GitHub Actions workflow and its configured triggers. |
+| ci | [production-smoke-runner workflow](../.github/workflows/production-smoke-runner.yml) | Inspect this GitHub Actions workflow and its configured triggers. |
