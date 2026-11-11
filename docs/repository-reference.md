@@ -20,3 +20,4 @@ not the effective values of a running deployment.
 | docs | [smoke-test-local guide](smoke-test-local.md) | Read the existing guide for smoke test local. |
 | docs | [spring-cloud guide](spring-cloud.md) | Read the existing guide for spring cloud. |
 | docs | [storage-s3 guide](storage-s3.md) | Read the existing guide for storage s3. |
+| auth-service | [auth-service readme](../auth-service/README.md) | Read the README maintained alongside this component. |
