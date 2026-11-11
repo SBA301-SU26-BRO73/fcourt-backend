@@ -67,3 +67,4 @@ not the effective values of a running deployment.
 | facility-service | [facility-service image build](../facility-service/Dockerfile) | Inspect the container image build definition for this module. |
 | gateway-service | [gateway-service image build](../gateway-service/Dockerfile) | Inspect the container image build definition for this module. |
 | notification-service | [notification-service image build](../notification-service/Dockerfile) | Inspect the container image build definition for this module. |
+| payment-service | [payment-service image build](../payment-service/Dockerfile) | Inspect the container image build definition for this module. |
