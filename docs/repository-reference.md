@@ -50,3 +50,4 @@ not the effective values of a running deployment.
 | facility-service | [facility-service config](../facility-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
 | gateway-service | [gateway-service config](../gateway-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
 | notification-service | [notification-service config](../notification-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
+| payment-service | [payment-service config](../payment-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
