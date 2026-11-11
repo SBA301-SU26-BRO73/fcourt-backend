@@ -45,3 +45,4 @@ not the effective values of a running deployment.
 | subscription-service | [subscription-service build](../subscription-service/pom.xml) | Inspect Maven dependencies and build settings. |
 | voucher-service | [voucher-service build](../voucher-service/pom.xml) | Inspect Maven dependencies and build settings. |
 | auth-service | [auth-service config](../auth-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
+| booking-service | [booking-service config](../booking-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
