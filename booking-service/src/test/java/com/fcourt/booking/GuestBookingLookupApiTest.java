@@ -74,6 +74,14 @@ class GuestBookingLookupApiTest {
     }
 
     @Test
+    void cancelledLookupIncludesServerRefundEntitlementForPublicRefundForm() throws Exception {
+        jdbc.update("UPDATE bookings SET status='CANCELLED',refund_amount=80000 WHERE id=1");
+        mvc.perform(post("/api/public/bookings/lookup").contentType("application/json").content(body("FC00000001","0901234567")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.refundAmount").value(80000))
+            .andExpect(jsonPath("$.branchId").value(7)).andExpect(jsonPath("$.checkInCode").doesNotExist());
+    }
+
+    @Test
     void checkInCodeHiddenWhenNotConfirmed() throws Exception {
         mvc.perform(post("/api/public/bookings/lookup").contentType("application/json").content(body("FC00000002", "0901234567")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("PENDING_PAYMENT"))

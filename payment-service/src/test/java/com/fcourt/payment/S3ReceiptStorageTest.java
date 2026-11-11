@@ -108,7 +108,7 @@ class S3ReceiptStorageTest {
         assertThat(payment.receiptImageUrl()).isEqualTo("receipts/a.png");
         var noReceipt = new PaymentRecord(1, 2, 3, BigDecimal.TEN, "PENDING", null, null, null, null, null, null);
         assertThat(urls.view(noReceipt)).isSameAs(noReceipt);
-        var refund = new RefundView(1, 2, BigDecimal.TEN, "COMPLETED", null, null, null, null, null, null, "refund-proofs/p.png", Instant.EPOCH, Instant.EPOCH);
+        var refund = new RefundView(1, 2, BigDecimal.TEN, "COMPLETED", null, null, null, null, null, null, "refund-proofs/p.png", Instant.EPOCH, Instant.EPOCH, "0901234567");
         assertThat(urls.view(refund).transferProofUrl()).isEqualTo("https://signed.test/refund-proofs/p.png");
     }
 }

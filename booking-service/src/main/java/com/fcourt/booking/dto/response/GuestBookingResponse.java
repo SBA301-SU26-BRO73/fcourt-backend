@@ -9,6 +9,6 @@ import java.util.List;
 public record GuestBookingResponse(
         long id, String bookingCode, String branchName, String branchAddress, String courtName,
         LocalDate date, List<Slot> slots, BigDecimal totalPrice, String status, String paymentStatus,
-        String checkInCode, String qrImageUrl) {
+        String checkInCode, String qrImageUrl, Long branchId, BigDecimal refundAmount) {
     public record Slot(LocalTime startTime, LocalTime endTime, BigDecimal price) {}
 }
