@@ -2,7 +2,7 @@
 
 Anh sinh bang Codex CLI (`codex exec -m gpt-5.6-luna`, 1 anh / 1 tien trinh, toi da 10 tien trinh song song), moi anh duoc mo xem truc tiep truoc khi nen (JPEG <= 280 KB, 1280 px) va tai len.
 Tieu chi: dung mon the thao, thay san + luoi + vach ke hop ly, khong chu/logo, khong vat the bien dang, khong trung anh khac.
-Tong: 31 anh sinh ra (30 + 1 sinh lai), 30 dat, 1 bi loai.
+Tong: 33 anh sinh ra (30 + 3 sinh lai), 30 dang dung; 1 bi loai, 2 duoc thay ngay 2026-11-12 (branch-03, branch-10).
 
 Anh the = `branch-NN.jpg` (NN = id chi nhanh); anh thu hai cua moi chi nhanh va anh san = `court-<mon>.jpg`. Anh mat tien cu da bo.
 
@@ -15,14 +15,16 @@ Anh the = `branch-NN.jpg` (NN = id chi nhanh); anh thu hai cua moi chi nhanh va 
 | court-basketball | bong ro trong nha, san go bong | Dat | Bang ro, vach 3 diem va vung son ro |
 | branch-01 Cau Long Ba Dinh | cau long, nhin doc luoi, 6 san xanh, ban ngay | Dat | Nhieu san, luoi that |
 | branch-02 Pickleball Cau Giay | pickleball trong nha, vot va bong tren ghe | Dat | Co san xanh, luoi, vach kitchen |
-| branch-03 Tennis Hoan Kiem | tennis dat nen, binh minh, canh luoi | Dat | Luoi + tru + vach; chi tiet san hoi it (canh luoi) |
+| branch-03 Tennis Hoan Kiem | lan 1: tennis dat nen, canh luoi | **Thay** | Chi tiet san it (canh luoi) |
+| branch-03 (lan 2, 2026-11-12) | 2 san tennis cung xanh/do nhin tu goc cao, binh minh, Thap Rua o nen | Dat | Luoi co day giua, vach san day du |
 | branch-04 Bong Da Dong Da | san 5 nguoi hoang hon, nhin qua khung thanh | Dat | Cau mon, vach, den pha |
 | branch-05 Cau Long Tay Ho | cau long san go cam, toi am | Dat | Vach vang/trang, luoi dung |
 | branch-06 Pickleball Ha Dong | pickleball co mai che luc chang vang | Dat | 2 san, luoi, vach xanh/teal |
 | branch-07 Cau Long Thanh Xuan | cau long toan canh tu goc cao, san do/xanh | Dat | Nhieu san, anh sang ngay |
 | branch-08 Bong Ro Hai Ba Trung | bong ro trong nha, khan dai | Dat | Ro, vach, khan dai |
 | branch-09 Pickleball Hai Chau | pickleball canh bien, ban trua | Dat | Co bien va cay dua, vach dung |
-| branch-10 Cau Long Thanh Khe | can canh luoi cau long | Dat | Luoi trang, vach san ro (chi tiet luoi la chinh) |
+| branch-10 Cau Long Thanh Khe | lan 1: can canh luoi cau long | **Thay** | Chu yeu la luoi, it san |
+| branch-10 (lan 2, 2026-11-12) | nha thi dau 4 san cau long PU xanh, den LED tran trang | Dat | 4 san, luoi, vach, cau tren san |
 | branch-11 Tennis Son Tra | tennis canh bien, ban trua | Dat | Luoi, vach, nen bien |
 | branch-12 Mini Football Ngu Hanh Son | san 7 nguoi ban ngay | Dat | Khung thanh, vach, cay xanh |
 | branch-13 Bong Ro Lien Chieu | bong ro ngoai troi hoang hon | Dat | Ro, bang, vach 3 diem |
