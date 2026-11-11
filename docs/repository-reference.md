@@ -56,3 +56,4 @@ not the effective values of a running deployment.
 | slot-hold-engine | [slot-hold-engine config](../slot-hold-engine/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
 | staff-operations-service | [staff-operations-service config](../staff-operations-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
 | subscription-service | [subscription-service config](../subscription-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
+| voucher-service | [voucher-service config](../voucher-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
