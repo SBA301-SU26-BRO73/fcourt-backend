@@ -37,3 +37,4 @@ not the effective values of a running deployment.
 | facility-service | [facility-service build](../facility-service/pom.xml) | Inspect Maven dependencies and build settings. |
 | gateway-service | [gateway-service build](../gateway-service/pom.xml) | Inspect Maven dependencies and build settings. |
 | notification-service | [notification-service build](../notification-service/pom.xml) | Inspect Maven dependencies and build settings. |
+| payment-service | [payment-service build](../payment-service/pom.xml) | Inspect Maven dependencies and build settings. |
