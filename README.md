@@ -36,9 +36,9 @@ fcourt-backend/
 | `pos-retail-service` | `pos_retail_db` | `products`, `orders`, `order_items` | _chưa điền_ |
 | `notification-service` | `notification_db` | `processed_events` (Flyway trong service, xem `notification-service/README.md`) | _chưa điền_ |
 
-## Spring Cloud (Eureka, Gateway)
+## Spring Cloud (Gateway)
 
-`eureka-server` (cổng 8761) là service registry dùng chung, không phải service nghiệp vụ. Mô tả, biến môi trường: xem [`docs/spring-cloud.md`](docs/spring-cloud.md).
+Không có service registry (đã bỏ Eureka): gateway tìm service bằng DNS tĩnh. Xem [`docs/spring-cloud.md`](docs/spring-cloud.md).
 
 ## Chạy database local
 
@@ -57,7 +57,7 @@ docker compose down -v && docker compose up -d
 
 Kết nối: `localhost:${POSTGRES_PORT}` (mặc định 5432), user và mật khẩu lấy từ `.env`.
 
-LocalStack (S3 giả lập, không cần tài khoản AWS) chạy ở `http://localhost:4566`, tự tạo bucket private `fcourt-local`. Chạy riêng bằng `docker compose up -d localstack`. Cách trỏ service vào đó nằm trong [docs/storage-s3.md](docs/storage-s3.md).
+Compose dùng bucket S3 thật cho local (không còn MinIO/LocalStack): đặt bucket và access key của IAM user `fcourt-local-s3` trong `.env`, xem [docs/storage-s3.md](docs/storage-s3.md) mục 5.
 
 ## Về script database
 
@@ -76,7 +76,7 @@ Dữ liệu mẫu là dữ liệu demo (tài khoản `@demo.com`, số tài kho�
 
 ## Gateway
 
-`gateway-service` (cổng 8080) là điểm vào duy nhất: web và app chỉ gọi gateway, gateway kiểm tra JWT và chuyển tiếp qua Eureka. Bảng route, danh sách path công khai, biến môi trường: xem [`docs/gateway.md`](docs/gateway.md).
+`gateway-service` (cổng 8080) là điểm vào duy nhất: web và app chỉ gọi gateway, gateway kiểm tra JWT và chuyển tiếp tới service theo DNS tĩnh. Bảng route, danh sách path công khai, biến môi trường: xem [`docs/gateway.md`](docs/gateway.md).
 
 ## Quy ước làm việc
 

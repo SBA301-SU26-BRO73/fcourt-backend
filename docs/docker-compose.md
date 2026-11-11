@@ -1,11 +1,11 @@
 # Chạy cả hệ thống bằng Docker Compose
 
-Một lệnh dựng toàn bộ backend trên máy: PostgreSQL, Redis, Kafka, MinIO (S3), Eureka, gateway và 12 service. Đây là cách chạy local mặc định và miễn phí; EKS chỉ dùng để demo trên cloud.
+Một lệnh dựng toàn bộ backend trên máy: PostgreSQL, Redis, Kafka, gateway và 12 service. Đây là cách chạy local mặc định và gần như miễn phí (chỉ tốn vài request S3); EKS chỉ dùng để demo trên cloud.
 
 ## Chạy nhanh
 
 ```bash
-cp .env.example .env            # tuỳ chọn, không có file này vẫn chạy với giá trị mặc định
+cp .env.example .env            # bắt buộc: điền AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY (S3 thật, xem khối S3)
 docker compose --profile core up -d --build
 ```
 
@@ -30,8 +30,8 @@ Không đặt profile thì không có container nào chạy. Chọn một trong 
 
 | Profile | Gồm | RAM ước tính |
 |---|---|---|
-| `infra` | postgres, redis, kafka, s3 (MinIO) | khoảng 1,5 GB |
-| `core` | `infra` + eureka-server, gateway, auth, facility, booking, slot-hold-engine, payment | khoảng 4,5 GB |
+| `infra` | postgres, redis, kafka | khoảng 1,5 GB |
+| `core` | `infra` + gateway, auth, facility, booking, slot-hold-engine, payment | khoảng 4,5 GB |
 | `all` | `core` + subscription, reporting, discovery, voucher, staff-operations, notification, pos-retail + mailpit | khoảng 7,5 GB |
 | `mail` | chỉ mailpit (đã nằm trong `all`) | 64 MB |
 
@@ -52,44 +52,42 @@ Có thể ghép profile: `--profile infra --profile core`. Mọi lệnh sau khi 
 
 ## Thứ tự khởi động
 
-`postgres, redis, kafka, s3` (healthy), rồi `eureka-server` (healthy), rồi các service (healthy), cuối cùng `gateway-service`. Gateway chờ auth, facility, booking, slot-hold-engine và payment healthy trước khi lên. Healthcheck của service gọi `/actuator/health` bằng bash, không cần curl trong image.
+`postgres, redis, kafka` (healthy), rồi các service (healthy), cuối cùng `gateway-service`. Gateway chờ auth, facility, booking, slot-hold-engine và payment healthy trước khi lên. Healthcheck của service gọi `/actuator/health` bằng bash, không cần curl trong image.
 
 ## Cổng
 
 | Cổng host | Dịch vụ | Ghi chú |
 |---|---|---|
 | 8080 | gateway-service | cổng duy nhất client cần |
-| 8761 | Eureka dashboard | xem service nào đã đăng ký |
 | 5432 | PostgreSQL | user/mật khẩu trong `.env` (mặc định `postgres`/`postgres`) |
 | 6387 | Redis | |
 | 9094 | Kafka (từ máy host) | trong Compose dùng `kafka:9092` |
-| 9000 / 9001 | MinIO S3 / console | bucket `fcourt-local`, user `test`, mật khẩu `testtest1234` |
 | 8025 / 1025 | Mailpit web / SMTP | chỉ profile `all` hoặc `mail` |
 
 Các service còn lại không mở cổng ra host (chỉ gateway đi vào được). Cần gọi thẳng một service để debug: `docker compose exec gateway-service ...` hoặc tạm thêm `ports:` vào service đó.
 
 ## Cấu hình
 
-Mọi giá trị đã có mặc định dùng được trong `docker-compose.yml`; `.env` chỉ để ghi đè (xem `.env.example`).
+Hầu hết giá trị có mặc định trong `docker-compose.yml`; riêng khối S3 (bucket và access key) bắt buộc đặt trong `.env` (xem `.env.example`).
 
 - **Database**: mỗi service một database riêng (`auth_db`, `booking_db`, ...), tạo bởi `docker/postgres/init-databases.sh` ở lần chạy đầu khi volume trống. Schema và dữ liệu mẫu do Flyway của từng service tạo khi service khởi động.
 - **Kafka**: `KAFKA_BOOTSTRAP_SERVERS=kafka:9092`, một node KRaft, topic tự tạo.
-- **Eureka**: `EUREKA_URL=http://eureka-server:8761/eureka`. Service chưa phải Eureka client sẽ bỏ qua biến này; gateway chỉ định tuyến được tới service đã đăng ký.
+- **Tìm service**: không có service registry. Gateway dùng danh sách tĩnh `<tên>:<cổng>` (tên service Compose), ghi đè bằng `<TÊN>_URI` (ví dụ `AUTH_SERVICE_URI`); các service khác gọi nhau bằng URL cố định (`AUTH_URL`, `FACILITY_URL`...).
 - **Redis**: gateway dùng cho rate limiting (fail open, `RATE_LIMIT_*`, đặt `RATE_LIMIT_ENABLED=false` để tắt); slot-hold-engine lưu hold; facility, discovery, payment dùng cho cache.
 - **JWT/JWKS**: auth-service ký token, các service khác lấy khoá tại `http://auth-service:8081/.well-known/jwks.json`. Mặc định auth dùng khoá ký tạm, restart auth thì token cũ không còn hợp lệ (đăng nhập lại). Muốn cố định, đặt `AUTH_JWT_PRIVATE_KEY` (PKCS8 PEM).
-- **S3**: mọi service dùng MinIO thay LocalStack (`STORAGE_S3_ENDPOINT=http://s3:9000`, path-style, credential `test`/`testtest1234`; LocalStack 3.8.1 không chạy được trên Docker Desktop của máy dev này), xem [storage-s3.md](storage-s3.md). Presigned URL dùng host `localhost:9000` (`STORAGE_S3_PRESIGN_ENDPOINT`) nên mở được từ trình duyệt; không cần sửa file hosts. Bucket có policy đọc ẩn danh cho `avatars/*`, `branches/*`, `reviews/*` (`docker/minio/public-read.json`, áp bởi service `s3-policy`); `receipts/`, `refund-proofs/`, `owner-documents/` vẫn private.
+- **S3**: mọi service dùng bucket S3 thật `fcourt-local-media-...` (IAM user `fcourt-local-s3`), không còn MinIO trong Compose. Đặt `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` trong `.env` (xin key ở tech lead, không commit); bucket và region có mặc định. Thiếu key thì hệ thống vẫn chạy, chỉ các API upload/xem file lỗi. Ảnh public (`avatars/*`, `branches/*`, `reviews/*`) đọc ẩn danh nhờ bucket policy; `receipts/`, `refund-proofs/`, `owner-documents/` dùng presigned URL. Xem [storage-s3.md](storage-s3.md).
 - **Token nội bộ** giữa các service (hold, POS, payment, ...) có giá trị DEV cố định trong Compose. Chỉ dùng local, không dùng cho môi trường thật.
 - **Tính năng cần tài khoản ngoài** (PayOS, SMTP thật, Firebase/SNS push, đăng nhập Google) để trống thì tắt; phần còn lại chạy bình thường. Mail đi vào Mailpit.
 
 ## Bộ nhớ
 
-Mỗi service Java có `mem_limit` 512 MB (Eureka 384 MB), đổi bằng `SERVICE_MEM_LIMIT` trong `.env`. `JAVA_TOOL_OPTIONS` đặt heap bằng 55% giới hạn container, SerialGC, chỉ C1, `-Xss512k`, nên mỗi JVM thường dùng khoảng 300 đến 450 MB. Dùng `docker stats --no-stream` để xem thực tế. Nếu Docker Desktop (WSL2) bị giới hạn RAM, tăng trong `%UserProfile%\.wslconfig` (`memory=...`), rồi `wsl --shutdown`.
+Mỗi service Java có `mem_limit` 512 MB, đổi bằng `SERVICE_MEM_LIMIT` trong `.env`. `JAVA_TOOL_OPTIONS` đặt heap bằng 55% giới hạn container, SerialGC, chỉ C1, `-Xss512k`, nên mỗi JVM thường dùng khoảng 300 đến 450 MB. Dùng `docker stats --no-stream` để xem thực tế. Nếu Docker Desktop (WSL2) bị giới hạn RAM, tăng trong `%UserProfile%\.wslconfig` (`memory=...`), rồi `wsl --shutdown`.
 
 ## Xử lý sự cố
 
 - **`docker compose up` không chạy gì**: thiếu `--profile`.
 - **Container `unhealthy` / restart liên tục**: `docker compose --profile all logs <service>`. Thường do thiếu RAM (exit 137, `OOMKilled`): chạy profile nhỏ hơn hoặc tăng `SERVICE_MEM_LIMIT`.
-- **Gateway 503 `Unable to find instance`**: service đó chưa đăng ký Eureka. Mở `http://localhost:8761` kiểm tra, đợi vài chục giây, hoặc service chưa là Eureka client trên nhánh bạn đang build.
+- **Gateway 503 / lỗi kết nối tới service**: service đích chưa healthy (`docker compose --profile all ps`), hoặc `<TÊN>_URI` trỏ sai.
 - **Flyway báo schema không rỗng / sai checksum**: volume cũ từ cách chạy trước (script SQL cũ). `docker compose down -v` rồi chạy lại.
 - **Port đã bị chiếm** (5432, 6387, 8080...): đổi `POSTGRES_PORT`, `REDIS_HOST_PORT`, `GATEWAY_PORT` trong `.env`, hoặc dừng Postgres/Redis cài sẵn trên máy.
 - **Container cũ tên `fcourt_postgres` đang chạy**: Compose không còn đặt `container_name`; dừng container cũ để tránh tranh cổng 5432.

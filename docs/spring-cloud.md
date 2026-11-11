@@ -1,39 +1,20 @@
-# Spring Cloud: Eureka và Gateway
+# Spring Cloud: Gateway và tìm service
 
-Các thành phần hạ tầng bắt buộc theo yêu cầu môn MSS301. Chúng là folder riêng ở gốc repo, không phải service nghiệp vụ, và không có database.
+Hệ thống không dùng service registry (đã bỏ Eureka). `gateway-service` là thành phần Spring Cloud duy nhất ở gốc repo, không có database. Chi tiết route và biến môi trường: xem [gateway.md](gateway.md).
 
-| Folder | Vai trò | Port | Spring Boot / Spring Cloud |
-|---|---|---|---|
-| `eureka-server` | Service registry (Netflix Eureka), chạy standalone | 8761 | 4.0.9 / 2025.1.4 |
+## Tìm service bằng DNS tĩnh
 
-Các service nghiệp vụ hiện vẫn dùng Spring Boot 3.5.x; client Eureka của chúng dùng Spring Cloud 2025.0.x (train tương ứng với Boot 3.5).
+Route của gateway vẫn viết dạng `lb://<tên-service>`. Địa chỉ lấy từ `SimpleDiscoveryClient` của Spring Cloud Commons, cấu hình trong `gateway-service/src/main/resources/application.yml`:
 
-## Eureka Server
-
-- Dashboard: `http://localhost:8761`. Health: `http://localhost:8761/actuator/health`.
-- Standalone: `register-with-eureka=false`, `fetch-registry=false`. Không chạy cụm nhiều node.
-- Biến môi trường:
-
-| Biến | Mặc định | Ý nghĩa |
-|---|---|---|
-| `SERVER_PORT` | `8761` | Cổng HTTP |
-| `EUREKA_HOSTNAME` | `localhost` | Hostname của registry |
-| `EUREKA_SELF_PRESERVATION` | `false` | Bật self-preservation (nên bật khi chạy nhiều node/prod) |
-
-Chạy local:
-
-```bash
-cd eureka-server
-sh mvnw spring-boot:run
+```yaml
+spring.cloud.discovery.client.simple.instances.auth-service[0].uri: ${AUTH_SERVICE_URI:http://auth-service:8081}
 ```
 
-## Service đăng ký với Eureka (client)
+- Mỗi service có đúng một URI mặc định `http://<tên>:<cổng>`. Tên service trong Docker Compose và tên Kubernetes Service giống nhau, nên mặc định chạy được ở cả hai môi trường, không cần profile riêng.
+- Cân bằng tải giữa các pod do Kubernetes Service (kube-proxy) đảm nhiệm; gateway chỉ cần một URI.
+- Muốn trỏ chỗ khác (ví dụ chạy service từ IDE) đặt biến `<TÊN>_URI`, như `AUTH_SERVICE_URI=http://localhost:8081`. Tên biến là tên service viết hoa, đổi `-` thành `_`.
+- Thêm service mới sau gateway: thêm một mục `instances` và route; thêm tên vào `GATEWAY_SWAGGER_SERVICES` nếu muốn có trong Swagger gộp.
 
-Mỗi service nghiệp vụ thêm `spring-cloud-starter-netflix-eureka-client` và cấu hình qua biến môi trường:
+Các service nghiệp vụ không hỏi registry: chúng gọi nhau bằng URL cố định qua biến môi trường (`AUTH_URL`, `FACILITY_URL`, `BOOKING_URL`, ...) và gRPC (`HOLD_GRPC_TARGET`, `BOOKING_GRPC_TARGET`). Feign của reporting và voucher dùng `url=` (`FACILITY_URL`).
 
-| Biến | Mặc định | Ý nghĩa |
-|---|---|---|
-| `EUREKA_URL` | `http://localhost:8761/eureka` | `eureka.client.service-url.defaultZone` |
-| `EUREKA_ENABLED` | `true` | `eureka.client.enabled`; đặt `false` để tắt (test, hoặc chạy không có registry) |
-
-Eureka bị tắt trong test của từng service (`eureka.client.enabled=false`), nên test không cần registry. Tên đăng ký là `spring.application.name` (ví dụ `booking-service`, `slot-hold-engine`).
+Test: `StaticDiscoveryTests` trong gateway kiểm tra `DiscoveryClient` trả đúng địa chỉ cho từng service.

@@ -1,6 +1,6 @@
 # Lưu trữ file và ảnh trên AWS S3
 
-Tài liệu này mô tả cách các service lưu file/ảnh sau khi chuyển từ Cloudinary sang S3: thiết kế, key layout, public và presigned, biến môi trường, chạy local bằng LocalStack, và hạ tầng cần chuẩn bị (bucket, bucket policy, IAM). Hạ tầng thật do repo `fcourt-infra` quản lý, tài liệu này chỉ nêu yêu cầu.
+Tài liệu này mô tả cách các service lưu file/ảnh sau khi chuyển từ Cloudinary sang S3: thiết kế, key layout, public và presigned, biến môi trường, chạy local bằng S3 thật, và hạ tầng cần chuẩn bị (bucket, bucket policy, IAM). Hạ tầng thật do repo `fcourt-infra` quản lý, tài liệu này chỉ nêu yêu cầu.
 
 ## 1. Thiết kế
 
@@ -8,7 +8,7 @@ Tài liệu này mô tả cách các service lưu file/ảnh sau khi chuyển t�
 - Mỗi service dùng AWS SDK for Java v2 (`software.amazon.awssdk:s3`, version quản lý bằng BOM `2.57.5`) và **default credential provider chain**: EKS Pod Identity trong cluster, AWS profile hoặc biến `AWS_*` ở máy local. Không có access key trong config, `application.yml` hay biến môi trường của service.
 - Mỗi service giữ nguyên port cũ (`DocumentStorage` ở auth, `ImageStorage` ở discovery và facility, `ReceiptStorage` ở payment) nên code gọi gần như không đổi. Chỉ adapter đổi từ Cloudinary sang S3.
 - Database lưu **object key** khi dữ liệu là private hoặc cần đổi domain về sau; response trả URL được tạo từ key đó:
-  - File **public** (avatar, ảnh chi nhánh, ảnh review): URL là `${storage.public-base-url}/${key}`. Trên môi trường thật `public-base-url` là URL virtual-hosted theo region của bucket (`https://<bucket>.s3.ap-southeast-1.amazonaws.com`), local là URL của LocalStack.
+  - File **public** (avatar, ảnh chi nhánh, ảnh review): URL là `${storage.public-base-url}/${key}`. Trên môi trường thật `public-base-url` là URL virtual-hosted theo region của bucket (`https://<bucket>.s3.ap-southeast-1.amazonaws.com`), local cũng vậy (bucket local riêng).
   - File **nhạy cảm** (giấy tờ chủ sân ở auth, biên lai và chứng từ hoàn tiền ở payment): không bao giờ public. Response trả **presigned GET URL** sống 10 phút (`storage.s3.presign-ttl`), tạo lúc đọc cho người đã được phân quyền.
 - Content type được đọc từ byte đầu của file (magic bytes), không tin header của client. Mỗi lần put đều set `Content-Type` và `Cache-Control`: file public dùng `public, max-age=31536000, immutable` (key chứa UUID, không ghi đè), file private dùng `private, no-store`.
 - Xóa theo key. Giá trị cũ là URL tuyệt đối (Cloudinary, ảnh Google) thì **không xóa từ xa**, chỉ ghi log và vẫn đọc nguyên giá trị đó nên dữ liệu cũ vẫn hiển thị.
@@ -49,40 +49,46 @@ Tên field và kiểu dữ liệu giữ nguyên, Flutter và web không cần s�
 |---|---|---|
 | `STORAGE_S3_BUCKET` | rỗng | Tên bucket. Rỗng thì tắt upload (503) |
 | `STORAGE_S3_REGION` | `ap-southeast-1` | Region của bucket |
-| `STORAGE_S3_ENDPOINT` | rỗng | Chỉ dùng cho LocalStack hoặc MinIO, ví dụ `http://localhost:4566`. Đặt biến này sẽ tự bật path-style |
+| `STORAGE_S3_ENDPOINT` | rỗng | Chỉ dùng cho kho tương thích S3 như MinIO (test), để trống với AWS S3. Đặt biến này sẽ tự bật path-style |
 | `STORAGE_S3_PATH_STYLE` | `false` | Ép path-style addressing |
 | `STORAGE_PUBLIC_BASE_URL` | rỗng | Base URL của file public: URL virtual-hosted theo region của bucket, ví dụ `https://<bucket>.s3.ap-southeast-1.amazonaws.com` (không có dấu `/` cuối). Rỗng thì dùng `${endpoint}/${bucket}` hoặc host của bucket |
 | `STORAGE_S3_PRESIGN_TTL` | `10m` | Thời gian sống của presigned URL (auth, payment, booking) |
 
 Các biến cũ bị xóa: `AUTH_CLOUDINARY_URL`, `CLOUDINARY_URL`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `STORAGE_PROVIDER`. Cần gỡ chúng khỏi manifest/secret của môi trường.
 
-Credential: không đặt access key. Trong cluster dùng EKS Pod Identity gắn role cho service account của từng service. Local dùng `aws configure`/`AWS_PROFILE`, hoặc `AWS_ACCESS_KEY_ID=test` với LocalStack.
+Credential: không đặt access key. Trong cluster dùng EKS Pod Identity gắn role cho service account của từng service. Local dùng `aws configure`/`AWS_PROFILE`, hoặc `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` của IAM user `fcourt-local-s3` (Compose, xem mục 5).
 
-## 5. Chạy local với LocalStack
+## 5. Chạy local với S3 thật
+
+Docker Compose và service chạy trên máy host đều dùng **bucket S3 thật** dành riêng cho local, không có MinIO hay LocalStack trong Compose.
+
+- Bucket: `fcourt-local-media-870853685410`, region `ap-southeast-1`, nằm ở `envs/shared` của `fcourt-infra` nên không bị xoá khi hạ cluster EKS. Không dùng chung với bucket của EKS: job dọn ảnh mồ côi của discovery xoá object không có trong DB của nó, nên hai môi trường dùng chung bucket sẽ xoá ảnh của nhau.
+- Credential: IAM user `fcourt-local-s3`, chỉ có quyền Get/Put/Delete/List trên bucket đó. Access key xin tech lead, đặt vào `.env` (đã gitignore, **không commit**). Xem khối S3 trong `.env.example`.
+- Compose tự đặt `STORAGE_PUBLIC_BASE_URL=https://<bucket>.s3.<region>.amazonaws.com`, `AWS_REGION`, và không đặt endpoint/path-style/presign-endpoint (mặc định của app đã đúng cho S3 thật). Bucket mặc định là `fcourt-local-media-870853685410`. Thiếu key thì service vẫn khởi động, chỉ lời gọi S3 lỗi (không tìm được credential).
 
 ```bash
-docker compose up -d localstack        # S3 ở http://localhost:4566, tự tạo bucket private fcourt-local
+# .env: STORAGE_S3_BUCKET, STORAGE_S3_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+docker compose --profile core up -d --build
 ```
 
-Image được ghim `localstack/localstack:3.8.1` vì các bản mới yêu cầu auth token. Chạy một service trên máy host:
+Chạy một service trên máy host:
 
 ```bash
-export AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test
-export STORAGE_S3_BUCKET=fcourt-local
-export STORAGE_S3_ENDPOINT=http://localhost:4566
-export STORAGE_PUBLIC_BASE_URL=http://localhost:4566/fcourt-local
+export AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=...   # key của fcourt-local-s3
+export STORAGE_S3_BUCKET=fcourt-local-media-870853685410
+export STORAGE_PUBLIC_BASE_URL=https://fcourt-local-media-870853685410.s3.ap-southeast-1.amazonaws.com
 mvn -f facility-service/pom.xml spring-boot:run
 ```
 
-Kiểm tra object: `aws --endpoint-url http://localhost:4566 s3 ls s3://fcourt-local --recursive`.
+Kiểm tra object: `aws s3 ls s3://fcourt-local-media-870853685410 --recursive` (cần credential có `s3:ListBucket`).
 
 Lưu ý khi chạy local:
 
-- discovery chấp nhận base `http://localhost:...` (chỉ loopback) để upload ảnh review thử được. Môi trường thật vẫn bắt buộc HTTPS.
-- LocalStack không ép Block Public Access, nên URL public trỏ thẳng vào LocalStack đọc được không cần ký. Presigned URL vẫn được tạo và dùng được.
-- Ảnh đại diện lưu vào review snapshot bị bỏ nếu không phải HTTPS (`ReviewerProfileClient`), nên local sẽ không thấy avatar trong review.
+- Dữ liệu local nằm trên AWS thật nên tốn dung lượng và request nhỏ; dọn bucket khi cần.
+- Presigned URL ký offline bằng key của IAM user nên mở được từ trình duyệt, không cần cấu hình thêm.
+- Ảnh public mở được ẩn danh nhờ bucket policy ở 6.3, giống môi trường thật.
 
-Test tự động dùng Testcontainers với MinIO (S3 tương thích, `org.testcontainers:minio`, image `cgr.dev/chainguard/minio` ghim theo digest `sha256`, vì bản miễn phí của Chainguard chỉ có tag `latest`), không cần tài khoản AWS. Adapter chỉ dùng API S3 chuẩn nên chạy giống nhau trên LocalStack, MinIO và S3 thật. Có Docker là chạy được `mvn -f <service>/pom.xml verify`.
+Test tự động **không** gọi AWS: dùng Testcontainers với MinIO (S3 tương thích, `org.testcontainers:minio`, image `cgr.dev/chainguard/minio` ghim theo digest `sha256`, vì bản miễn phí của Chainguard chỉ có tag `latest`), không cần tài khoản AWS. Adapter chỉ dùng API S3 chuẩn nên chạy giống nhau trên MinIO và S3 thật. Có Docker là chạy được `mvn -f <service>/pom.xml verify`.
 
 ## 6. Hạ tầng cần chuẩn bị
 

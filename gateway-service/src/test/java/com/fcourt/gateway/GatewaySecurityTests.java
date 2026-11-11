@@ -43,7 +43,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 
 /**
  * Real gateway context against a WireMock acting as every service (resolved through the simple discovery
- * client instead of Eureka) and as auth-service's JWKS endpoint.
+ * client, no registry) and as auth-service's JWKS endpoint.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")

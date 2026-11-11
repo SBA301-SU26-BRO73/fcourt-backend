@@ -28,7 +28,7 @@ SQL
 
 json_field() { sed -n "s/.*\"$1\":\"\([^\"]*\)\".*/\1/p" | head -1; }
 
-echo ">> Cho gateway thay auth-service trong Eureka (toi da 90s)"
+echo ">> Cho gateway thay auth-service san sang (toi da 90s)"
 for i in $(seq 1 30); do
   c=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$GATEWAY/api/auth/login" -H "Content-Type: application/json" -d "{}" || true)
   [ "$c" = 400 ] && break; sleep 3

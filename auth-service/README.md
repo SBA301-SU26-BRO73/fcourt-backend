@@ -30,7 +30,7 @@ stable key once with
 | `AUTH_JWT_PRIVATE_KEY` / `AUTH_JWT_KEY_ID` | PKCS8 PEM RSA key (ephemeral when blank) / thumbprint of the key |
 | `AUTH_JWT_ACCESS_TTL` / `AUTH_JWT_REFRESH_TTL` | `15m` / `30d` |
 | `STORAGE_S3_BUCKET` / `STORAGE_S3_REGION` | private S3 bucket / `ap-southeast-1`; blank bucket disables uploads (503). Credentials come from the default AWS chain (EKS Pod Identity), never from config |
-| `STORAGE_S3_ENDPOINT` / `STORAGE_S3_PATH_STYLE` | LocalStack/MinIO endpoint (for example `http://localhost:4566`) / path-style addressing |
+| `STORAGE_S3_ENDPOINT` / `STORAGE_S3_PATH_STYLE` | Endpoint of an S3-compatible store such as MinIO (tests only; empty for AWS S3) / path-style addressing |
 | `STORAGE_PUBLIC_BASE_URL` / `STORAGE_S3_PRESIGN_TTL` | base of public object URLs (CloudFront) / lifetime of presigned document URLs, `10m` |
 | `AUTH_PASSWORD_RESET_TTL` | `30m` |
 | `AUTH_GOOGLE_CLIENT_ID` | Google OAuth Web client ID used as the ID token audience; required for Google sign-in |

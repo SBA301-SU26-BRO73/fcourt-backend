@@ -56,7 +56,7 @@ storage:
   s3:
     bucket: ${STORAGE_S3_BUCKET:}
     region: ${STORAGE_S3_REGION:ap-southeast-1}
-    # LocalStack/MinIO only (for example http://localhost:4566); also turns on path-style addressing.
+    # Only for S3-compatible stores such as MinIO (used by tests); leave empty for real AWS S3. Setting it also turns on path-style addressing.
     endpoint: ${STORAGE_S3_ENDPOINT:}
     path-style: ${STORAGE_S3_PATH_STYLE:false}
   # Base of every issued image URL (CloudFront). Default: endpoint/bucket or the bucket host.
@@ -96,11 +96,3 @@ springdoc:
     enabled: ${SWAGGER_ENABLED:true}
     path: /swagger-ui.html
   paths-to-exclude: /api/internal/**,/error
-
-eureka:
-  client:
-    enabled: ${EUREKA_ENABLED:true}
-    service-url:
-      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
-  instance:
-    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:true}

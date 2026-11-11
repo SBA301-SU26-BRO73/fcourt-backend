@@ -48,14 +48,6 @@ management:
   endpoint:
     health:
       show-details: never
-eureka:
-  client:
-    enabled: ${EUREKA_ENABLED:true}
-    service-url:
-      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
-  instance:
-    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:true}
-
 springdoc:
   api-docs:
     enabled: ${SWAGGER_ENABLED:true}

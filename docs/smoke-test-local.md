@@ -16,7 +16,7 @@ echo "VITE_API_URL=http://localhost:8080/api" > .env.local
 npm ci && npm run dev           # http://localhost:5173, gọi thẳng gateway (CORS đã mở cho 5173 và 3000)
 ```
 
-Gateway cần 30 đến 60 giây sau khi lên mới thấy các service trong Eureka (lúc đó trả 503). `compose-seed.sh` tự chờ.
+Gateway trả 503 cho tới khi service đích lên (gateway tìm service bằng DNS của Compose, không có registry). `compose-seed.sh` tự chờ.
 
 ## Tài khoản (chỉ dùng local, mật khẩu chung `Fcourt@123456`)
 
@@ -65,7 +65,7 @@ Web (Vite dev, port 5173): `/`, `/lookup`, `/auth/login`, `/branches` trả 200.
 - 403 `No active staff assignment` ở `/api/staff/me`: seed Flyway của staff-operations không có dòng staff. `compose-seed.sh` thêm bằng SQL.
 - Tạo staff bằng API: mật khẩu tối thiểu 12 ký tự, `Idempotency-Key` phải là UUID. Vì vậy mật khẩu chung là `Fcourt@123456`.
 - Gateway giới hạn đăng nhập 10 lần/phút/IP, quá chặt khi thử nhiều role từ một máy. Compose đặt `RATE_LIMIT_AUTH_REQUESTS=120`.
-- LocalStack 3.8.1 không chạy được trên Docker Desktop của máy dev này (`File name too long`), nên Compose dùng MinIO (cùng ảnh với Testcontainers của backend).
+- Compose dùng bucket S3 thật cho local (key IAM user `fcourt-local-s3` trong `.env`), không còn MinIO/LocalStack.
 - booking-service cần `SPRING_DATA_REDIS_HOST/PORT` (không đọc `REDIS_HOST`).
 
 ## Chưa kiểm tra

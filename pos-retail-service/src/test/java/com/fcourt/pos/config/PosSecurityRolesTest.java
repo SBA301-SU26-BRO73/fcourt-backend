@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @WebMvcTest(controllers = PosSecurityRolesTest.Probe.class, properties = {
         "pos.jwk-set-uri=http://localhost:1/jwks", "pos.issuer=test", "pos.audience=fcourt",
-        "pos.settlement-token=", "eureka.client.enabled=false"})
+        "pos.settlement-token="})
 @Import({PosSecurity.class, PosSecurityRolesTest.Probe.class})
 class PosSecurityRolesTest {
     @RestController
