@@ -27,3 +27,4 @@ documentation. This index is a navigation aid, not an execution runbook.
 | staff-operations-service | [V2__seed_sample_data.sql](../staff-operations-service/database/V2__seed_sample_data.sql) | Inspect the checked-in SQL seed script for this service. |
 | subscription-service | [V1__init_schema.sql](../subscription-service/database/V1__init_schema.sql) | Inspect the checked-in SQL schema script for this service. |
 | subscription-service | [V2__seed_sample_data.sql](../subscription-service/database/V2__seed_sample_data.sql) | Inspect the checked-in SQL seed script for this service. |
+| voucher-service | [V1__init_schema.sql](../voucher-service/database/V1__init_schema.sql) | Inspect the checked-in SQL schema script for this service. |
