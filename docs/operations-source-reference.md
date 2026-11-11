@@ -14,3 +14,4 @@ documentation. This index is a navigation aid, not an execution runbook.
 | --- | --- | --- |
 | auth-service | [V1__init_schema.sql](../auth-service/database/V1__init_schema.sql) | Inspect the checked-in SQL schema script for this service. |
 | auth-service | [V2__seed_sample_data.sql](../auth-service/database/V2__seed_sample_data.sql) | Inspect the checked-in SQL seed script for this service. |
+| booking-service | [V1__init_schema.sql](../booking-service/database/V1__init_schema.sql) | Inspect the checked-in SQL schema script for this service. |
