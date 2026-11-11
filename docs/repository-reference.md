@@ -54,3 +54,4 @@ not the effective values of a running deployment.
 | pos-retail-service | [pos-retail-service config](../pos-retail-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
 | reporting-service | [reporting-service config](../reporting-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
 | slot-hold-engine | [slot-hold-engine config](../slot-hold-engine/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
+| staff-operations-service | [staff-operations-service config](../staff-operations-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
