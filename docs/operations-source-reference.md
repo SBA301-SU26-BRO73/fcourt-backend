@@ -39,3 +39,4 @@ documentation. This index is a navigation aid, not an execution runbook.
 | tools/k8s-seed | [05-bookings.sh](../tools/k8s-seed/05-bookings.sh) | Inspect this shell script and its prerequisites before running it. |
 | tools/k8s-seed | [06-online.sh](../tools/k8s-seed/06-online.sh) | Inspect this shell script and its prerequisites before running it. |
 | tools/k8s-seed | [07-reviews.sh](../tools/k8s-seed/07-reviews.sh) | Inspect this shell script and its prerequisites before running it. |
+| tools/k8s-seed | [99-verify.sh](../tools/k8s-seed/99-verify.sh) | Inspect this shell script and its prerequisites before running it. |
