@@ -64,6 +64,7 @@ class BookingCancellationTest extends BookingApiTest {
             .andExpect(jsonPath("$.cancellationReason").value("Đổi lịch")).andExpect(jsonPath("$.slots.length()").value(1));
         var event=json.readTree(jdbc.queryForObject("SELECT payload::text FROM booking_outbox",String.class));
         assertThat(event.path("booking").path("refundAmount").asInt()).isEqualTo(100000);
+        assertThat(event.path("booking").path("cancelledByRole").asText()).isEqualTo("CUSTOMER");
         assertThat(jdbc.queryForObject("SELECT active FROM booking_slots WHERE booking_id=1",Boolean.class)).isFalse();
         // Same court/date/time can be booked again while the cancelled booking retains its history.
         jdbc.update("INSERT INTO booking_slots(booking_id,court_id,booking_date,slot_start,slot_end,price_at_booking) VALUES(3,1,'2099-12-01','18:00','18:30',100000)");

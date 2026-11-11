@@ -58,7 +58,7 @@ class BookingCancellation {
         if(b.get("status").equals("CANCELLED"))return queries.detail(id,jwt,null);
         var policy=policy(b);
         if(!policy.allowed())throw new ResponseStatusException(HttpStatus.BAD_REQUEST,policy.reason());
-        applyCancellation(b,reason,policy);
+        applyCancellation(b,reason,policy,"CUSTOMER");
         return queries.detail(id,jwt,null);
     }
     record GuestResult(String bookingCode,String status,BigDecimal refundAmount,String currency) {}
@@ -80,13 +80,18 @@ class BookingCancellation {
             return new GuestResult(code,"CANCELLED",(BigDecimal)b.get("refund_amount"),"VND");
         var policy=policy(b);
         if(!policy.allowed()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,policy.reason());
-        applyCancellation(b,why,policy);
+        applyCancellation(b,why,policy,"CUSTOMER");
         return new GuestResult(code,"CANCELLED",policy.refundAmount(),"VND");
     }
     /** Policy of one booking row, for package cancellation (SCRUM-242) which applies the same rules per member. */
     Policy policyFor(Map<String,Object> b) {return policy(b);}
     /** Cancels one booking row: status, released slots and the BookingCancelledEvent outbox row (payment refunds follow it). */
-    void applyCancellation(Map<String,Object> b,String reason,Policy policy) {
+    void applyCancellation(Map<String,Object> b,String reason,Policy policy) {applyCancellation(b,reason,policy,null);}
+    /**
+     * {@code cancelledByRole} (CUSTOMER, ADMIN or SYSTEM; null when unknown) rides in the event so notification-service can
+     * tell the branch owner only about cancellations made by the customer. Additive: consumers that do not read it ignore it.
+     */
+    void applyCancellation(Map<String,Object> b,String reason,Policy policy,String cancelledByRole) {
         long id=((Number)b.get("id")).longValue();
         var slots=jdbc.queryForList("SELECT court_id AS \"courtId\",booking_date AS date,slot_start AS \"startTime\",slot_end AS \"endTime\" FROM booking_slots WHERE booking_id=? ORDER BY slot_start",id);
         jdbc.update("UPDATE bookings SET status='CANCELLED',cancellation_reason=?,cancelled_at=?,refund_amount=?,updated_at=now() WHERE id=?",reason.strip(),java.sql.Timestamp.from(clock.instant()),policy.refundAmount(),id);
@@ -96,6 +101,7 @@ class BookingCancellation {
         booking.put("id",id);booking.put("bookingId",id);booking.put("branchId",b.get("branch_id"));booking.put("customerId",b.get("customer_id"));
         booking.put("bookingCode",b.get("booking_code"));booking.put("status","CANCELLED");booking.put("reason",reason.strip());
         booking.put("paymentId",b.get("payment_id"));booking.put("paymentStatus",b.get("payment_status"));booking.put("refundAmount",policy.refundAmount());booking.put("slots",slots);
+        if(cancelledByRole!=null)booking.put("cancelledByRole",cancelledByRole);
         try {
             jdbc.update("INSERT INTO booking_outbox(event_id,booking_id,payload) VALUES (?,?,?::jsonb)",eventId,id,
                 json.writeValueAsString(Map.of("eventId",eventId,"type","BookingCancelledEvent","booking",booking)));

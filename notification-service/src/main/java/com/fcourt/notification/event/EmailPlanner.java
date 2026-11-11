@@ -76,7 +76,7 @@ public class EmailPlanner {
         // deactivated) is mailed again. Without approvedAt the eventId alone dedupes redelivery.
         JsonNode approvedAt = data.path("approvedAt");
         String key = approvedAt.isMissingNode() || approvedAt.isNull()
-                ? null : "owner-approved:" + userId + ":" + instant(approvedAt, event);
+                ? null : BusinessKeys.ownerApproved(userId, instant(approvedAt, event).toString());
         return build(address(data.path("email")), key, "Hồ sơ chủ sân FCOURT đã được duyệt", "owner-approved",
                 Map.of("name", name(data.path("fullName"))));
     }
@@ -113,7 +113,7 @@ public class EmailPlanner {
         model.put("details", checkoutDetails(checkout, event));
         model.put("amount", money(payment.path("amount")));
         model.put("ticketCode", payment.path("checkInCode").asText("—"));
-        return build(recipientAddress(event), "booking-confirmed:" + bookingId,
+        return build(recipientAddress(event), BusinessKeys.bookingConfirmed(bookingId),
                 "Xác nhận đặt sân " + code, "booking-confirmed", model);
     }
 
@@ -156,7 +156,7 @@ public class EmailPlanner {
         model.put("details", details);
         model.put("note", note);
         // The customer cancelling, payment expiry and a rejected payment all end the same booking.
-        return build(recipientAddress(event), "booking-cancelled:" + bookingId,
+        return build(recipientAddress(event), BusinessKeys.bookingCancelled(bookingId),
                 "Đơn đặt sân " + code + " đã bị hủy", "booking-cancelled", model);
     }
 

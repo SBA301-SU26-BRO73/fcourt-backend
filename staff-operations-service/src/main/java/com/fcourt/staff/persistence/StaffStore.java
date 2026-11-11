@@ -27,6 +27,12 @@ public class StaffStore {
                 this::map, branchId, limit, offset));
     }
 
+    /** User ids of the branch's active (not disabled) staff, for notification-service. */
+    public List<Long> activeUserIds(long branchId) {
+        return jdbc.queryForList("SELECT user_id FROM staff WHERE branch_id = ? AND deleted_at IS NULL ORDER BY id",
+                Long.class, branchId);
+    }
+
     public StaffView get(long id, boolean lock) {
         var rows = jdbc.query("SELECT * FROM staff WHERE id = ?" + (lock ? " FOR UPDATE" : ""), this::map, id);
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Staff assignment not found");

@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -23,6 +24,13 @@ class AccountRepository {
 
     record AccountRecord(long id, String email, String passwordHash, String fullName, String phone, String role,
                          String status, OffsetDateTime createdAt) {
+    }
+
+    /** Ids of the active super admins, the recipients of a new owner registration. */
+    List<Long> activeSuperAdminIds() {
+        return jdbc.queryForList(
+                "SELECT id FROM users WHERE role = 'SUPER_ADMIN' AND status = 'ACTIVE' AND deleted_at IS NULL ORDER BY id",
+                Long.class);
     }
 
     Optional<AccountRecord> findById(long id) {

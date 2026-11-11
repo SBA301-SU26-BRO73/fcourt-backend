@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 import com.fcourt.notification.event.EventEnvelope;
+import com.fcourt.notification.inapp.InAppEventHandler;
 import com.fcourt.notification.push.PushDeliveryService;
 import org.junit.jupiter.api.Test;
 
@@ -15,7 +16,8 @@ class NotificationServiceTest {
         EventEnvelope event = mock(EventEnvelope.class);
         when(emails.handle("payload")).thenReturn(event);
         doThrow(new IllegalStateException("SNS unavailable")).when(pushes).send(event);
-        NotificationService service = new NotificationService(emails, pushes);
+        InAppEventHandler inApp = mock(InAppEventHandler.class);
+        NotificationService service = new NotificationService(emails, inApp, pushes);
 
         assertThatThrownBy(() -> service.handle("payload")).hasMessage("SNS unavailable");
 

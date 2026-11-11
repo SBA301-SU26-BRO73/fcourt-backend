@@ -52,7 +52,7 @@ Khớp theo `order` (nhỏ trước), rồi theo thứ tự khai báo. Cụ th�
 | `/ws-fcourt/**` (WebSocket/STOMP, `lb:ws://`) | booking-service | 20 |
 | `/api/payments/**`, `/api/refunds/**`, `/api/admin/{payments,refunds}/**` | payment-service | 20 |
 | `/api/staff/{schedule,check-in,offline,me,walk-in,bookings}/**`, `/api/admin/staff/**` | staff-operations-service | 20 |
-| `/devices/**` | notification-service | 20 |
+| `/devices/**`, `/api/notifications/**` (thông báo trong ứng dụng) | notification-service | 20 |
 | `/api/staff/pos/**`, `/api/admin/pos/**` | pos-retail-service | 20 |
 | `GET /docs/<service>/v3/api-docs` | service tương ứng (đổi thành `/v3/api-docs`) | 5 |
 
@@ -76,7 +76,7 @@ Lấy từ cấu hình bảo mật của từng service (`fcourt.gateway.securit
 | `/swagger-ui.html`, `/swagger-ui/**`, `/webjars/**`, `/v3/api-docs/**`, `GET /docs/**` | gateway |
 | `/actuator/health` | gateway |
 
-Ngoại lệ vẫn cần token (`authenticated-paths`, kiểm tra trước): `/api/bookings/my`, `/api/payments/my-transactions`, `/api/payments/*/confirm-free`, `/api/refunds/**`. `PUT/DELETE /devices` (đăng ký thiết bị) cần token như mặc định.
+Ngoại lệ vẫn cần token (`authenticated-paths`, kiểm tra trước): `/api/bookings/my`, `/api/payments/my-transactions`, `/api/payments/*/confirm-free`, `/api/refunds/**`. `PUT/DELETE /devices` (đăng ký thiết bị) và `/api/notifications/**` (chuông thông báo) cần token như mặc định.
 
 ## Giới hạn tốc độ (rate limiting)
 

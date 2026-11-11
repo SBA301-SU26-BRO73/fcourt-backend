@@ -61,7 +61,7 @@ class AdminBookingCancellation {
                 ? (BigDecimal) booking.get("total_price") : BigDecimal.ZERO;
         var policy = new BookingCancellation.Policy(true, "Hủy bởi chủ sân", (Instant) null, (Instant) null, 0,
                 refund, BigDecimal.valueOf(100), "VND");
-        cancellation.applyCancellation(booking, reason, policy);
+        cancellation.applyCancellation(booking, reason, policy, "ADMIN");
         jdbc.update("UPDATE bookings SET cancelled_by=?,cancelled_by_role='ADMIN' WHERE id=?", actor, id);
         return queries.view(id);
     }

@@ -180,7 +180,7 @@ spring:
               uri: lb://notification-service
               order: 20
               predicates:
-                - Path=/devices/**
+                - Path=/devices/**,/api/notifications/**
             - id: pos-retail-service
               uri: lb://pos-retail-service
               order: 20

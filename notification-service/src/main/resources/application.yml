@@ -62,6 +62,12 @@ notification:
       visibility-timeout-seconds: ${PUSH_REMINDER_VISIBILITY_TIMEOUT_SECONDS:120}
   mail:
     from: ${NOTIFICATION_MAIL_FROM:FCOURT <no-reply@fcourt.example>}
+  directory:
+    # Internal lookups (not routed by the gateway) to find the owner and the staff of a branch.
+    facility-url: ${FACILITY_URL:http://facility-service:8083}
+    staff-url: ${STAFF_URL:http://staff-operations-service:8090}
+    # Shared secret of staff-operations-service for the staff directory. Empty: branch staff are not notified.
+    staff-token: ${STAFF_DIRECTORY_TOKEN:}
   links:
     # Deep link or web page of the app that takes ?token=... to finish a password reset.
     reset-password-url: ${NOTIFICATION_RESET_PASSWORD_URL:https://fcourt.example/reset-password}
