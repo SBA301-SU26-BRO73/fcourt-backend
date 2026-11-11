@@ -101,6 +101,8 @@ class BookingCancellation {
         booking.put("id",id);booking.put("bookingId",id);booking.put("branchId",b.get("branch_id"));booking.put("customerId",b.get("customer_id"));
         booking.put("bookingCode",b.get("booking_code"));booking.put("status","CANCELLED");booking.put("reason",reason.strip());
         booking.put("paymentId",b.get("payment_id"));booking.put("paymentStatus",b.get("payment_status"));booking.put("refundAmount",policy.refundAmount());booking.put("slots",slots);
+        // Additive fields for payment-service's automatic guest/owner refund requests.
+        booking.put("totalPrice",b.get("total_price"));booking.put("customerPhone",b.get("guest_phone"));
         if(cancelledByRole!=null)booking.put("cancelledByRole",cancelledByRole);
         try {
             jdbc.update("INSERT INTO booking_outbox(event_id,booking_id,payload) VALUES (?,?,?::jsonb)",eventId,id,

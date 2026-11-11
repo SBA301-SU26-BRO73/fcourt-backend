@@ -134,6 +134,7 @@ class GatewaySecurityTests {
                 of(HttpMethod.POST, "/api/bookings"),
                 of(HttpMethod.DELETE, "/api/bookings/hold-slots/6f1a"),
                 of(HttpMethod.POST, "/api/public/bookings/lookup"), of(HttpMethod.POST, "/api/public/bookings/cancel"), of(HttpMethod.GET, "/api/bookings/42"), of(HttpMethod.GET, "/api/payments/42/status"),
+                of(HttpMethod.POST, "/api/public/refunds"), of(HttpMethod.POST, "/api/public/refunds/lookup"),
                 of(HttpMethod.GET, "/api/payments/checkout-info/42"),
                 of(HttpMethod.POST, "/api/payments/42/upload-receipt"),
                 of(HttpMethod.GET, "/actuator/health"));

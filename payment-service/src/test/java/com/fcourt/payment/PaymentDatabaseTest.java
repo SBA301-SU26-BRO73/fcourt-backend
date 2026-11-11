@@ -406,7 +406,7 @@ class PaymentDatabaseTest {
                 .isEqualByComparingTo("160000.00");
         assertThat(jdbc.queryForObject("SELECT status FROM payments", String.class)).isEqualTo("PENDING");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM refund_requests", Long.class)).isZero();
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success", Long.class)).isEqualTo(8);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success", Long.class)).isEqualTo(9);
     }
     @Autowired CustomerPayments customerPayments;
     @Test
@@ -579,6 +579,45 @@ class PaymentDatabaseTest {
         return new RefundService(store,authority,tx);
     }
     RefundService.Request refundRequest(){return new RefundService.Request(42,"Vietcombank","970436","00123456789","NGUYEN VAN A","Đổi lịch");}
+    @Test
+    void automaticGuestRefundAndPublicSubmissionRaceKeepOneRequestAndOneNotification() throws Exception {
+        submitted();jdbc.update("UPDATE payments SET status='CONFIRMED' WHERE booking_id=42");
+        var authority=org.mockito.Mockito.mock(PaymentUpstreams.class);
+        org.mockito.Mockito.when(authority.guestBooking("FC00000042","0901234567")).thenReturn(
+            new PaymentUpstreams.GuestBooking(42L,"FC00000042",7L,new java.math.BigDecimal("160000"),
+                "CANCELLED","CONFIRMED",new java.math.BigDecimal("80000")));
+        var service=new RefundService(store,authority,tx);
+        var cancellation=new RefundService.Cancellation(42,7,null,"0901234567",new java.math.BigDecimal("160000"),new java.math.BigDecimal("80000"),"Cancelled");
+        var request=new RefundService.GuestRequest("FC00000042","0901234567","VCB","123456789","NGUYEN VAN A",null);
+        try(var pool=java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            var start=new java.util.concurrent.CountDownLatch(1);
+            var event=pool.submit(()->{start.await();return service.automatic(cancellation);});
+            var publicRequest=pool.submit(()->{start.await();return service.guestRequest(request);});
+            start.countDown();
+            assertThat(event.get(10,java.util.concurrent.TimeUnit.SECONDS).id())
+                .isEqualTo(publicRequest.get(10,java.util.concurrent.TimeUnit.SECONDS).id());
+        }
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM refund_requests",Long.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM payment_outbox WHERE event_type='RefundRequestedEvent'",Long.class)).isEqualTo(1);
+        var state=service.guestState(new RefundService.GuestIdentity("FC00000042","0901234567"));
+        assertThat(state.request().bankInfoMissing()).isFalse();
+        assertThat(state.request().customerPhone()).isEqualTo("0901234567");
+        assertThat(service.automatic(cancellation).bankAccountNumber()).isEqualTo("123456789");
+    }
+
+    @Test
+    void automaticRefundOutboxFailureRollsBackNullableBankRequest() throws Exception {
+        submitted();jdbc.update("UPDATE payments SET status='CONFIRMED' WHERE booking_id=42");
+        jdbc.execute("ALTER TABLE payment_outbox ADD CONSTRAINT test_request_outbox CHECK(event_type<>'RefundRequestedEvent') NOT VALID");
+        try {
+            var service=new RefundService(store,org.mockito.Mockito.mock(PaymentUpstreams.class),tx);
+            org.assertj.core.api.Assertions.assertThatThrownBy(()->service.automatic(new RefundService.Cancellation(
+                42,7,null,"0901234567",new java.math.BigDecimal("160000"),new java.math.BigDecimal("80000"),"Cancelled")))
+                .isInstanceOf(RuntimeException.class);
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM refund_requests",Long.class)).isZero();
+        } finally {jdbc.execute("ALTER TABLE payment_outbox DROP CONSTRAINT test_request_outbox");}
+    }
+
     @Test
     void refundUsesServerEntitlementAndDuplicateRequestDoesNotCreateAnother() throws Exception {
         submitted();jdbc.update("UPDATE payments SET status='CONFIRMED' WHERE booking_id=42");

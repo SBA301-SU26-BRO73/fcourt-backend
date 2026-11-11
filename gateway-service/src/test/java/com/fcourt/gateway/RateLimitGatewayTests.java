@@ -157,6 +157,19 @@ class RateLimitGatewayTests {
     }
 
     @Test
+    void publicRefundsShareLookupBudgetIncludingReadsAndUpdates() {
+        String ip = "203.0.113.11";
+        post("/api/public/bookings/lookup", ip).expectStatus().isOk();
+        post("/api/public/bookings/cancel", ip).expectStatus().isOk();
+        post("/api/public/refunds", ip).expectStatus().isOk();
+        post("/api/public/refunds/lookup", ip).expectStatus().isOk();
+        post("/api/public/refunds", ip).expectStatus().isOk();
+        post("/api/public/refunds/lookup", ip).expectStatus().isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        post("/api/public/refunds", ip).expectStatus().isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        post("/api/public/refunds", "203.0.113.12").expectStatus().isOk();
+    }
+
+    @Test
     void holdAndBookingCreationAreLimitedPerClientForGuestsAndPerUserWhenSignedIn() throws JOSEException {
         String ip = "203.0.113.5";
         // One budget for hold + create: a guest flow is one of each.

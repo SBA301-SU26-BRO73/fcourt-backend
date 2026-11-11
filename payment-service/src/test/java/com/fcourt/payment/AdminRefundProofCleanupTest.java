@@ -34,6 +34,9 @@ class AdminRefundProofCleanupTest {
         row.put("branch_id", 7L);
         row.put("amount", new BigDecimal("100000"));
         row.put("status", status);
+        row.put("refund_bank_name", "VCB");
+        row.put("refund_bank_account_number", "123456789");
+        row.put("refund_bank_account_name", "NGUYEN VAN A");
         row.put("refund_proof_image_url", proof);
         row.put("created_at", Timestamp.valueOf("2026-01-01 00:00:00"));
         row.put("updated_at", Timestamp.valueOf("2026-01-01 00:00:00"));

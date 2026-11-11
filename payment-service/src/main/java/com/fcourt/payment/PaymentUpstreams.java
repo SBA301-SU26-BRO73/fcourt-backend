@@ -113,6 +113,26 @@ class PaymentUpstreams {
         }
     }
 
+    /** Uses the booking authority's existing code + phone verification, including guest-only ownership. */
+    GuestBooking guestBooking(String code, String phone) {
+        try {
+            var result = booking.post().uri("/api/public/bookings/lookup")
+                .body(java.util.Map.of("bookingCode", code, "phone", phone)).retrieve().body(GuestBooking.class);
+            if (result == null || result.id() == null || result.id() <= 0 || result.branchId() == null
+                    || !code.strip().toUpperCase(java.util.Locale.ROOT).replace("-", "").equals(result.bookingCode()))
+                throw unavailable();
+            return result;
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode().value() == 404)
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found");
+            throw unavailable();
+        } catch (RestClientException e) { throw unavailable(); }
+    }
+
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
+    record GuestBooking(Long id, String bookingCode, Long branchId, BigDecimal totalPrice,
+                        String status, String paymentStatus, BigDecimal refundAmount) {}
+
     static ResponseStatusException unavailable() {
         return new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Checkout dependency unavailable or invalid response");
     }

@@ -33,6 +33,7 @@ class AdminRefundService {
         if(initial.equals(action))return RefundService.row(first);
         if(Set.of("COMPLETED","REJECTED").contains(initial))throw new ResponseStatusException(HttpStatus.CONFLICT,"Refund decision already final");
         if(action.equals("REJECTED")&&(note==null||note.isBlank()||note.strip().length()>500))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Rejection reason required (1-500 characters)");
+        if(action.equals("APPROVED"))requireBank(first);
         if(action.equals("COMPLETED") && proof==null)throw ReceiptValidator.invalid();
         String proofUrl=action.equals("COMPLETED")?storage.uploadRefundProof(ReceiptValidator.read(proof)):null;
         if(proofUrl!=null&&!proofUrl.startsWith(S3ReceiptStorage.REFUND_PROOFS))
@@ -45,6 +46,7 @@ class AdminRefundService {
             String state=row.get("status").toString();
             if(state.equals(action))return RefundService.row(row);
             if(!Set.of("PENDING","APPROVED").contains(state))throw new ResponseStatusException(HttpStatus.CONFLICT,"Refund decision already final");
+            if(!action.equals("REJECTED"))requireBank(row);
             var payment=store.find(booking);
             if(payment==null||!"CONFIRMED".equals(payment.status())||((java.math.BigDecimal)row.get("amount")).compareTo(payment.amount())>0)
                 throw new ResponseStatusException(HttpStatus.CONFLICT,"Confirmed payment no longer matches refund");
@@ -56,8 +58,12 @@ class AdminRefundService {
             var result=RefundService.row(store.jdbc().queryForMap("SELECT * FROM refund_requests WHERE id=?",id));
             if(action.equals("COMPLETED")){
                 UUID eventId=UUID.randomUUID();
+                var refund=new LinkedHashMap<String,Object>();
+                refund.put("id",id);refund.put("bookingId",booking);refund.put("branchId",row.get("branch_id"));
+                refund.put("customerId",row.get("customer_id"));refund.put("amount",result.amount());
+                refund.put("status",result.status());refund.put("transferProofUrl",result.transferProofUrl());
                 store.jdbc().update("INSERT INTO payment_outbox(event_id,booking_id,event_type,payload) VALUES (?,?,?,?::jsonb)",eventId,booking,"RefundCompletedEvent",
-                    store.encode(Map.of("eventId",eventId,"type","RefundCompletedEvent","refund",Map.of("id",id,"bookingId",booking,"branchId",row.get("branch_id"),"customerId",row.get("customer_id"),"amount",result.amount(),"status",result.status(),"transferProofUrl",result.transferProofUrl()))));
+                    store.encode(Map.of("eventId",eventId,"type","RefundCompletedEvent","refund",refund)));
             }
             return result;
         });}catch(RuntimeException e){
@@ -66,5 +72,8 @@ class AdminRefundService {
         }
         if(proofUrl!=null&&!proofUrl.equals(saved.transferProofUrl()))storage.delete(proofUrl);
         return saved;
+    }
+    private void requireBank(Map<String,Object> row){
+        if(RefundService.row(row).bankInfoMissing())throw new ResponseStatusException(HttpStatus.CONFLICT,"Refund bank information is missing; contact the customer");
     }
 }
