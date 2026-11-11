@@ -100,7 +100,7 @@ jobs:
           push: true
           tags: |
             ${{ steps.ecr.outputs.registry }}/${{ env.ECR_NAMESPACE }}/${{ matrix.service }}:${{ needs.detect.outputs.tag }}
-            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_NAMESPACE }}/${{ matrix.service }}:dev
+            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_NAMESPACE }}/${{ matrix.service }}:latest
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,scope=${{ matrix.service }},mode=max
 
@@ -127,7 +127,7 @@ jobs:
         env:
           SERVICES: ${{ needs.detect.outputs.services }}
           TAG: ${{ needs.detect.outputs.tag }}
-          REGISTRY: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+          REGISTRY: ${{ vars.AWS_ACCOUNT_ID || '870853685410' }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
         run: |
           set -euo pipefail
           for svc in $(echo "$SERVICES" | jq -r '.[]'); do
@@ -140,13 +140,14 @@ jobs:
       - name: Commit and push
         env:
           TAG: ${{ needs.detect.outputs.tag }}
+          SERVICES: ${{ needs.detect.outputs.services }}
         run: |
           set -euo pipefail
           git config user.name "fcourt-ci"
           git config user.email "fcourt-ci@users.noreply.github.com"
           git add services
           git diff --cached --quiet && { echo "No tag changes"; exit 0; }
-          git commit -m "chore(dev): bump images to ${TAG}"
+          git commit -m "chore(images): bump $(echo "$SERVICES" | jq -r 'join(", ")') to ${TAG}"
           for attempt in 1 2 3; do
             git push origin HEAD:main && exit 0
             git pull --rebase origin main
