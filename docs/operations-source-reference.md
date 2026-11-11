@@ -42,3 +42,4 @@ documentation. This index is a navigation aid, not an execution runbook.
 | tools/k8s-seed | [99-verify.sh](../tools/k8s-seed/99-verify.sh) | Inspect this shell script and its prerequisites before running it. |
 | tools/k8s-seed | [lib.sh](../tools/k8s-seed/lib.sh) | Inspect this shell script and its prerequisites before running it. |
 | tools/demo_seed | [manifest.example.json](../tools/demo_seed/manifest.example.json) | Inspect this example configuration before preparing a local copy. |
+| tools/demo_seed | [seed.py](../tools/demo_seed/seed.py) | Inspect the Python tool implementation and supported arguments. |
