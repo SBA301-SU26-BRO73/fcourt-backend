@@ -59,3 +59,4 @@ not the effective values of a running deployment.
 | voucher-service | [voucher-service config](../voucher-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
 | tools/demo_seed | [tools/demo_seed readme](../tools/demo_seed/README.md) | Read the README maintained alongside this component. |
 | tools/production_smoke | [tools/production_smoke readme](../tools/production_smoke/README.md) | Read the README maintained alongside this component. |
+| tools/system_tests | [tools/system_tests readme](../tools/system_tests/README.md) | Read the README maintained alongside this component. |
