@@ -19,3 +19,4 @@ documentation. This index is a navigation aid, not an execution runbook.
 | facility-service | [V1__init_schema.sql](../facility-service/database/V1__init_schema.sql) | Inspect the checked-in SQL schema script for this service. |
 | facility-service | [V2__seed_sample_data.sql](../facility-service/database/V2__seed_sample_data.sql) | Inspect the checked-in SQL seed script for this service. |
 | payment-service | [V1__init_schema.sql](../payment-service/database/V1__init_schema.sql) | Inspect the checked-in SQL schema script for this service. |
+| payment-service | [V2__seed_sample_data.sql](../payment-service/database/V2__seed_sample_data.sql) | Inspect the checked-in SQL seed script for this service. |
