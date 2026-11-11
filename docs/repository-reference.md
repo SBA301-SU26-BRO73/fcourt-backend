@@ -30,3 +30,4 @@ not the effective values of a running deployment.
 | reporting-service | [reporting-service readme](../reporting-service/README.md) | Read the README maintained alongside this component. |
 | slot-hold-engine | [slot-hold-engine readme](../slot-hold-engine/README.md) | Read the README maintained alongside this component. |
 | staff-operations-service | [staff-operations-service readme](../staff-operations-service/README.md) | Read the README maintained alongside this component. |
+| subscription-service | [subscription-service readme](../subscription-service/README.md) | Read the README maintained alongside this component. |
