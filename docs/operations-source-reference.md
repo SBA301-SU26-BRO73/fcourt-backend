@@ -35,3 +35,4 @@ documentation. This index is a navigation aid, not an execution runbook.
 | tools/k8s-seed | [01-accounts.sh](../tools/k8s-seed/01-accounts.sh) | Inspect this shell script and its prerequisites before running it. |
 | tools/k8s-seed | [02-catalog.sh](../tools/k8s-seed/02-catalog.sh) | Inspect this shell script and its prerequisites before running it. |
 | tools/k8s-seed | [03-images.sh](../tools/k8s-seed/03-images.sh) | Inspect this shell script and its prerequisites before running it. |
+| tools/k8s-seed | [04-ops.sh](../tools/k8s-seed/04-ops.sh) | Inspect this shell script and its prerequisites before running it. |
