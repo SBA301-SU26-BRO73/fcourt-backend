@@ -45,3 +45,4 @@ documentation. This index is a navigation aid, not an execution runbook.
 | tools/demo_seed | [seed.py](../tools/demo_seed/seed.py) | Inspect the Python tool implementation and supported arguments. |
 | tools/demo_seed | [runtime_smoke.py](../tools/demo_seed/runtime_smoke.py) | Inspect the Python tool implementation and supported arguments. |
 | tools/production_smoke | [config.example.json](../tools/production_smoke/config.example.json) | Inspect this example configuration before preparing a local copy. |
+| tools/production_smoke | [smoke.py](../tools/production_smoke/smoke.py) | Inspect the Python tool implementation and supported arguments. |
