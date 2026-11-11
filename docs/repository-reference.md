@@ -55,3 +55,4 @@ not the effective values of a running deployment.
 | reporting-service | [reporting-service config](../reporting-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
 | slot-hold-engine | [slot-hold-engine config](../slot-hold-engine/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
 | staff-operations-service | [staff-operations-service config](../staff-operations-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
+| subscription-service | [subscription-service config](../subscription-service/src/main/resources/application.yml) | Inspect checked-in Spring application defaults and environment placeholders. |
