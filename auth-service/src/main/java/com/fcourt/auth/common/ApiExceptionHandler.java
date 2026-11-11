@@ -27,7 +27,9 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             response.header(HttpHeaders.RETRY_AFTER,
                     Long.toString(Math.max(1, retryLater.retryAfter().toSeconds())));
         }
-        return response.body(problem(error.status(), error.getMessage(), request));
+        var body = problem(error.status(), error.getMessage(), request);
+        error.properties().forEach(body::setProperty);
+        return response.body(body);
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)

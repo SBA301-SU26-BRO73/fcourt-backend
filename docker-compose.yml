@@ -209,6 +209,8 @@ services:
       FACILITY_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       # Khoa/mo khoa san phat su kien slot qua Redis cho STOMP (docs/SCRUM-108.md).
       FACILITY_REALTIME_ENABLED: "true"
+      # Han muc goi dang ky (3 chi nhanh / 15 san mac dinh neu chua co goi) lay tu subscription-service.
+      SUBSCRIPTION_BASE_URL: http://subscription-service:8082
 
   booking-service:
     build: ./booking-service

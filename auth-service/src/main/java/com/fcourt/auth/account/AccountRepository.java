@@ -30,6 +30,15 @@ class AccountRepository {
                 .stream().findFirst();
     }
 
+    /** Reason the super admin gave when rejecting the owner; the latest REJECT log entry wins. */
+    Optional<String> rejectionReason(long userId) {
+        return jdbc.query("""
+                SELECT reason FROM user_account_action_logs
+                WHERE target_user_id = ? AND action = 'REJECT' AND reason IS NOT NULL
+                ORDER BY id DESC LIMIT 1""", (row, i) -> row.getString("reason"), userId)
+                .stream().findFirst();
+    }
+
     Optional<AccountRecord> findByEmail(String email) {
         return jdbc.query(COLUMNS + "WHERE email = ? AND deleted_at IS NULL", this::account, email)
                 .stream().findFirst();
