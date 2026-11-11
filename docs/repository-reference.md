@@ -24,3 +24,4 @@ not the effective values of a running deployment.
 | booking-service | [booking-service readme](../booking-service/README.md) | Read the README maintained alongside this component. |
 | discovery-service | [discovery-service readme](../discovery-service/README.md) | Read the README maintained alongside this component. |
 | facility-service | [facility-service readme](../facility-service/README.md) | Read the README maintained alongside this component. |
+| notification-service | [notification-service readme](../notification-service/README.md) | Read the README maintained alongside this component. |
