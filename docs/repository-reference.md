@@ -62,3 +62,4 @@ not the effective values of a running deployment.
 | tools/system_tests | [tools/system_tests readme](../tools/system_tests/README.md) | Read the README maintained alongside this component. |
 | repository | [repository readme](../README.md) | Read the README maintained alongside this component. |
 | auth-service | [auth-service image build](../auth-service/Dockerfile) | Inspect the container image build definition for this module. |
+| booking-service | [booking-service image build](../booking-service/Dockerfile) | Inspect the container image build definition for this module. |
