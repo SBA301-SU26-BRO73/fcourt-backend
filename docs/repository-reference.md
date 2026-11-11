@@ -61,3 +61,4 @@ not the effective values of a running deployment.
 | tools/production_smoke | [tools/production_smoke readme](../tools/production_smoke/README.md) | Read the README maintained alongside this component. |
 | tools/system_tests | [tools/system_tests readme](../tools/system_tests/README.md) | Read the README maintained alongside this component. |
 | repository | [repository readme](../README.md) | Read the README maintained alongside this component. |
+| auth-service | [auth-service image build](../auth-service/Dockerfile) | Inspect the container image build definition for this module. |
