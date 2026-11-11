@@ -17,3 +17,4 @@ not the effective values of a running deployment.
 | docs | [code-structure guide](code-structure.md) | Read the existing guide for code structure. |
 | docs | [docker-compose guide](docker-compose.md) | Read the existing guide for docker compose. |
 | docs | [gateway guide](gateway.md) | Read the existing guide for gateway. |
+| docs | [smoke-test-local guide](smoke-test-local.md) | Read the existing guide for smoke test local. |
