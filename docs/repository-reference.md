@@ -65,3 +65,4 @@ not the effective values of a running deployment.
 | booking-service | [booking-service image build](../booking-service/Dockerfile) | Inspect the container image build definition for this module. |
 | discovery-service | [discovery-service image build](../discovery-service/Dockerfile) | Inspect the container image build definition for this module. |
 | facility-service | [facility-service image build](../facility-service/Dockerfile) | Inspect the container image build definition for this module. |
+| gateway-service | [gateway-service image build](../gateway-service/Dockerfile) | Inspect the container image build definition for this module. |
