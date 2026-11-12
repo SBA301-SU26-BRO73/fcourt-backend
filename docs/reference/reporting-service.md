@@ -22,3 +22,59 @@ Inspect the Maven descriptor for dependencies and plugins, and the Dockerfile or
 Tracked application resources are listed below. Inspect property placeholders and profile selection before choosing local values; do not copy credentials into documentation.
 
 - [application.yml](../../reporting-service/src/main/resources/application.yml)
+
+## Java source map
+
+Java files are grouped by their tracked source directory. Package location alone does not establish an API contract or runtime dependency.
+
+### `com/fcourt/reporting`
+
+- [ReportingApplication.java](../../reporting-service/src/main/java/com/fcourt/reporting/ReportingApplication.java)
+
+### `com/fcourt/reporting/api`
+
+- [AnalyticsController.java](../../reporting-service/src/main/java/com/fcourt/reporting/api/AnalyticsController.java)
+- [ApiErrors.java](../../reporting-service/src/main/java/com/fcourt/reporting/api/ApiErrors.java)
+- [DashboardController.java](../../reporting-service/src/main/java/com/fcourt/reporting/api/DashboardController.java)
+- [ExportController.java](../../reporting-service/src/main/java/com/fcourt/reporting/api/ExportController.java)
+- [SuperAdminDashboardController.java](../../reporting-service/src/main/java/com/fcourt/reporting/api/SuperAdminDashboardController.java)
+
+### `com/fcourt/reporting/client`
+
+- [FacilityFeignClient.java](../../reporting-service/src/main/java/com/fcourt/reporting/client/FacilityFeignClient.java)
+
+### `com/fcourt/reporting/config`
+
+- [ClockConfiguration.java](../../reporting-service/src/main/java/com/fcourt/reporting/config/ClockConfiguration.java)
+- [FacilityResilienceConfig.java](../../reporting-service/src/main/java/com/fcourt/reporting/config/FacilityResilienceConfig.java)
+- [FacilityResilienceProperties.java](../../reporting-service/src/main/java/com/fcourt/reporting/config/FacilityResilienceProperties.java)
+- [FeignClientsConfig.java](../../reporting-service/src/main/java/com/fcourt/reporting/config/FeignClientsConfig.java)
+- [KafkaErrorHandling.java](../../reporting-service/src/main/java/com/fcourt/reporting/config/KafkaErrorHandling.java)
+- [OpenApiConfig.java](../../reporting-service/src/main/java/com/fcourt/reporting/config/OpenApiConfig.java)
+- [ReportingSecurity.java](../../reporting-service/src/main/java/com/fcourt/reporting/config/ReportingSecurity.java)
+
+### `com/fcourt/reporting/events`
+
+- [EventProjector.java](../../reporting-service/src/main/java/com/fcourt/reporting/events/EventProjector.java)
+- [EventTranslator.java](../../reporting-service/src/main/java/com/fcourt/reporting/events/EventTranslator.java)
+- [InvalidEventException.java](../../reporting-service/src/main/java/com/fcourt/reporting/events/InvalidEventException.java)
+- [ReportingListeners.java](../../reporting-service/src/main/java/com/fcourt/reporting/events/ReportingListeners.java)
+
+### `com/fcourt/reporting/integration`
+
+- [FacilityClient.java](../../reporting-service/src/main/java/com/fcourt/reporting/integration/FacilityClient.java)
+- [PlatformStatsClient.java](../../reporting-service/src/main/java/com/fcourt/reporting/integration/PlatformStatsClient.java)
+
+### `com/fcourt/reporting/persistence`
+
+- [ReadModelStore.java](../../reporting-service/src/main/java/com/fcourt/reporting/persistence/ReadModelStore.java)
+- [ReportQueryStore.java](../../reporting-service/src/main/java/com/fcourt/reporting/persistence/ReportQueryStore.java)
+
+### `com/fcourt/reporting/service`
+
+- [AnalyticsService.java](../../reporting-service/src/main/java/com/fcourt/reporting/service/AnalyticsService.java)
+- [DashboardService.java](../../reporting-service/src/main/java/com/fcourt/reporting/service/DashboardService.java)
+- [RevenueExportService.java](../../reporting-service/src/main/java/com/fcourt/reporting/service/RevenueExportService.java)
+- [RevenueReport.java](../../reporting-service/src/main/java/com/fcourt/reporting/service/RevenueReport.java)
+- [SuperAdminDetailsService.java](../../reporting-service/src/main/java/com/fcourt/reporting/service/SuperAdminDetailsService.java)
+- [SuperAdminOverviewService.java](../../reporting-service/src/main/java/com/fcourt/reporting/service/SuperAdminOverviewService.java)
