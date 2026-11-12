@@ -159,3 +159,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 148 | 2026-11-12 | Hotfix | `payment-service` | #494 | Sửa lỗi trùng lặp mã thanh toán PayOS orderCode khi chạy nhiều cụm payment container. |
 | 149 | 2026-11-12 | Hotfix | `payment-service` | #495 | Bổ sung cơ chế retry cấp số nhân (exponential backoff) khi gọi API kiểm tra giao dịch PayOS. |
 | 150 | 2026-11-12 | Docs update | `docs/operations` | #496 | Tài liệu hoá hướng dẫn xử lý sự cố khi cổng thanh toán trực tuyến bị gián đoạn. |
+| 151 | 2026-11-12 | Hotfix | `notification-service` | #497 | Sửa lỗi format ngày giờ trong tin nhắn SMS nhắc lịch thi đấu bị lệch sang múi giờ UTC. |
