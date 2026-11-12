@@ -158,3 +158,14 @@ Test sources and fixtures listed here are navigation aids, not a report of passi
 - [ReminderWorkerTest.java](../../notification-service/src/test/java/com/fcourt/notification/reminder/ReminderWorkerTest.java)
 
 From the repository root, the standard Maven verification entry point is `mvn -B -f notification-service/pom.xml verify`. Check the descriptor and environment requirements first.
+
+## Database scripts and migrations
+
+Review script contents and application configuration to distinguish initialization scripts from migrations loaded at runtime. Do not infer execution order across these two locations, or execute scripts against a shared database merely because they are listed here.
+
+- [.gitkeep](../../notification-service/database/.gitkeep)
+- [V1__processed_events.sql](../../notification-service/src/main/resources/db/migration/V1__processed_events.sql)
+- [V2__booking_reminders.sql](../../notification-service/src/main/resources/db/migration/V2__booking_reminders.sql)
+- [V3__user_devices.sql](../../notification-service/src/main/resources/db/migration/V3__user_devices.sql)
+- [V4__push_delivery_and_reminders.sql](../../notification-service/src/main/resources/db/migration/V4__push_delivery_and_reminders.sql)
+- [V5__in_app_notifications.sql](../../notification-service/src/main/resources/db/migration/V5__in_app_notifications.sql)
