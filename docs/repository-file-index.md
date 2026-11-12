@@ -80,3 +80,4 @@
 - [notification-service/pom.xml](../notification-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
 - [payment-service/pom.xml](../payment-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
 - [pos-retail-service/pom.xml](../pos-retail-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
+- [reporting-service/pom.xml](../reporting-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
