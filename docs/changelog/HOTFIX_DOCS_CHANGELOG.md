@@ -209,3 +209,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 198 | 2026-11-12 | Docs update | `docs/business` | #544 | Tài liệu hoá quy định bảo mật thông tin khách hàng và chính sách lưu trữ dữ liệu GD. |
 | 199 | 2026-11-12 | Hotfix | `gateway-service` | #545 | Sửa lỗi rò rỉ socket descriptor khi số lượng client WebSocket kết nối tăng đột biến. |
 | 200 | 2026-11-12 | Hotfix | `docker-compose` | #546 | Cập nhật healthcheck intervals và start-period cho 12 microservices để khởi động trơn tru. |
+| 201 | 2026-11-12 | Docs update | `docs/operations` | #547 | Tài liệu hoá quy trình kiểm thử hồi quy toàn diện (Regression Testing Runbook) cho bản v1.2. |
