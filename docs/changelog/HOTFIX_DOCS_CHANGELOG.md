@@ -54,3 +54,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 43 | 2026-11-06 | Hotfix | `pos-retail-service` | #77 | Sửa lỗi trừ âm tồn kho sản phẩm khi 2 quầy thu ngân cùng bán mặt hàng cuối cùng. |
 | 44 | 2026-11-06 | Hotfix | `pos-retail-service` | #78 | Validate mã vạch sản phẩm (barcode) chỉ chứa ký tự số chuẩn EAN-13. |
 | 45 | 2026-11-06 | Docs update | `docs/operations` | #79 | Tài liệu hoá quy trình sao lưu và phục hồi dữ liệu cơ sở dữ liệu PostgreSQL định kỳ. |
+| 46 | 2026-11-06 | Hotfix | `subscription-service` | #80 | Khắc phục lỗi không kích hoạt gói dịch vụ khi webhook gia hạn gửi về chậm. |
