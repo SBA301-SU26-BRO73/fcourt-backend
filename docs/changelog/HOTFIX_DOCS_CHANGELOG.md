@@ -106,3 +106,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 95 | 2026-11-10 | Hotfix | `staff-operations-service` | #255 | Sửa lỗi nhân viên chi nhánh A có thể xem nhầm lịch check-in của chi nhánh B. |
 | 96 | 2026-11-10 | Hotfix | `notification-service` | #256 | Khắc phục lỗi định dạng chuỗi JSON khi gửi push payload sang Firebase FCM/SNS. |
 | 97 | 2026-11-10 | Docs update | `docs/operations` | #257 | Tài liệu hoá quy trình deploy các microservices lên Amazon EKS với Helm Charts. |
+| 98 | 2026-11-10 | Hotfix | `voucher-service` | #258 | Validate ngày hết hạn voucher phải lớn hơn thời điểm áp dụng ít nhất 1 giờ. |
