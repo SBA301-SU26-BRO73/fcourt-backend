@@ -77,3 +77,4 @@
 - [discovery-service/pom.xml](../discovery-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
 - [facility-service/pom.xml](../facility-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
 - [gateway-service/pom.xml](../gateway-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
+- [notification-service/pom.xml](../notification-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
