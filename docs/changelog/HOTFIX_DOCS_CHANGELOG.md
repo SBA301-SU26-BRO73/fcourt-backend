@@ -32,3 +32,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 21 | 2026-10-31 | Docs update | `docs/reference` | #29 | Bổ sung tài liệu hợp đồng tích hợp gRPC giữa voucher-service và payment-service. |
 | 22 | 2026-10-31 | Hotfix | `voucher-service` | #30 | Khắc phục lỗi không hoàn lại voucher quota khi giao dịch thanh toán bị huỷ bỏ. |
 | 23 | 2026-10-31 | Hotfix | `notification-service` | #31 | Sửa lỗi template email xác nhận đặt sân bị mất logo và sai biến thời gian. |
+| 24 | 2026-10-31 | Docs update | `docs/architecture` | #32 | Tài liệu hoá kiến trúc gửi email bất đồng bộ qua hàng đợi AWS SQS / SES. |
