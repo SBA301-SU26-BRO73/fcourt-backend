@@ -28,3 +28,4 @@ contract. Follow the owning component's README for execution and build commands.
 | production smoke tests | [tools/production_smoke/test_smoke.py](../tools/production_smoke/test_smoke.py) |
 | system validation evidence | [tools/system_tests/LIVE_VALIDATION.md](../tools/system_tests/LIVE_VALIDATION.md) |
 | system reassessment notes | [tools/system_tests/REASSESSMENT.md](../tools/system_tests/REASSESSMENT.md) |
+| system flow tests | [tools/system_tests/test_flow.py](../tools/system_tests/test_flow.py) |
