@@ -121,3 +121,4 @@
 - [auth-service/src/test/java/com/fcourt/auth/account/S3DocumentStorageContainerTest.java](../auth-service/src/test/java/com/fcourt/auth/account/S3DocumentStorageContainerTest.java) — Java test source; inspect fixtures and assertions before running.
 - [auth-service/src/test/java/com/fcourt/auth/account/S3DocumentStorageTest.java](../auth-service/src/test/java/com/fcourt/auth/account/S3DocumentStorageTest.java) — Java test source; inspect fixtures and assertions before running.
 - [auth-service/src/test/java/com/fcourt/auth/account/SessionServiceTest.java](../auth-service/src/test/java/com/fcourt/auth/account/SessionServiceTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/config/SecurityConfigurationTest.java](../auth-service/src/test/java/com/fcourt/auth/config/SecurityConfigurationTest.java) — Java test source; inspect fixtures and assertions before running.
