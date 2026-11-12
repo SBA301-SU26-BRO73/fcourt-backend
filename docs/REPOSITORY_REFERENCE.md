@@ -116,3 +116,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `POST /api/bookings/hold-slots` giữ chỗ tạm thời và trả về `holdToken`.
 - `DELETE /api/bookings/hold-slots/{holdToken}` nhả chỗ đã giữ.
 
+## 9. booking-service
+- `GET /api/bookings/my` danh sách booking của tôi.
