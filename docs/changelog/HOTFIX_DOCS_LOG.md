@@ -92,3 +92,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 82 | 2026-11-09 | Hotfix | `docker-compose` | #243 | Bật profile realtime của booking để handshake STOMP `/ws-fcourt` chạy được ở local. |
 | 83 | 2026-11-09 | Hotfix | `booking-service` | #248 | Cho phép huỷ booking chưa thanh toán vào bất kỳ thời điểm nào. |
 | 84 | 2026-11-11 | Refactor | `docker-compose` | #249 | Gỡ Eureka, dùng AWS S3 thật trong Docker Compose. |
+| 85 | 2026-11-11 | Hotfix | `.github` | #250 | Gắn tag image `latest` thay vì `dev` và trỏ đúng cấu trúc gitops dạng phẳng. |
