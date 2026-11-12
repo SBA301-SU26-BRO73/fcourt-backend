@@ -38,3 +38,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | auth-service | [PlatformStatsServiceTest.java](../auth-service/src/test/java/com/fcourt/auth/superadmin/PlatformStatsServiceTest.java) |
 | auth-service | [SuperAdminServiceTest.java](../auth-service/src/test/java/com/fcourt/auth/superadmin/SuperAdminServiceTest.java) |
 | auth-service | [AccessTokenIssuerTest.java](../auth-service/src/test/java/com/fcourt/auth/token/AccessTokenIssuerTest.java) |
+| auth-service | [JwksControllerTest.java](../auth-service/src/test/java/com/fcourt/auth/token/JwksControllerTest.java) |
