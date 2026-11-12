@@ -76,3 +76,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 66 | 2026-11-09 | Feature | `slot-hold-engine` | #229 | `guestPhone` không bắt buộc khi khách hàng đã đăng nhập. |
 | 67 | 2026-11-09 | Feature | `gateway-service` | #230 | Mở tạo booking công khai cho khách, giới hạn tần suất theo từng client. |
 | 68 | 2026-11-09 | Feature | `facility-service` | #233 | Công khai số điện thoại, giờ mở cửa, ảnh sân và bổ sung trường card cho discovery. |
+| 69 | 2026-11-09 | Feature | `booking-service` | #234 | API nội bộ gỡ voucher khỏi booking chưa thanh toán. |
