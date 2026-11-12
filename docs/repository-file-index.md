@@ -15,3 +15,4 @@
 - [docs/architecture/aws-architecture.md](../docs/architecture/aws-architecture.md) — Kiến trúc AWS và phương án triển khai FCOURT
 - [docs/architecture/code-structure.md](../docs/architecture/code-structure.md) — Cấu trúc package chuẩn của backend FCourt
 - [docs/architecture/realtime-schedule-notifications.md](../docs/architecture/realtime-schedule-notifications.md) — SCRUM-108 — public schedule notifications
+- [docs/architecture/spring-cloud.md](../docs/architecture/spring-cloud.md) — Spring Cloud: Gateway và tìm service
