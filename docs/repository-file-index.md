@@ -5,3 +5,4 @@
 - [auth-service/README.md](../auth-service/README.md) — auth-service
 - [booking-service/FULL_COURT.md](../booking-service/FULL_COURT.md) — SCRUM-114 — full-court pricing preview and atomic reservation
 - [booking-service/ONLINE_BOOKING.md](../booking-service/ONLINE_BOOKING.md) — Online booking authority — SCRUM-91
+- [booking-service/README.md](../booking-service/README.md) — Booking history — SCRUM-53
