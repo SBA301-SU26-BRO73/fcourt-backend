@@ -96,3 +96,4 @@ aids and do not establish runtime validation results.
 | OfflineCheckInController | [staff-operations-service/src/main/java/com/fcourt/staff/api/OfflineCheckInController.java](../staff-operations-service/src/main/java/com/fcourt/staff/api/OfflineCheckInController.java) |
 | StaffController | [staff-operations-service/src/main/java/com/fcourt/staff/api/StaffController.java](../staff-operations-service/src/main/java/com/fcourt/staff/api/StaffController.java) |
 | StaffDirectoryController | [staff-operations-service/src/main/java/com/fcourt/staff/api/StaffDirectoryController.java](../staff-operations-service/src/main/java/com/fcourt/staff/api/StaffDirectoryController.java) |
+| WalkInController | [staff-operations-service/src/main/java/com/fcourt/staff/api/WalkInController.java](../staff-operations-service/src/main/java/com/fcourt/staff/api/WalkInController.java) |
