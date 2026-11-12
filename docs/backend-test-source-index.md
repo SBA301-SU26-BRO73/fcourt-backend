@@ -83,3 +83,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | discovery-service | [BranchControllerTest.java](../discovery-service/src/test/java/com/fcourt/discovery/controller/BranchControllerTest.java) |
 | discovery-service | [CourtSlotControllerTest.java](../discovery-service/src/test/java/com/fcourt/discovery/controller/CourtSlotControllerTest.java) |
 | discovery-service | [SlotHoldRepositoryTest.java](../discovery-service/src/test/java/com/fcourt/discovery/repository/SlotHoldRepositoryTest.java) |
+| discovery-service | [BranchAvailabilitySearchTest.java](../discovery-service/src/test/java/com/fcourt/discovery/service/BranchAvailabilitySearchTest.java) |
