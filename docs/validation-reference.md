@@ -72,3 +72,4 @@ aids and do not establish runtime validation results.
 | InAppNotificationController | [notification-service/src/main/java/com/fcourt/notification/inapp/InAppNotificationController.java](../notification-service/src/main/java/com/fcourt/notification/inapp/InAppNotificationController.java) |
 | AdminRefundController | [payment-service/src/main/java/com/fcourt/payment/AdminRefundController.java](../payment-service/src/main/java/com/fcourt/payment/AdminRefundController.java) |
 | BookingExpiryController | [payment-service/src/main/java/com/fcourt/payment/BookingExpiryController.java](../payment-service/src/main/java/com/fcourt/payment/BookingExpiryController.java) |
+| BranchLedgerController | [payment-service/src/main/java/com/fcourt/payment/BranchLedgerController.java](../payment-service/src/main/java/com/fcourt/payment/BranchLedgerController.java) |
