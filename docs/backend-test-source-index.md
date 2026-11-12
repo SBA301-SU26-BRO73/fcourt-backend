@@ -215,3 +215,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | voucher-service | [OpenApiDocsTest.java](../voucher-service/src/test/java/com/fcourt/voucher/OpenApiDocsTest.java) |
 | voucher-service | [VoucherApiTest.java](../voucher-service/src/test/java/com/fcourt/voucher/VoucherApiTest.java) |
 | voucher-service | [VoucherApplyTest.java](../voucher-service/src/test/java/com/fcourt/voucher/VoucherApplyTest.java) |
+| voucher-service | [VoucherAuthorityCircuitBreakerTest.java](../voucher-service/src/test/java/com/fcourt/voucher/VoucherAuthorityCircuitBreakerTest.java) |
