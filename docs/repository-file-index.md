@@ -185,3 +185,4 @@
 - [facility-service/src/test/java/com/fcourt/facility/CourtReservationIntegrationTest.java](../facility-service/src/test/java/com/fcourt/facility/CourtReservationIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
 - [facility-service/src/test/java/com/fcourt/facility/FacilityApiIntegrationTest.java](../facility-service/src/test/java/com/fcourt/facility/FacilityApiIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
 - [facility-service/src/test/java/com/fcourt/facility/OpenApiDocsTest.java](../facility-service/src/test/java/com/fcourt/facility/OpenApiDocsTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/PricingRulesIntegrationTest.java](../facility-service/src/test/java/com/fcourt/facility/PricingRulesIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
