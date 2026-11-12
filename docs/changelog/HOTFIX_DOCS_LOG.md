@@ -87,3 +87,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 77 | 2026-11-09 | Hotfix | `payment-service` | #242 | Trả 422 thay vì 503 khi thông tin ngân hàng của chi nhánh chưa đầy đủ. |
 | 78 | 2026-11-09 | Feature | `auth-service` | #244 | Cấu hình `storage.s3.presign-endpoint` để URL tài liệu chủ sân mở được từ trình duyệt. |
 | 79 | 2026-11-09 | Feature | `payment-service` | #245 | Cấu hình `storage.s3.presign-endpoint` cho URL biên lai và chứng từ hoàn tiền. |
+| 80 | 2026-11-09 | Feature | `booking-service` | #246 | Cấu hình `storage.s3.presign-endpoint` cho URL biên lai thanh toán. |
