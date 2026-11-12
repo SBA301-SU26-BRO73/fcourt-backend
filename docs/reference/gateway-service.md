@@ -70,3 +70,9 @@ Test sources and fixtures listed here are navigation aids, not a report of passi
 - [application-test.yml](../../gateway-service/src/test/resources/application-test.yml)
 
 From the repository root, the standard Maven verification entry point is `mvn -B -f gateway-service/pom.xml verify`. Check the descriptor and environment requirements first.
+
+## Database scripts and migrations
+
+Review script contents and application configuration to distinguish initialization scripts from migrations loaded at runtime. Do not infer execution order across these two locations, or execute scripts against a shared database merely because they are listed here.
+
+No files are tracked in `database/` or `src/main/resources/db/migration/` for this service. Consult configuration and the existing documentation for its persistence model.
