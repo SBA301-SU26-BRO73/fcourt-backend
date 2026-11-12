@@ -21,3 +21,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 11 | 2026-11-08 | CI/CD | `.github` | #130 | Chặn workflow chạy trùng và tăng tốc build gateway-service (SCRUM-247). |
 | 12 | 2026-11-08 | Hotfix | `tools` | #131 | Sửa demo seed cho khớp schema voucher-service (SCRUM-247). |
 | 13 | 2026-11-09 | Feature | `booking-service` | #126 | Saga đặt nguyên sân (full-court) nguyên tử, lấy facility làm nguồn quyết định (SCRUM-242). |
+| 14 | 2026-11-09 | Feature | `slot-hold-engine` | #125 | Phát sự kiện realtime khi khoá slot và khi hold hết hạn (SCRUM-245). |
