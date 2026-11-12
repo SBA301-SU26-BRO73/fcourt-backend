@@ -54,3 +54,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 44 | 2026-11-09 | Feature | `slot-hold-engine` | #207 | Thêm `@RestControllerAdvice` trả lỗi chuẩn RFC 7807 ProblemDetail. |
 | 45 | 2026-11-09 | Feature | `booking-service` | #213 | Trả presigned URL cho biên lai thanh toán lưu trên S3. |
 | 46 | 2026-11-09 | Feature | `booking-service` | #204 | Thêm `@RestControllerAdvice` trả lỗi chuẩn RFC 7807 ProblemDetail. |
+| 47 | 2026-11-09 | Docs update | `payment-service` | #193 | Bổ sung Swagger/OpenAPI (springdoc) cho payment-service. |
