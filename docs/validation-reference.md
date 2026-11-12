@@ -74,3 +74,4 @@ aids and do not establish runtime validation results.
 | BookingExpiryController | [payment-service/src/main/java/com/fcourt/payment/BookingExpiryController.java](../payment-service/src/main/java/com/fcourt/payment/BookingExpiryController.java) |
 | BranchLedgerController | [payment-service/src/main/java/com/fcourt/payment/BranchLedgerController.java](../payment-service/src/main/java/com/fcourt/payment/BranchLedgerController.java) |
 | CheckoutController | [payment-service/src/main/java/com/fcourt/payment/CheckoutController.java](../payment-service/src/main/java/com/fcourt/payment/CheckoutController.java) |
+| CompactPaymentStatusController | [payment-service/src/main/java/com/fcourt/payment/CompactPaymentStatusController.java](../payment-service/src/main/java/com/fcourt/payment/CompactPaymentStatusController.java) |
