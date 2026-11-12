@@ -154,3 +154,4 @@
 - [booking-service/src/test/java/com/fcourt/booking/SlotOccupancyTest.java](../booking-service/src/test/java/com/fcourt/booking/SlotOccupancyTest.java) — Java test source; inspect fixtures and assertions before running.
 - [booking-service/src/test/java/com/fcourt/booking/SlotRealtimeTest.java](../booking-service/src/test/java/com/fcourt/booking/SlotRealtimeTest.java) — Java test source; inspect fixtures and assertions before running.
 - [booking-service/src/test/java/com/fcourt/booking/SlotRedisLatencyIntegrationTest.java](../booking-service/src/test/java/com/fcourt/booking/SlotRedisLatencyIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/SlotWebSocketIntegrationTest.java](../booking-service/src/test/java/com/fcourt/booking/SlotWebSocketIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
