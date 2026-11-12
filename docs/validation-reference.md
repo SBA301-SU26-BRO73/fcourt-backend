@@ -29,3 +29,4 @@ contract. Follow the owning component's README for execution and build commands.
 | system validation evidence | [tools/system_tests/LIVE_VALIDATION.md](../tools/system_tests/LIVE_VALIDATION.md) |
 | system reassessment notes | [tools/system_tests/REASSESSMENT.md](../tools/system_tests/REASSESSMENT.md) |
 | system flow tests | [tools/system_tests/test_flow.py](../tools/system_tests/test_flow.py) |
+| booking slot safety contract | [booking-service/src/main/proto/slot_safety.proto](../booking-service/src/main/proto/slot_safety.proto) |
