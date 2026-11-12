@@ -107,3 +107,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 97 | 2026-11-12 | Hotfix | `staff-operations-service` | #459 | Trả lý do khi check-in bị từ chối và mở route đăng ký thiết bị nhận thông báo. |
 | 98 | 2026-11-12 | Feature | `staff-operations-service` | #461 | Check-in booking theo id ngay từ lịch hôm nay. |
 | 99 | 2026-11-12 | Docs update | `docs/reference` | #463 | Thêm hướng dẫn điều hướng file cho tất cả service backend. |
+| 100 | 2026-11-12 | Docs update | `docs/REPOSITORY_REFERENCE.md` | #465 | Mở rộng tài liệu tham chiếu repository theo từng service và hạ tầng. |
