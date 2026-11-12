@@ -98,3 +98,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `PUT`, `DELETE` trên `/api/admin/courts/{courtId}/pricing-rules/{ruleId}`.
 - `POST .../pricing-rules/copy-weekday-to-weekend` sao chép giá ngày thường sang cuối tuần.
 - `GET /api/internal/courts/{id}/booking-context` ngữ cảnh phục vụ đặt sân.
+- `GET /api/internal/courts/{courtId}/price-quote` báo giá theo khung giờ.
+- `GET /api/internal/courts/{courtId}/slot-schedule` lịch khung giờ của sân.
