@@ -110,3 +110,11 @@ Review script contents and application configuration to distinguish initializati
 - [V2__voucher_redemptions.sql](../../voucher-service/src/main/resources/db/migration/V2__voucher_redemptions.sql)
 - [V3__voucher_usage_history.sql](../../voucher-service/src/main/resources/db/migration/V3__voucher_usage_history.sql)
 - [V4__voucher_usage_customer_snapshot.sql](../../voucher-service/src/main/resources/db/migration/V4__voucher_usage_customer_snapshot.sql)
+
+## Related documentation
+
+Read the existing service documentation for behavior, setup instructions, and recorded validation details. Historical validation notes describe the run they record and are not fresh verification results.
+
+This service has no tracked Markdown document in its directory. Start with the [repository README](../../README.md) and [documentation index](../README.md).
+
+For shared runtime setup, see [Docker Compose operations](../operations/docker-compose.md). For request routing, see [gateway operations](../operations/gateway.md).
