@@ -94,3 +94,4 @@
 - [voucher-service/compose.yml](../voucher-service/compose.yml) — Docker Compose service and dependency configuration.
 - [auth-service/Dockerfile](../auth-service/Dockerfile) — Container image build definition.
 - [booking-service/Dockerfile](../booking-service/Dockerfile) — Container image build definition.
+- [discovery-service/Dockerfile](../discovery-service/Dockerfile) — Container image build definition.
