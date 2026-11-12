@@ -29,3 +29,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 18 | 2026-10-30 | Docs update | `docs/operations` | #26 | Tài liệu hoá quy trình quản lý biến môi trường .env và cấu hình bảo mật credential. |
 | 19 | 2026-10-30 | Hotfix | `payment-service` | #27 | Xử lý lỗi timeout khi sinh mã VietQR động với ngân hàng Vietcombank qua PayOS. |
 | 20 | 2026-10-30 | Hotfix | `payment-service` | #28 | Sửa lỗi sai lệch định dạng số tiền VND trong payload gửi sang cổng thanh toán. |
+| 21 | 2026-10-31 | Docs update | `docs/reference` | #29 | Bổ sung tài liệu hợp đồng tích hợp gRPC giữa voucher-service và payment-service. |
