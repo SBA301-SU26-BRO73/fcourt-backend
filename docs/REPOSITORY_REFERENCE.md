@@ -90,3 +90,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `DELETE /api/admin/courts/out-of-service/{groupId}` hủy ngừng hoạt động.
 - `GET`, `POST` trên `/api/admin/courts/{courtId}/time-slot-templates`.
 - `PUT`, `DELETE` trên `/api/admin/time-slot-templates/{id}`.
+- `POST /api/admin/courts/{courtId}/time-slot-templates/preview` xem trước mẫu.
+- `POST /api/admin/courts/{courtId}/apply-template` áp dụng mẫu cho một sân.
