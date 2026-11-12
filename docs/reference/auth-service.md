@@ -107,3 +107,9 @@ Java files are grouped by their tracked source directory. Package location alone
 
 - [UserRole.java](../../auth-service/src/main/java/com/fcourt/auth/user/UserRole.java)
 - [UserStatus.java](../../auth-service/src/main/java/com/fcourt/auth/user/UserStatus.java)
+
+## Protocol definitions
+
+For REST behavior, begin with controller classes in the source map and the existing service documentation; this inventory does not infer endpoints from class names.
+
+No `.proto` files are tracked in this service directory. This does not imply that the service makes no calls to other services.
