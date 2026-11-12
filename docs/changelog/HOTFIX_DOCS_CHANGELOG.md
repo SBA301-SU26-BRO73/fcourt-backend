@@ -24,3 +24,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 13 | 2026-10-29 | Docs update | `docs/reference` | #19 | Cập nhật tài liệu OpenAPI/Swagger 3.0 cho booking-service. |
 | 14 | 2026-10-29 | Hotfix | `booking-service` | #20 | Sửa lỗi lệch múi giờ UTC+7 khi lưu ngày đặt sân booking_date xuống PostgreSQL. |
 | 15 | 2026-10-29 | Hotfix | `booking-service` | #21 | Bổ sung transaction timeout 5 giây cho luồng kiểm tra slot khả dụng trước khi đặt. |
+| 16 | 2026-10-29 | Docs update | `docs/architecture` | #22 | Tài liệu hoá chiến lược phân quyền và xác thực token JWT qua API Gateway. |
