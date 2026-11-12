@@ -27,3 +27,4 @@
 - [docs/reference/README.md](../docs/reference/README.md) — Service file references
 - [docs/reference/auth-service.md](../docs/reference/auth-service.md) — auth-service: repository reference
 - [docs/reference/booking-service.md](../docs/reference/booking-service.md) — booking-service: repository reference
+- [docs/reference/discovery-service.md](../docs/reference/discovery-service.md) — discovery-service: repository reference
