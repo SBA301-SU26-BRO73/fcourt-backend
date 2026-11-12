@@ -36,3 +36,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 26 | 2026-11-09 | Feature | `booking-service` | #187 | Tra cứu booking cho khách vãng lai: `POST /api/public/bookings/lookup`. |
 | 27 | 2026-11-09 | Feature | `booking-service` | #190 | Admin huỷ booking: `POST /api/admin/bookings/{id}/cancel`. |
 | 28 | 2026-11-09 | Feature | `pos-retail-service` | #191 | Danh sách sản phẩm POS cho chủ sân: `GET /api/admin/pos/products`. |
+| 29 | 2026-11-09 | Feature | `gateway-service` | #212 | Giới hạn tần suất request tại gateway bằng Redis. |
