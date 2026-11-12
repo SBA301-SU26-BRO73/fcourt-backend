@@ -38,3 +38,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `POST /api/auth/refresh` làm mới token.
 - `POST /api/auth/logout` đăng xuất.
 - `GET /api/auth/profile` xem hồ sơ, `PATCH /api/auth/profile` cập nhật.
+- `PUT /api/auth/profile/avatar` đổi ảnh đại diện, `DELETE` để xóa.
+- `POST /api/auth/password/forgot` yêu cầu đặt lại mật khẩu.
