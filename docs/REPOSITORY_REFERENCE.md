@@ -94,3 +94,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `POST /api/admin/courts/{courtId}/apply-template` áp dụng mẫu cho một sân.
 - `POST /api/admin/courts/bulk-apply-template/preview` xem trước áp dụng hàng loạt.
 - `POST /api/admin/courts/bulk-apply-template` áp dụng mẫu cho nhiều sân.
+- `GET`, `POST` trên `/api/admin/courts/{courtId}/pricing-rules`.
+- `PUT`, `DELETE` trên `/api/admin/courts/{courtId}/pricing-rules/{ruleId}`.
