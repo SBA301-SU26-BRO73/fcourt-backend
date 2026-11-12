@@ -60,3 +60,4 @@
 - [staff-operations-service/VALIDATION_SCRUM_63.md](../staff-operations-service/VALIDATION_SCRUM_63.md) — SCRUM-63 validation
 - [staff-operations-service/VALIDATION_SCRUM_65.md](../staff-operations-service/VALIDATION_SCRUM_65.md) — SCRUM-65 validation
 - [subscription-service/README.md](../subscription-service/README.md) — subscription-service
+- [tools/demo_seed/README.md](../tools/demo_seed/README.md) — SCRUM-92 — Resumable demo seeder
