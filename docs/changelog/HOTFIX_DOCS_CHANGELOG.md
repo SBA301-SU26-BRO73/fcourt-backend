@@ -41,3 +41,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 30 | 2026-11-02 | Hotfix | `slot-hold-engine` | #49 | Đảm bảo giải phóng key hold slot khi Redis nhận lệnh DEL từ background cleanup job. |
 | 31 | 2026-11-02 | Docs update | `docs/architecture` | #50 | Tài liệu hoá thiết kế luồng xử lý saga điều phối đặt sân giữa booking và slot-hold. |
 | 32 | 2026-11-02 | Hotfix | `facility-service` | #66 | Đồng bộ quyền SUPER_ADMIN, chỉ số todayRevenue và cách tính booking đã huỷ. |
+| 33 | 2026-11-03 | Docs update | `docs/reference` | #67 | Tài liệu hoá cấu trúc response chuẩn API ResponseWrapper cho toàn bộ microservices. |
