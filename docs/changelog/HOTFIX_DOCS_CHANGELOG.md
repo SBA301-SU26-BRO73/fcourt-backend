@@ -207,3 +207,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 196 | 2026-11-12 | Hotfix | `subscription-service` | #542 | Khắc phục lỗi không gửi email cảnh báo khi gói dịch vụ của chi nhánh sắp hết hạn. |
 | 197 | 2026-11-12 | Hotfix | `auth-service` | #543 | Sửa lỗi race condition khi tạo mới người dùng qua Google OAuth2 lần đầu tiên. |
 | 198 | 2026-11-12 | Docs update | `docs/business` | #544 | Tài liệu hoá quy định bảo mật thông tin khách hàng và chính sách lưu trữ dữ liệu GD. |
+| 199 | 2026-11-12 | Hotfix | `gateway-service` | #545 | Sửa lỗi rò rỉ socket descriptor khi số lượng client WebSocket kết nối tăng đột biến. |
