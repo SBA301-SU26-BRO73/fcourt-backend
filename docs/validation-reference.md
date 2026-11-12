@@ -57,3 +57,4 @@ aids and do not establish runtime validation results.
 | CourtSlotInternalController | [discovery-service/src/main/java/com/fcourt/discovery/controller/CourtSlotInternalController.java](../discovery-service/src/main/java/com/fcourt/discovery/controller/CourtSlotInternalController.java) |
 | ReviewController | [discovery-service/src/main/java/com/fcourt/discovery/controller/ReviewController.java](../discovery-service/src/main/java/com/fcourt/discovery/controller/ReviewController.java) |
 | BookingContextController | [facility-service/src/main/java/com/fcourt/facility/api/BookingContextController.java](../facility-service/src/main/java/com/fcourt/facility/api/BookingContextController.java) |
+| BranchController | [facility-service/src/main/java/com/fcourt/facility/api/BranchController.java](../facility-service/src/main/java/com/fcourt/facility/api/BranchController.java) |
