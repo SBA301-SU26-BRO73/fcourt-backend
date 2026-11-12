@@ -184,3 +184,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | staff-operations-service | [OpenApiDocsTest.java](../staff-operations-service/src/test/java/com/fcourt/staff/OpenApiDocsTest.java) |
 | staff-operations-service | [OutboxIntegrationTest.java](../staff-operations-service/src/test/java/com/fcourt/staff/OutboxIntegrationTest.java) |
 | staff-operations-service | [ScheduleBoundaryTest.java](../staff-operations-service/src/test/java/com/fcourt/staff/ScheduleBoundaryTest.java) |
+| staff-operations-service | [ScheduleFlagsTest.java](../staff-operations-service/src/test/java/com/fcourt/staff/ScheduleFlagsTest.java) |
