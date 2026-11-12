@@ -97,3 +97,4 @@ vào `dev` với task triển khai, và ghi task gốc với ticket review.
 | 86 | [SCRUM-203](https://bro73.atlassian.net/browse/SCRUM-203) | Code review | Review | To Do | [SCRUM-102](https://bro73.atlassian.net/browse/SCRUM-102) | DevOps: Flutter CI/CD GitHub Actions Build APK Release Android & ký Keystore |
 | 87 | [SCRUM-208](https://bro73.atlassian.net/browse/SCRUM-208) | Request review | Review | To Do | [SCRUM-84](https://bro73.atlassian.net/browse/SCRUM-84) | SCRUM-84 — Voucher CRUD and gRPC validation |
 | 88 | [SCRUM-209](https://bro73.atlassian.net/browse/SCRUM-209) | Request code review | Review | To Do | [SCRUM-84](https://bro73.atlassian.net/browse/SCRUM-84) | SCRUM-84 — Voucher CRUD and gRPC validation |
+| 89 | [SCRUM-210](https://bro73.atlassian.net/browse/SCRUM-210) | Request review | Review | To Do | [SCRUM-86](https://bro73.atlassian.net/browse/SCRUM-86) | SCRUM-86 — Voucher apply, payment integration and usage |
