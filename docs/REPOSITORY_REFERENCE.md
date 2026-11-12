@@ -194,3 +194,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/staff/pos/orders` và `/{id}` xem đơn.
 - `POST /api/internal/pos/settlements` quyết toán đơn gắn với booking.
 
+## 14. reporting-service
