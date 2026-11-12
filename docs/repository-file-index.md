@@ -20,3 +20,4 @@
 - [docs/business/business-gap-b.md](../docs/business/business-gap-b.md) — Business gap analysis — part B
 - [docs/business/cancellation-refunds.md](../docs/business/cancellation-refunds.md) — booking-service
 - [docs/operations/ci-image-build.md](../docs/operations/ci-image-build.md) — CI build và push image
+- [docs/operations/docker-compose.md](../docs/operations/docker-compose.md) — Chạy cả hệ thống bằng Docker Compose
