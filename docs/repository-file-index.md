@@ -74,3 +74,4 @@
 - [voucher-service/src/main/proto/voucher_validation.proto](../voucher-service/src/main/proto/voucher_validation.proto) — Protocol Buffer contract; inspect service and message definitions here.
 - [auth-service/pom.xml](../auth-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
 - [booking-service/pom.xml](../booking-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
+- [discovery-service/pom.xml](../discovery-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
