@@ -15,3 +15,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 4 | 2026-10-26 | Hotfix | `auth-service` | #7 | Xử lý lỗi NullPointerException khi parse JWT token không chứa claim roles. |
 | 5 | 2026-10-26 | Hotfix | `auth-service` | #9 | Khắc phục timeout kết nối Redis blacklist khi refresh token với tải đồng thời. |
 | 6 | 2026-10-27 | Docs update | `docs/operations` | #11 | Tài liệu hoá hướng dẫn cài đặt và khởi chạy môi trường dev qua Docker Compose. |
+| 7 | 2026-10-27 | Hotfix | `facility-service` | #12 | Sửa lỗi trùng lặp mã chi nhánh (branch_code) khi seed dữ liệu ban đầu. |
