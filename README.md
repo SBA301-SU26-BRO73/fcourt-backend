@@ -1,168 +1,149 @@
 # FCourt Backend
 
-FCourt is a court (sports field) booking platform built as 13 Spring Boot microservices behind one API gateway, each service with its own database. This repository holds the backend; the clients and the deployment live in sibling repositories.
+FCourt là nền tảng đặt sân thể thao, xây dựng theo kiến trúc 13 microservice Spring Boot phía sau một API gateway, mỗi service có cơ sở dữ liệu riêng. Repository này chứa phần backend; các client và phần triển khai nằm ở các repository liên quan.
 
-**What it does**
+**Chức năng chính**
 
-- **Customers:** search branches and courts, hold a slot (300 s), pay by bank transfer with a receipt, get a QR ticket, cancel and request a refund.
-- **Court owners and staff:** manage branches, courts, pricing, slot templates, bookings, receipts, refunds, vouchers, shifts, check-in and retail (POS) sales; read dashboards and reports.
-- **Super admin:** approve or reject owner accounts, lock users, manage SaaS subscription plans.
-- **Platform:** JWT auth with refresh tokens, Kafka events between services, realtime schedule updates over WebSocket, in-app, email and push notifications.
+- **Khách hàng:** tìm chi nhánh và sân, giữ chỗ (300 giây), thanh toán chuyển khoản kèm biên lai, nhận vé QR, hủy đặt sân và yêu cầu hoàn tiền.
+- **Chủ sân và nhân viên:** quản lý chi nhánh, sân, bảng giá, khung giờ mẫu, đơn đặt, biên lai, hoàn tiền, voucher, ca làm, check-in và bán lẻ (POS); xem dashboard và báo cáo.
+- **Super admin:** duyệt hoặc từ chối tài khoản chủ sân, khóa người dùng, quản lý gói đăng ký SaaS.
+- **Nền tảng:** xác thực JWT kèm refresh token, sự kiện Kafka giữa các service, cập nhật lịch realtime qua WebSocket, thông báo trong ứng dụng, email và push.
 
-Live web: <https://fcourt.donan.site> (CloudFront + S3, the API is served under `/api`). Related repos: `fcourt-web` (React), `fcourt-flutter` (Android app), `fcourt-gitops` (Argo CD manifests), `fcourt-infra` (Terraform).
+Web đang chạy: <https://fcourt.donan.site> (CloudFront + S3, API nằm dưới `/api`). Repository liên quan: `fcourt-web` (React), `fcourt-flutter` (ứng dụng Android), `fcourt-gitops` (manifest Argo CD), `fcourt-infra` (Terraform).
 
-## Contents
+## Mục lục
 
-[Architecture](#architecture) · [Services](#services) · [Tech stack](#tech-stack) · [Quick start](#quick-start-local) · [Build and test](#build-and-test-one-service) · [Configuration](#configuration) · [Production](#production) · [CI/CD](#cicd-and-deployment) · [API](#api-entry-points) · [Docs](#documentation) · [Contributing](#contributing)
+[Kiến trúc](#kiến-trúc) · [Các service](#các-service) · [Công nghệ](#công-nghệ) · [Chạy nhanh](#chạy-nhanh-trên-máy-local) · [Build và test](#build-và-test-một-service) · [Cấu hình](#cấu-hình) · [Production](#production) · [CI/CD](#cicd-và-triển-khai) · [API](#điểm-vào-api) · [Tài liệu](#tài-liệu) · [Đóng góp](#đóng-góp)
 
-## Architecture
+## Kiến trúc
 
-```mermaid
-flowchart LR
-  Web["fcourt-web (React)"] --> GW
-  App["fcourt-flutter (Android)"] --> GW
-  GW["gateway-service :8080<br/>JWT check, rate limit"]
-  GW --> AUTH[auth-service]
-  GW --> SUB[subscription-service]
-  GW --> FAC[facility-service]
-  GW --> DIS[discovery-service]
-  GW --> BOOK[booking-service]
-  GW --> HOLD["slot-hold-service<br/>(dir slot-hold-engine)"]
-  GW --> PAY[payment-service]
-  GW --> STAFF[staff-operations-service]
-  GW --> POS[pos-retail-service]
-  GW --> NOTI[notification-service]
-  GW --> REP[reporting-service]
-  GW --> VOU[voucher-service]
-  BOOK -- gRPC --> HOLD
-  BOOK -- gRPC --> VOU
-  STAFF -- gRPC --> HOLD
-  HOLD --- REDIS[(Redis 7)]
-  GW -. rate limit .- REDIS
-  AUTH & SUB & FAC & DIS & BOOK & PAY & STAFF & POS & NOTI & REP & VOU --- PG[(PostgreSQL 16<br/>one database per service)]
-  AUTH & FAC & BOOK & PAY & STAFF & POS & DIS & VOU & REP & NOTI <--> KAFKA{{Kafka}}
-  SUB --> PAYOS[PayOS]
-  AUTH & FAC & BOOK & PAY & DIS --> S3[(AWS S3)]
-```
+![Kiến trúc microservices](docs/architecture/images/arch-3-1-microservices.png)
 
-Services never read each other's database; they talk through REST, gRPC or Kafka events. There is no service registry (Eureka was removed): the gateway uses a static address list, see [docs/architecture/spring-cloud.md](docs/architecture/spring-cloud.md).
+*Hình: kiến trúc microservices của FCourt (file draw.io có thể chỉnh sửa: [arch-3-1-microservices.drawio](docs/architecture/images/arch-3-1-microservices.drawio)).*
 
-## Services
+- **Presentation:** web React và ứng dụng Flutter, đi vào hệ thống qua AWS Application Load Balancer.
+- **Gateway:** `gateway-service` là cổng vào duy nhất, kiểm tra JWT, giới hạn tốc độ (Redis) và định tuyến request tới các service.
+- **Service:** 12 service nghiệp vụ, mỗi service sở hữu dữ liệu riêng (PostgreSQL; slot-hold-service dùng Redis); các service trao đổi sự kiện qua Kafka và gọi nhau bằng gRPC khi cần.
+- **Bên thứ ba:** PayOS (thanh toán QR), SMTP (email), Amazon S3 (file), Amazon SNS và Firebase FCM (push).
 
-| Service (folder) | Port | Responsibility | Data / messaging |
+Các service không đọc trực tiếp cơ sở dữ liệu của nhau mà giao tiếp qua REST, gRPC hoặc sự kiện Kafka. Hệ thống không có service registry (đã bỏ Eureka): gateway dùng danh sách địa chỉ tĩnh, xem [docs/architecture/spring-cloud.md](docs/architecture/spring-cloud.md).
+
+## Các service
+
+| Service (thư mục) | Port | Trách nhiệm | Dữ liệu / messaging |
 |---|---|---|---|
-| `gateway-service` | 8080 | Single entry point, JWT validation, routing, rate limiting, merged Swagger | Redis |
-| `auth-service` | 8081 | Register, login, JWT/JWKS, refresh token, super admin (approve owners, lock accounts) | `auth_db`, Kafka |
-| `subscription-service` | 8082 | Court types, SaaS subscription plans, PayOS purchase and renewal | `subscription_db` |
-| `facility-service` | 8083 | Branches, courts, 30-minute time slot templates | `facility_db`, Redis cache, Kafka |
-| `reporting-service` | 8084 | Dashboard statistics from a Kafka-fed read model | `reporting_db`, Kafka |
-| `discovery-service` | 8085 | Public branch/court search and reviews | `discovery_db`, Redis cache, Kafka |
-| `voucher-service` | 8086 | Vouchers and validation (gRPC) | `voucher_db`, Kafka |
-| `slot-hold-engine` (slot-hold-service) | 8087 | All-or-nothing slot holds, 300 s expiry (gRPC) | Redis |
-| `booking-service` | 8088 | Bookings, history, public lookup, realtime schedule (`/ws-fcourt`) | `booking_db`, Redis, Kafka |
-| `payment-service` | 8089 | Payments, receipts, refund requests | `payment_db`, Redis cache, Kafka |
-| `staff-operations-service` | 8090 | Staff assignments, shifts, check-in, walk-in | `staff_db`, Kafka |
-| `notification-service` | 8091 | In-app, email and push notifications | `notification_db`, Kafka |
-| `pos-retail-service` | 8092 | Retail catalog, stock, POS invoices | `pos_retail_db`, Kafka |
+| `gateway-service` | 8080 | Cổng vào duy nhất, xác thực JWT, định tuyến, giới hạn tốc độ, Swagger gộp | Redis |
+| `auth-service` | 8081 | Đăng ký, đăng nhập, JWT/JWKS, refresh token, super admin (duyệt chủ sân, khóa tài khoản) | `auth_db`, Kafka |
+| `subscription-service` | 8082 | Loại sân, gói đăng ký SaaS, mua và gia hạn qua PayOS | `subscription_db` |
+| `facility-service` | 8083 | Chi nhánh, sân, khung giờ mẫu 30 phút | `facility_db`, Redis cache, Kafka |
+| `reporting-service` | 8084 | Thống kê dashboard từ read model nạp bằng Kafka | `reporting_db`, Kafka |
+| `discovery-service` | 8085 | Tìm kiếm chi nhánh/sân công khai và đánh giá | `discovery_db`, Redis cache, Kafka |
+| `voucher-service` | 8086 | Voucher và kiểm tra hợp lệ (gRPC) | `voucher_db`, Kafka |
+| `slot-hold-service` (thư mục `slot-hold-engine`) | 8087 | Giữ chỗ theo nguyên tắc tất cả hoặc không, hết hạn sau 300 giây (gRPC) | Redis |
+| `booking-service` | 8088 | Đặt sân, lịch sử, tra cứu công khai, lịch realtime (`/ws-fcourt`) | `booking_db`, Redis, Kafka |
+| `payment-service` | 8089 | Thanh toán, biên lai, yêu cầu hoàn tiền | `payment_db`, Redis cache, Kafka |
+| `staff-operations-service` | 8090 | Phân công nhân viên, ca làm, check-in, khách vãng lai | `staff_db`, Kafka |
+| `notification-service` | 8091 | Thông báo trong ứng dụng, email và push | `notification_db`, Kafka |
+| `pos-retail-service` | 8092 | Danh mục bán lẻ, tồn kho, hóa đơn POS | `pos_retail_db`, Kafka |
 
-The slot-hold service is called slot-hold-service in the project report; its directory, image name and CI paths are still `slot-hold-engine`. Service details are in each folder's `README.md` where present.
+Trong báo cáo dự án và sơ đồ, service giữ chỗ có tên slot-hold-service; thư mục, tên image và đường dẫn CI vẫn là `slot-hold-engine`. Chi tiết từng service nằm trong `README.md` của thư mục tương ứng (nếu có).
 
-## Tech stack
+## Công nghệ
 
-Java 21, Spring Boot 3.5 (`gateway-service` runs Spring Boot 4.0 with Spring Cloud Gateway on WebFlux), Maven (one independent project per service, no root POM), PostgreSQL 16 with Flyway, Redis 7, Apache Kafka, gRPC (slot safety, voucher validation), AWS S3 for files, Docker. Production: AWS EKS, Argo CD, Terraform.
+Java 21, Spring Boot 3.5 (`gateway-service` dùng Spring Boot 4.0 với Spring Cloud Gateway trên WebFlux), Maven (mỗi service là một project độc lập, không có root POM), PostgreSQL 16 với Flyway, Redis 7, Apache Kafka, gRPC (giữ chỗ an toàn, kiểm tra voucher), AWS S3 lưu file, Docker. Production: AWS EKS, Argo CD, Terraform.
 
-## Prerequisites
+## Yêu cầu
 
-- Docker with Compose v2 (about 4.5 GB RAM for profile `core`, 7.5 GB for `all`)
-- JDK 21 and Maven 3.9+ (only to build or test outside Docker; most services also ship `mvnw`)
-- Python 3.12 (only for the scripts under `tools/`)
+- Docker với Compose v2 (khoảng 4,5 GB RAM cho profile `core`, 7,5 GB cho `all`)
+- JDK 21 và Maven 3.9+ (chỉ cần khi build hoặc test ngoài Docker; hầu hết service có sẵn `mvnw`)
+- Python 3.12 (chỉ cần cho các script trong `tools/`)
 
-## Quick start (local)
+## Chạy nhanh trên máy local
 
 ```bash
-cp .env.example .env                          # never commit .env
+cp .env.example .env                          # không commit .env
 docker compose --profile core up -d --build   # postgres, redis, kafka, gateway, auth, facility, booking, slot-hold, payment
-# or every service: docker compose --profile all up -d --build
-docker compose --profile all ps               # wait until healthy
+# hoặc toàn bộ service: docker compose --profile all up -d --build
+docker compose --profile all ps               # chờ đến khi healthy
 curl http://localhost:8080/actuator/health
 curl http://localhost:8080/api/public/branches
 ```
 
-- Without a `--profile`, Compose starts nothing. Profiles: `infra`, `core`, `all`, `mail`.
-- Swagger for all services: <http://localhost:8080/swagger-ui.html>.
-- Sample data is created by each service's Flyway migrations. `bash tools/compose-seed.sh` sets a shared DEV password on the demo accounts (`superadmin@demo.com`, `owner01..05@demo.com`, `staff01..05@demo.com`, `customer01..05@demo.com`; the password is in the script, local only) and logs each role in; `bash tools/compose-smoke.sh` then runs a role-by-request smoke table.
-- File upload/download needs real S3 keys in `.env` (ask the tech lead). Without them everything else still works.
-- Reset all data: `docker compose --profile all down -v`.
+- Nếu không có `--profile`, Compose không khởi động gì. Các profile: `infra`, `core`, `all`, `mail`.
+- Swagger của toàn bộ service: <http://localhost:8080/swagger-ui.html>.
+- Dữ liệu mẫu do Flyway migration của từng service tạo ra. `bash tools/compose-seed.sh` đặt mật khẩu DEV dùng chung cho các tài khoản demo (`superadmin@demo.com`, `owner01..05@demo.com`, `staff01..05@demo.com`, `customer01..05@demo.com`; mật khẩu nằm trong script, chỉ dùng local) và đăng nhập từng vai trò; sau đó `bash tools/compose-smoke.sh` chạy bảng smoke test theo vai trò và request.
+- Upload/download file cần khóa S3 thật trong `.env` (hỏi tech lead). Nếu không có, các chức năng khác vẫn hoạt động bình thường.
+- Xóa toàn bộ dữ liệu: `docker compose --profile all down -v`.
 
-Full guide (ports, memory, troubleshooting): [docs/operations/docker-compose.md](docs/operations/docker-compose.md). Recorded smoke run: [docs/operations/smoke-test-local.md](docs/operations/smoke-test-local.md).
+Hướng dẫn đầy đủ (port, bộ nhớ, xử lý sự cố): [docs/operations/docker-compose.md](docs/operations/docker-compose.md). Kết quả smoke test đã ghi lại: [docs/operations/smoke-test-local.md](docs/operations/smoke-test-local.md).
 
-## Build and test one service
+## Build và test một service
 
-There is no root POM, so point Maven at the service's `pom.xml` (the same command CI runs):
+Không có root POM nên cần trỏ Maven tới `pom.xml` của service (đúng lệnh CI chạy):
 
 ```bash
-mvn -B -f booking-service/pom.xml clean verify      # compile + tests
-mvn -B -f booking-service/pom.xml spring-boot:run   # run on the host
-docker compose --profile infra up -d                # postgres, redis, kafka for a host run
+mvn -B -f booking-service/pom.xml clean verify      # compile + test
+mvn -B -f booking-service/pom.xml spring-boot:run   # chạy trên máy host
+docker compose --profile infra up -d                # postgres, redis, kafka cho lần chạy trên host
 ```
 
-Integration tests use Testcontainers, so Docker must be running. JaCoCo is configured in `pos-retail-service` (80% line-coverage rule on `com.fcourt.pos.service`, checked at `verify`) and `staff-operations-service`; the HTML report is `<service>/target/site/jacoco/index.html`. Cross-service checks live in `tools/system_tests` (gateway flow runner), `tools/demo_seed` and `tools/production_smoke`.
+Integration test dùng Testcontainers nên Docker phải đang chạy. JaCoCo được cấu hình trong `pos-retail-service` (quy tắc phủ 80% dòng cho `com.fcourt.pos.service`, kiểm tra ở bước `verify`) và `staff-operations-service`; báo cáo HTML ở `<service>/target/site/jacoco/index.html`. Các kiểm tra liên service nằm trong `tools/system_tests` (chạy luồng qua gateway), `tools/demo_seed` và `tools/production_smoke`.
 
-## Configuration
+## Cấu hình
 
-Settings are environment variables with local defaults in each `application.yml` and in `docker-compose.yml`. Put overrides in `.env` (see [.env.example](.env.example)); never commit values.
+Cấu hình là các biến môi trường, có giá trị mặc định cho local trong `application.yml` của từng service và trong `docker-compose.yml`. Ghi đè trong `.env` (xem [.env.example](.env.example)); không commit giá trị thật.
 
-| Variable | Purpose |
+| Biến | Mục đích |
 |---|---|
-| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT` | Local PostgreSQL |
-| `GATEWAY_PORT`, `KAFKA_HOST_PORT`, `REDIS_HOST_PORT`, `MAILPIT_UI_PORT` | Host ports |
-| `SERVICE_MEM_LIMIT` | Memory limit per Java container |
-| `STORAGE_S3_BUCKET`, `STORAGE_S3_REGION` | S3 bucket and region for files |
-| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Local S3 credentials (secret) |
-| `AUTH_JWT_PRIVATE_KEY` | Fixed JWT signing key (PKCS8 PEM, secret); empty means an ephemeral key |
-| `AUTH_GOOGLE_CLIENT_ID` | Google sign-in |
-| `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY` | PayOS payments (secret) |
-| `NOTIFICATION_SMTP_HOST`, `NOTIFICATION_SMTP_USER`, `NOTIFICATION_SMTP_PASSWORD` | Real SMTP (default: Mailpit) |
-| `BOOKING_HOLD_SERVICE_TOKEN` | Internal service token (DEV value in Compose) |
-| `<NAME>_URI` (e.g. `AUTH_SERVICE_URI`), `RATE_LIMIT_*`, `GATEWAY_*` | Gateway routing, rate limit, CORS, Swagger: [docs/operations/gateway.md](docs/operations/gateway.md) |
+| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT` | PostgreSQL local |
+| `GATEWAY_PORT`, `KAFKA_HOST_PORT`, `REDIS_HOST_PORT`, `MAILPIT_UI_PORT` | Port mở ra máy host |
+| `SERVICE_MEM_LIMIT` | Giới hạn bộ nhớ cho mỗi container Java |
+| `STORAGE_S3_BUCKET`, `STORAGE_S3_REGION` | Bucket và region S3 lưu file |
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Thông tin S3 dùng local (bí mật) |
+| `AUTH_JWT_PRIVATE_KEY` | Khóa ký JWT cố định (PKCS8 PEM, bí mật); để trống thì dùng khóa tạm |
+| `AUTH_GOOGLE_CLIENT_ID` | Đăng nhập Google |
+| `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY` | Thanh toán PayOS (bí mật) |
+| `NOTIFICATION_SMTP_HOST`, `NOTIFICATION_SMTP_USER`, `NOTIFICATION_SMTP_PASSWORD` | SMTP thật (mặc định: Mailpit) |
+| `BOOKING_HOLD_SERVICE_TOKEN` | Token nội bộ giữa các service (giá trị DEV trong Compose) |
+| `<NAME>_URI` (ví dụ `AUTH_SERVICE_URI`), `RATE_LIMIT_*`, `GATEWAY_*` | Định tuyến gateway, rate limit, CORS, Swagger: [docs/operations/gateway.md](docs/operations/gateway.md) |
 
-Database scripts live in `<service>/database/`; the database list is `docker/postgres/services.txt`. Cross-service foreign keys are intentionally absent.
+Script cơ sở dữ liệu nằm trong `<service>/database/`; danh sách database ở `docker/postgres/services.txt`. Cố ý không có khóa ngoại giữa các service.
 
 ## Production
 
-| Item | Value |
+| Hạng mục | Giá trị |
 |---|---|
-| Web and API | <https://fcourt.donan.site> (API under `/api`, WebSocket `/ws-fcourt`) |
-| Runtime | Amazon EKS cluster `fcourt-prod`, namespace `fcourt-prod` (services) and `data` (PostgreSQL, Kafka, Redis), region ap-southeast-1 |
-| Delivery | GitHub Actions builds images to ECR, `fcourt-gitops` holds the manifests, Argo CD syncs them |
-| Infrastructure | Terraform in `fcourt-infra` (VPC, EKS, ECR, S3, CloudFront, Route 53, ACM, SNS) |
-| Local vs cloud | Docker Compose is for local development only; production does not use it |
+| Web và API | <https://fcourt.donan.site> (API dưới `/api`, WebSocket `/ws-fcourt`) |
+| Môi trường chạy | Amazon EKS cluster `fcourt-prod`, namespace `fcourt-prod` (các service) và `data` (PostgreSQL, Kafka, Redis), region ap-southeast-1 |
+| Triển khai | GitHub Actions build image lên ECR, `fcourt-gitops` giữ manifest, Argo CD đồng bộ |
+| Hạ tầng | Terraform trong `fcourt-infra` (VPC, EKS, ECR, S3, CloudFront, Route 53, ACM, SNS) |
+| Local và cloud | Docker Compose chỉ dùng để phát triển local; production không dùng Compose |
 
-## CI/CD and deployment
+## CI/CD và triển khai
 
-1. Pull requests run the per-service workflows in `.github/workflows/` (path-filtered, `mvn verify` on Java 21), plus the demo seed, gateway system test and production smoke runner checks.
-2. A push to `dev` runs `build-push-images.yml`: it builds only the services whose folder changed and pushes `fcourt/<service>:<short-sha>` (and `latest`) to Amazon ECR in ap-southeast-1.
-3. The `update-gitops` job then bumps the image tag in `fcourt-gitops` (`kustomize edit set image`) when the repository variable `GITOPS_UPDATE_ENABLED` is `true`.
-4. Argo CD syncs `fcourt-gitops` into the EKS cluster (namespace `fcourt-prod`). Infrastructure is managed in `fcourt-infra` (Terraform).
-5. Release: open a PR `dev` -> `main` titled `merge: release vX.Y.Z` and merge it with a merge commit (do not squash).
+1. Pull request chạy các workflow theo từng service trong `.github/workflows/` (lọc theo đường dẫn, `mvn verify` trên Java 21), cùng với các bước kiểm tra demo seed, gateway system test và production smoke runner.
+2. Push lên `dev` chạy `build-push-images.yml`: chỉ build các service có thư mục thay đổi và đẩy `fcourt/<service>:<short-sha>` (và `latest`) lên Amazon ECR ở ap-southeast-1.
+3. Job `update-gitops` sau đó cập nhật tag image trong `fcourt-gitops` (`kustomize edit set image`) khi biến repository `GITOPS_UPDATE_ENABLED` là `true`.
+4. Argo CD đồng bộ `fcourt-gitops` vào cluster EKS (namespace `fcourt-prod`). Hạ tầng được quản lý trong `fcourt-infra` (Terraform).
+5. Phát hành: tạo PR `dev` -> `main` với tiêu đề `merge: release vX.Y.Z` và merge bằng merge commit (không squash).
 
-Details: [docs/operations/ci-image-build.md](docs/operations/ci-image-build.md), [docs/architecture/aws-architecture.md](docs/architecture/aws-architecture.md).
+Chi tiết: [docs/operations/ci-image-build.md](docs/operations/ci-image-build.md), [docs/architecture/aws-architecture.md](docs/architecture/aws-architecture.md).
 
-## API entry points
+## Điểm vào API
 
-Clients call only the gateway (`http://localhost:8080` locally, `https://fcourt.donan.site` in production, same origin under `/api`). Main prefixes: `/api/auth/**`, `/api/public/**` (no token), `/api/bookings/**`, `/api/payments/**`, `/api/refunds/**`, `/api/vouchers/**`, `/api/subscriptions/**`, `/api/staff/**`, `/api/admin/**`, `/api/super-admin/**`, `/api/notifications/**`, and WebSocket `/ws-fcourt`. `/api/internal/**` and `/actuator/**` are never forwarded. Full route table and public paths: [docs/operations/gateway.md](docs/operations/gateway.md).
+Client chỉ gọi gateway (`http://localhost:8080` ở local, `https://fcourt.donan.site` ở production, cùng origin dưới `/api`). Các prefix chính: `/api/auth/**`, `/api/public/**` (không cần token), `/api/bookings/**`, `/api/payments/**`, `/api/refunds/**`, `/api/vouchers/**`, `/api/subscriptions/**`, `/api/staff/**`, `/api/admin/**`, `/api/super-admin/**`, `/api/notifications/**` và WebSocket `/ws-fcourt`. `/api/internal/**` và `/actuator/**` không bao giờ được chuyển tiếp. Bảng route đầy đủ và các đường dẫn công khai: [docs/operations/gateway.md](docs/operations/gateway.md).
 
-## Documentation
+## Tài liệu
 
-[docs/README.md](docs/README.md) is the index: architecture, operations, business analysis, and the `docs/report/` folder for the final report.
+[docs/README.md](docs/README.md) là mục lục: kiến trúc, vận hành, phân tích nghiệp vụ và thư mục `docs/report/` cho báo cáo cuối kỳ.
 
-## Contributing
+## Đóng góp
 
-- Branches: `main` (production), `dev` (integration), `feature/<name>-<topic>`, `fix/<name>-<topic>`, `docs/<topic>`, `test/<topic>`.
-- Commit messages and PR titles in English, format `type(scope): description`, with `type` one of `feat`, `fix`, `docs`, `refactor`, `test`, `chore` and `scope` the service or area, e.g. `fix(auth): handle expired refresh token`. The squash commit uses the PR title. PR bodies may be Vietnamese.
-- Open every PR against `dev` (no direct pushes), get at least one review and a green CI; fill in `.github/PULL_REQUEST_TEMPLATE.md`.
-- Change only your own service folder; ask its owner for anything else.
-- Never commit secrets or `.env`.
-- Adding a service: create `<name>/`, add `<name> <database>` to `docker/postgres/services.txt`, put SQL in `<name>/database/`, add a `Dockerfile` (CI builds every `*/Dockerfile`) and a Compose entry.
+- Nhánh: `main` (production), `dev` (tích hợp), `feature/<name>-<topic>`, `fix/<name>-<topic>`, `docs/<topic>`, `test/<topic>`.
+- Commit message và tiêu đề PR viết bằng tiếng Anh, định dạng `type(scope): description`, trong đó `type` là một trong `feat`, `fix`, `docs`, `refactor`, `test`, `chore` và `scope` là service hoặc khu vực, ví dụ `fix(auth): handle expired refresh token`. Squash commit lấy theo tiêu đề PR. Phần mô tả PR có thể viết tiếng Việt.
+- Mọi PR đều tạo vào `dev` (không push trực tiếp), cần ít nhất một review và CI xanh; điền `.github/PULL_REQUEST_TEMPLATE.md`.
+- Chỉ sửa thư mục service của mình; việc khác hãy nhờ chủ sở hữu service đó.
+- Không commit secret hoặc `.env`.
+- Thêm service mới: tạo `<name>/`, thêm dòng `<name> <database>` vào `docker/postgres/services.txt`, đặt SQL trong `<name>/database/`, thêm `Dockerfile` (CI build mọi `*/Dockerfile`) và một mục trong Compose.
 
-Team: SBA301 project (GitHub organization `SBA301-SU26-BRO73`). No license file is present in this repository.
+Nhóm: dự án SBA301 (GitHub organization `SBA301-SU26-BRO73`). Repository này chưa có file license.
