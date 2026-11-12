@@ -142,3 +142,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/payments/checkout-info/{bookingId}` thông tin thanh toán.
 - `POST /api/payments/{bookingId}/upload-receipt` tải biên lai chuyển khoản.
 - `GET /api/payments/{bookingId}/status` trạng thái thanh toán.
+- `GET /api/payments/{bookingId}/status?compact=true` trạng thái rút gọn.
+- `POST /api/payments/{bookingId}/confirm-free` xác nhận booking miễn phí nhờ voucher.
