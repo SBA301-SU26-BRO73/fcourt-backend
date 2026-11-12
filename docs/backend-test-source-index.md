@@ -138,3 +138,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | notification-service | [TemplateRendererTest.java](../notification-service/src/test/java/com/fcourt/notification/mail/TemplateRendererTest.java) |
 | notification-service | [PushDeliveryServiceTest.java](../notification-service/src/test/java/com/fcourt/notification/push/PushDeliveryServiceTest.java) |
 | notification-service | [PushPlannerTest.java](../notification-service/src/test/java/com/fcourt/notification/push/PushPlannerTest.java) |
+| notification-service | [SnsPushSenderTest.java](../notification-service/src/test/java/com/fcourt/notification/push/SnsPushSenderTest.java) |
