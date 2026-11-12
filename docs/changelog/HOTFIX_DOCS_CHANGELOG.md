@@ -148,3 +148,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 137 | 2026-11-12 | Hotfix | `facility-service` | #483 | Thêm ràng buộc khoá ngoại giữa court và court_type để tránh dữ liệu mồ côi. |
 | 138 | 2026-11-12 | Docs update | `docs/reference` | #484 | Tài liệu hoá API quản lý lịch biểu định kỳ hàng tuần cho từng cụm sân thể thao. |
 | 139 | 2026-11-12 | Hotfix | `discovery-service` | #485 | Sửa lỗi lọc khoảng giá tìm kiếm sân không bao gồm cận trên (inclusive boundary). |
+| 140 | 2026-11-12 | Hotfix | `discovery-service` | #486 | Tối ưu hoá chỉ mục Full-Text Search cho tên sân và địa chỉ quận huyện tại Hà Nội/TP.HCM. |
