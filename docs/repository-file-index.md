@@ -116,3 +116,4 @@
 - [auth-service/src/test/java/com/fcourt/auth/account/GoogleLoginServiceTest.java](../auth-service/src/test/java/com/fcourt/auth/account/GoogleLoginServiceTest.java) — Java test source; inspect fixtures and assertions before running.
 - [auth-service/src/test/java/com/fcourt/auth/account/LocalFixtureApplication.java](../auth-service/src/test/java/com/fcourt/auth/account/LocalFixtureApplication.java) — Java test source; inspect fixtures and assertions before running.
 - [auth-service/src/test/java/com/fcourt/auth/account/PasswordChangeTokenValidatorTest.java](../auth-service/src/test/java/com/fcourt/auth/account/PasswordChangeTokenValidatorTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/account/PasswordControllerTest.java](../auth-service/src/test/java/com/fcourt/auth/account/PasswordControllerTest.java) — Java test source; inspect fixtures and assertions before running.
