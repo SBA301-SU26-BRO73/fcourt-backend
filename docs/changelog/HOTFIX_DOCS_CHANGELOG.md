@@ -33,3 +33,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 22 | 2026-10-31 | Hotfix | `voucher-service` | #30 | Khắc phục lỗi không hoàn lại voucher quota khi giao dịch thanh toán bị huỷ bỏ. |
 | 23 | 2026-10-31 | Hotfix | `notification-service` | #31 | Sửa lỗi template email xác nhận đặt sân bị mất logo và sai biến thời gian. |
 | 24 | 2026-10-31 | Docs update | `docs/architecture` | #32 | Tài liệu hoá kiến trúc gửi email bất đồng bộ qua hàng đợi AWS SQS / SES. |
+| 25 | 2026-11-01 | Docs update | `docs/business` | #33 | Tài liệu hoá chính sách hoàn huỷ sân và quy tắc tính phí huỷ theo thời gian. |
