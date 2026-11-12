@@ -10,3 +10,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | # | Ngày | Loại | Service / Module | PR / Mã | Mô tả chi tiết nội dung |
 |---:|---|---|---|---|---|
 | 1 | 2026-10-25 | Docs update | `docs/architecture` | #2 | Tài liệu hoá kiến trúc tổng thể 12 microservices và luồng dữ liệu Spring Cloud Gateway. |
+| 2 | 2026-10-25 | Hotfix | `gateway-service` | #4 | Sửa lỗi CORS preflight OPTIONS request bị từ chối trên môi trường staging. |
