@@ -118,3 +118,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 107 | 2026-11-11 | Hotfix | `auth-service` | #282 | Khắc phục lỗi tài khoản bị khoá nhưng vẫn gọi được các endpoint đã được cache quyền. |
 | 108 | 2026-11-11 | Hotfix | `payment-service` | #285 | Sửa lỗi mất thông tin chi nhánh thụ hưởng trong giao dịch thanh toán trực tuyến. |
 | 109 | 2026-11-11 | Docs update | `docs/reference` | #290 | Tài liệu hoá quy chuẩn xử lý ngoại lệ toàn cục GlobalExceptionHandler cho Spring Boot. |
+| 110 | 2026-11-11 | Hotfix | `booking-service` | #295 | Sửa lỗi hiển thị sai tổng tiền đơn khi áp dụng voucher giảm giá có giới hạn tối đa. |
