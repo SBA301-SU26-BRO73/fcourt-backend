@@ -111,3 +111,19 @@ Test sources and fixtures listed here are navigation aids, not a report of passi
 - [S3ReceiptStorageTest.java](../../payment-service/src/test/java/com/fcourt/payment/S3ReceiptStorageTest.java)
 
 From the repository root, the standard Maven verification entry point is `mvn -B -f payment-service/pom.xml verify`. Check the descriptor and environment requirements first.
+
+## Database scripts and migrations
+
+Review script contents and application configuration to distinguish initialization scripts from migrations loaded at runtime. Do not infer execution order across these two locations, or execute scripts against a shared database merely because they are listed here.
+
+- [V1__init_schema.sql](../../payment-service/database/V1__init_schema.sql)
+- [V2__seed_sample_data.sql](../../payment-service/database/V2__seed_sample_data.sql)
+- [V1__payment_schema.sql](../../payment-service/src/main/resources/db/migration/V1__payment_schema.sql)
+- [V2__receipt_submission.sql](../../payment-service/src/main/resources/db/migration/V2__receipt_submission.sql)
+- [V3__ticket_and_expiry.sql](../../payment-service/src/main/resources/db/migration/V3__ticket_and_expiry.sql)
+- [V4__customer_transaction_ownership.sql](../../payment-service/src/main/resources/db/migration/V4__customer_transaction_ownership.sql)
+- [V5__branch_ledger_filters.sql](../../payment-service/src/main/resources/db/migration/V5__branch_ledger_filters.sql)
+- [V6__status_cache_version.sql](../../payment-service/src/main/resources/db/migration/V6__status_cache_version.sql)
+- [V7__customer_refunds.sql](../../payment-service/src/main/resources/db/migration/V7__customer_refunds.sql)
+- [V8__walk_in_cash_ledger.sql](../../payment-service/src/main/resources/db/migration/V8__walk_in_cash_ledger.sql)
+- [V9__automatic_cancellation_refunds.sql](../../payment-service/src/main/resources/db/migration/V9__automatic_cancellation_refunds.sql)
