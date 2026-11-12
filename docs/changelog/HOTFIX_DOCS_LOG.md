@@ -43,3 +43,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 33 | 2026-11-09 | Feature | `payment-service` | #211 | Biên lai thanh toán và chứng từ hoàn tiền lưu trên S3, truy cập qua presigned URL. |
 | 34 | 2026-11-09 | Feature | `discovery-service` | #214 | Chuyển ảnh đánh giá (review) từ Cloudinary sang AWS S3. |
 | 35 | 2026-11-09 | Docs update | `discovery-service` | #189 | Bổ sung Swagger/OpenAPI (springdoc) cho discovery-service. |
+| 36 | 2026-11-09 | Docs update | `booking-service` | #192 | Bổ sung Swagger/OpenAPI (springdoc) cho booking-service. |
