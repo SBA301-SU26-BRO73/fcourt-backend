@@ -108,3 +108,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 97 | 2026-11-10 | Docs update | `docs/operations` | #257 | Tài liệu hoá quy trình deploy các microservices lên Amazon EKS với Helm Charts. |
 | 98 | 2026-11-10 | Hotfix | `voucher-service` | #258 | Validate ngày hết hạn voucher phải lớn hơn thời điểm áp dụng ít nhất 1 giờ. |
 | 99 | 2026-11-10 | Hotfix | `reporting-service` | #259 | Sửa lỗi chia cho 0 khi tính tỷ lệ lấp đầy sân ngày không có slot nào được tạo. |
+| 100 | 2026-11-11 | Docs update | `docs/reference` | #260 | Tài liệu hoá cấu trúc bảng giá linh hoạt theo thứ trong tuần và ngày lễ. |
