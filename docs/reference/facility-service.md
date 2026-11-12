@@ -162,3 +162,11 @@ Review script contents and application configuration to distinguish initializati
 - [V50__court_reservations.sql](../../facility-service/src/main/resources/db/migration/V50__court_reservations.sql)
 - [V70__branch_images.sql](../../facility-service/src/main/resources/db/migration/V70__branch_images.sql)
 - [V71__backfill_branch_bank_bin.sql](../../facility-service/src/main/resources/db/migration/V71__backfill_branch_bank_bin.sql)
+
+## Related documentation
+
+Read the existing service documentation for behavior, setup instructions, and recorded validation details. Historical validation notes describe the run they record and are not fresh verification results.
+
+- [README.md](../../facility-service/README.md)
+
+For shared runtime setup, see [Docker Compose operations](../operations/docker-compose.md). For request routing, see [gateway operations](../operations/gateway.md).
