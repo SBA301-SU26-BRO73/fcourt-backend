@@ -28,3 +28,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 18 | 2026-11-09 | Feature | `facility-service` | #172 | API công khai danh sách sân đang hoạt động của một chi nhánh (SCRUM-248). |
 | 19 | 2026-11-09 | Feature | `notification-service` | #173 | Registry thiết bị, push SNS theo từng thiết bị và nhắc lịch đặt sân. |
 | 20 | 2026-11-09 | Docs update | `docs/architecture` | #174 | Chuẩn hoá và tài liệu hoá cấu trúc package cho các service backend. |
+| 21 | 2026-11-09 | CI/CD | `.github` | #175 | Chỉ build và push image của service có thay đổi lên Amazon ECR. |
