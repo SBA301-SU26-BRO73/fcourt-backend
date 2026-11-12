@@ -148,3 +148,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | payment-service | [BookingRefundConsumerTest.java](../payment-service/src/test/java/com/fcourt/payment/BookingRefundConsumerTest.java) |
 | payment-service | [CheckoutApiTest.java](../payment-service/src/test/java/com/fcourt/payment/CheckoutApiTest.java) |
 | payment-service | [GuestRefundAuthorityTest.java](../payment-service/src/test/java/com/fcourt/payment/GuestRefundAuthorityTest.java) |
+| payment-service | [GuestRefundLifecycleTest.java](../payment-service/src/test/java/com/fcourt/payment/GuestRefundLifecycleTest.java) |
