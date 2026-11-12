@@ -24,3 +24,4 @@ contract. Follow the owning component's README for execution and build commands.
 | staff scrum-65 evidence | [staff-operations-service/VALIDATION_SCRUM_65.md](../staff-operations-service/VALIDATION_SCRUM_65.md) |
 | demo seed reassessment | [tools/demo_seed/REASSESSMENT.md](../tools/demo_seed/REASSESSMENT.md) |
 | demo seed tests | [tools/demo_seed/test_seed.py](../tools/demo_seed/test_seed.py) |
+| production smoke evidence | [tools/production_smoke/LIVE_VALIDATION.md](../tools/production_smoke/LIVE_VALIDATION.md) |
