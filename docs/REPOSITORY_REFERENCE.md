@@ -96,3 +96,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `POST /api/admin/courts/bulk-apply-template` áp dụng mẫu cho nhiều sân.
 - `GET`, `POST` trên `/api/admin/courts/{courtId}/pricing-rules`.
 - `PUT`, `DELETE` trên `/api/admin/courts/{courtId}/pricing-rules/{ruleId}`.
+- `POST .../pricing-rules/copy-weekday-to-weekend` sao chép giá ngày thường sang cuối tuần.
+- `GET /api/internal/courts/{id}/booking-context` ngữ cảnh phục vụ đặt sân.
