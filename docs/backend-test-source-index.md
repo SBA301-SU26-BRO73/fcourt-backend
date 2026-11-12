@@ -158,3 +158,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | payment-service | [PublicRefundApiTest.java](../payment-service/src/test/java/com/fcourt/payment/PublicRefundApiTest.java) |
 | payment-service | [ReceiptCleanupTest.java](../payment-service/src/test/java/com/fcourt/payment/ReceiptCleanupTest.java) |
 | payment-service | [S3ReceiptStorageContainerTest.java](../payment-service/src/test/java/com/fcourt/payment/S3ReceiptStorageContainerTest.java) |
+| payment-service | [S3ReceiptStorageTest.java](../payment-service/src/test/java/com/fcourt/payment/S3ReceiptStorageTest.java) |
