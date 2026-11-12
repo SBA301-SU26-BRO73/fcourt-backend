@@ -47,3 +47,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 37 | 2026-11-09 | Docs update | `voucher-service` | #194 | Bổ sung Swagger/OpenAPI (springdoc) cho voucher-service. |
 | 38 | 2026-11-09 | Docs update | `notification-service` | #195 | Bổ sung Swagger/OpenAPI (springdoc) cho notification-service. |
 | 39 | 2026-11-09 | Docs update | `reporting-service` | #198 | Bổ sung Swagger/OpenAPI (springdoc) cho reporting-service. |
+| 40 | 2026-11-09 | Docs update | `subscription-service` | #202 | Bổ sung Swagger/OpenAPI (springdoc) cho subscription-service. |
