@@ -68,3 +68,4 @@ aids and do not establish runtime validation results.
 | TemplateController | [facility-service/src/main/java/com/fcourt/facility/api/TemplateController.java](../facility-service/src/main/java/com/fcourt/facility/api/TemplateController.java) |
 | FacilitySecurity | [facility-service/src/main/java/com/fcourt/facility/config/FacilitySecurity.java](../facility-service/src/main/java/com/fcourt/facility/config/FacilitySecurity.java) |
 | DeviceController | [notification-service/src/main/java/com/fcourt/notification/device/DeviceController.java](../notification-service/src/main/java/com/fcourt/notification/device/DeviceController.java) |
+| DeviceSecurity | [notification-service/src/main/java/com/fcourt/notification/device/DeviceSecurity.java](../notification-service/src/main/java/com/fcourt/notification/device/DeviceSecurity.java) |
