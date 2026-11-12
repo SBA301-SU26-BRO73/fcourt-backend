@@ -87,3 +87,27 @@ Java files are grouped by their tracked source directory. Package location alone
 For REST behavior, begin with controller classes in the source map and the existing service documentation; this inventory does not infer endpoints from class names.
 
 No `.proto` files are tracked in this service directory. This does not imply that the service makes no calls to other services.
+
+## Test inventory
+
+Test sources and fixtures listed here are navigation aids, not a report of passing tests. Review the test setup for Docker, Testcontainers, external services, and profile requirements before execution.
+
+- [AdminRefundProofCleanupTest.java](../../payment-service/src/test/java/com/fcourt/payment/AdminRefundProofCleanupTest.java)
+- [AutomaticRefundServiceTest.java](../../payment-service/src/test/java/com/fcourt/payment/AutomaticRefundServiceTest.java)
+- [BookingRefundConsumerTest.java](../../payment-service/src/test/java/com/fcourt/payment/BookingRefundConsumerTest.java)
+- [CheckoutApiTest.java](../../payment-service/src/test/java/com/fcourt/payment/CheckoutApiTest.java)
+- [GuestRefundAuthorityTest.java](../../payment-service/src/test/java/com/fcourt/payment/GuestRefundAuthorityTest.java)
+- [GuestRefundLifecycleTest.java](../../payment-service/src/test/java/com/fcourt/payment/GuestRefundLifecycleTest.java)
+- [JwtVerificationTest.java](../../payment-service/src/test/java/com/fcourt/payment/JwtVerificationTest.java)
+- [LocalFixtureApplication.java](../../payment-service/src/test/java/com/fcourt/payment/LocalFixtureApplication.java)
+- [OpenApiDocsTest.java](../../payment-service/src/test/java/com/fcourt/payment/OpenApiDocsTest.java)
+- [PaymentDatabaseTest.java](../../payment-service/src/test/java/com/fcourt/payment/PaymentDatabaseTest.java)
+- [PaymentReminderRecipientTest.java](../../payment-service/src/test/java/com/fcourt/payment/PaymentReminderRecipientTest.java)
+- [PaymentSessionsExpiryTest.java](../../payment-service/src/test/java/com/fcourt/payment/PaymentSessionsExpiryTest.java)
+- [PaymentVoucherBridgeTest.java](../../payment-service/src/test/java/com/fcourt/payment/PaymentVoucherBridgeTest.java)
+- [PublicRefundApiTest.java](../../payment-service/src/test/java/com/fcourt/payment/PublicRefundApiTest.java)
+- [ReceiptCleanupTest.java](../../payment-service/src/test/java/com/fcourt/payment/ReceiptCleanupTest.java)
+- [S3ReceiptStorageContainerTest.java](../../payment-service/src/test/java/com/fcourt/payment/S3ReceiptStorageContainerTest.java)
+- [S3ReceiptStorageTest.java](../../payment-service/src/test/java/com/fcourt/payment/S3ReceiptStorageTest.java)
+
+From the repository root, the standard Maven verification entry point is `mvn -B -f payment-service/pom.xml verify`. Check the descriptor and environment requirements first.
