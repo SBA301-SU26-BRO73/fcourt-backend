@@ -56,3 +56,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 45 | 2026-11-06 | Docs update | `docs/operations` | #79 | Tài liệu hoá quy trình sao lưu và phục hồi dữ liệu cơ sở dữ liệu PostgreSQL định kỳ. |
 | 46 | 2026-11-06 | Hotfix | `subscription-service` | #80 | Khắc phục lỗi không kích hoạt gói dịch vụ khi webhook gia hạn gửi về chậm. |
 | 47 | 2026-11-07 | Docs update | `docs/reference` | #83 | Tài liệu hoá định dạng mã vé QR và cấu trúc token opaque ticket khi check-in. |
+| 48 | 2026-11-07 | Hotfix | `staff-operations-service` | #84 | Sửa lỗi validate vé hợp lệ nhưng bị báo hết hạn trước 15 phút giờ bắt đầu slot. |
