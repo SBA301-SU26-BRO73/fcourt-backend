@@ -72,3 +72,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/admin/branches` danh sách chi nhánh của chủ sân.
 - `POST /api/admin/branches` tạo chi nhánh.
 - `GET`, `PUT`, `DELETE` trên `/api/admin/branches/{id}`.
+- `GET /api/public/branches/{id}` chi tiết công khai.
+- `GET /api/staff/branches/{id}` chi tiết cho nhân viên.
