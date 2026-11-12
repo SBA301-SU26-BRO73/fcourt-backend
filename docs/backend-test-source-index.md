@@ -132,3 +132,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | notification-service | [InAppPlannerTest.java](../notification-service/src/test/java/com/fcourt/notification/inapp/InAppPlannerTest.java) |
 | notification-service | [NotificationServiceTest.java](../notification-service/src/test/java/com/fcourt/notification/inbox/NotificationServiceTest.java) |
 | notification-service | [KafkaErrorHandlingConfigurationTest.java](../notification-service/src/test/java/com/fcourt/notification/kafka/KafkaErrorHandlingConfigurationTest.java) |
+| notification-service | [NotificationTopicsTest.java](../notification-service/src/test/java/com/fcourt/notification/kafka/NotificationTopicsTest.java) |
