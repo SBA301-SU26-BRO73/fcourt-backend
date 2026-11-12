@@ -93,3 +93,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 82 | 2026-11-09 | Docs update | `docs/reference` | #239 | Cập nhật tài liệu chi tiết về vòng đời booking (Booking Lifecycle State Machine). |
 | 83 | 2026-11-09 | Hotfix | `facility-service` | #241 | Backfill bank_bin cho các chi nhánh seed sẵn để tạo được mã VietQR thanh toán. |
 | 84 | 2026-11-09 | Hotfix | `payment-service` | #242 | Trả mã lỗi HTTP 422 thay vì 503 khi chi nhánh chưa cấu hình tài khoản ngân hàng. |
+| 85 | 2026-11-09 | Docs update | `docs/operations` | #243 | Tài liệu hoá cấu hình presign endpoint S3 khi truy cập từ mạng nội bộ và công cộng. |
