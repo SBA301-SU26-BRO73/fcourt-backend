@@ -49,3 +49,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 38 | 2026-11-04 | Hotfix | `payment-service` | #72 | Bổ sung transaction lock ngăn chặn 2 lần xác nhận thanh toán cùng 1 mã giao dịch. |
 | 39 | 2026-11-04 | Docs update | `docs/reference` | #73 | Tài liệu hoá chi tiết schema bảng biểu và migration script của booking-service. |
 | 40 | 2026-11-05 | Hotfix | `booking-service` | #74 | Khắc phục lỗi mất thông tin ghi chú khách hàng khi chuyển trạng thái booking. |
+| 41 | 2026-11-05 | Hotfix | `reporting-service` | #75 | Sửa công thức tính doanh thu ngày trong reporting-service để loại trừ đơn đã hoàn tiền. |
