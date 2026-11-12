@@ -132,3 +132,11 @@ Review script contents and application configuration to distinguish initializati
 - [V2__seed_sample_data.sql](../../subscription-service/src/main/resources/db/migration/V2__seed_sample_data.sql)
 - [V3__case_insensitive_names_and_positive_prices.sql](../../subscription-service/src/main/resources/db/migration/V3__case_insensitive_names_and_positive_prices.sql)
 - [V4__subscription_starter_flag_and_dates.sql](../../subscription-service/src/main/resources/db/migration/V4__subscription_starter_flag_and_dates.sql)
+
+## Related documentation
+
+Read the existing service documentation for behavior, setup instructions, and recorded validation details. Historical validation notes describe the run they record and are not fresh verification results.
+
+- [README.md](../../subscription-service/README.md)
+
+For shared runtime setup, see [Docker Compose operations](../operations/docker-compose.md). For request routing, see [gateway operations](../operations/gateway.md).
