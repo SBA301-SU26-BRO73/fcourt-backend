@@ -59,3 +59,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 48 | 2026-11-07 | Hotfix | `staff-operations-service` | #84 | Sửa lỗi validate vé hợp lệ nhưng bị báo hết hạn trước 15 phút giờ bắt đầu slot. |
 | 49 | 2026-11-07 | Hotfix | `tools` | #85 | Căn chỉnh dữ liệu demo runtime cho khớp schema mới nhất của 12 microservices. |
 | 50 | 2026-11-07 | Docs update | `docs/operations` | #86 | Tài liệu hoá cấu hình biến môi trường AWS S3 và MinIO cho lưu trữ chứng từ. |
+| 51 | 2026-11-07 | Hotfix | `slot-hold-engine` | #87 | Xử lý ngoại lệ JedisConnectionException khi Redis cluster chuyển đổi node master. |
