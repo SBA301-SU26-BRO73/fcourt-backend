@@ -189,3 +189,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | staff-operations-service | [SlotSafetyGatewayTest.java](../staff-operations-service/src/test/java/com/fcourt/staff/SlotSafetyGatewayTest.java) |
 | staff-operations-service | [StaffBootstrapTest.java](../staff-operations-service/src/test/java/com/fcourt/staff/StaffBootstrapTest.java) |
 | staff-operations-service | [StaffIntegrationTest.java](../staff-operations-service/src/test/java/com/fcourt/staff/StaffIntegrationTest.java) |
+| staff-operations-service | [StaffUpstreamContractTest.java](../staff-operations-service/src/test/java/com/fcourt/staff/StaffUpstreamContractTest.java) |
