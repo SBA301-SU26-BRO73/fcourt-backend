@@ -79,3 +79,4 @@ aids and do not establish runtime validation results.
 | FreeVoucherPaymentController | [payment-service/src/main/java/com/fcourt/payment/FreeVoucherPaymentController.java](../payment-service/src/main/java/com/fcourt/payment/FreeVoucherPaymentController.java) |
 | PaymentApprovalController | [payment-service/src/main/java/com/fcourt/payment/PaymentApprovalController.java](../payment-service/src/main/java/com/fcourt/payment/PaymentApprovalController.java) |
 | PaymentSecurity | [payment-service/src/main/java/com/fcourt/payment/PaymentSecurity.java](../payment-service/src/main/java/com/fcourt/payment/PaymentSecurity.java) |
+| PublicRefundController | [payment-service/src/main/java/com/fcourt/payment/PublicRefundController.java](../payment-service/src/main/java/com/fcourt/payment/PublicRefundController.java) |
