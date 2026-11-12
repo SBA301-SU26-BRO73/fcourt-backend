@@ -11,3 +11,4 @@
 - [discovery-service/SCRUM-22_AVAILABLE_SLOTS.md](../discovery-service/SCRUM-22_AVAILABLE_SLOTS.md) — SCRUM-22 — Available slots by court and date
 - [discovery-service/VALIDATION.md](../discovery-service/VALIDATION.md) — Validation evidence
 - [docs/README.md](../docs/README.md) — Tài liệu backend FCourt
+- [docs/REPOSITORY_REFERENCE.md](../docs/REPOSITORY_REFERENCE.md) — FCOURT Backend — Repository Reference
