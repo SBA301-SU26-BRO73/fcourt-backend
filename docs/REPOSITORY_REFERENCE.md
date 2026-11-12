@@ -84,3 +84,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `PATCH /api/admin/courts/{id}/status` đổi trạng thái sân.
 - `POST`, `DELETE` trên `/api/admin/courts/{id}/image` quản lý ảnh sân.
 - `POST /api/admin/courts/lock-slots` khóa khung giờ.
+- `GET /api/admin/courts/lock-slots` xem các khung đang khóa.
+- `DELETE /api/admin/courts/lock-slots/{id}` mở khóa.
