@@ -177,3 +177,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | reporting-service | [SuperAdminOverviewServiceTest.java](../reporting-service/src/test/java/com/fcourt/reporting/service/SuperAdminOverviewServiceTest.java) |
 | slot-hold-engine | [CounterHoldsTest.java](../slot-hold-engine/src/test/java/com/fcourt/hold/CounterHoldsTest.java) |
 | slot-hold-engine | [HoldIntegrationTest.java](../slot-hold-engine/src/test/java/com/fcourt/hold/HoldIntegrationTest.java) |
+| slot-hold-engine | [OpenApiDocsTest.java](../slot-hold-engine/src/test/java/com/fcourt/hold/OpenApiDocsTest.java) |
