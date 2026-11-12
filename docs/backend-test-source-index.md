@@ -196,3 +196,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | subscription-service | [OpenApiDocsTest.java](../subscription-service/src/test/java/com/fcourt/subscription/OpenApiDocsTest.java) |
 | subscription-service | [BillingApiIntegrationTest.java](../subscription-service/src/test/java/com/fcourt/subscription/billing/BillingApiIntegrationTest.java) |
 | subscription-service | [BillingControllerTest.java](../subscription-service/src/test/java/com/fcourt/subscription/billing/BillingControllerTest.java) |
+| subscription-service | [BillingCycleTest.java](../subscription-service/src/test/java/com/fcourt/subscription/billing/BillingCycleTest.java) |
