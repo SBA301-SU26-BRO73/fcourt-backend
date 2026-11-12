@@ -129,3 +129,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 118 | 2026-11-12 | Hotfix | `payment-service` | #453 | Bỏ qua các sự kiện hoàn tiền quá hạn thay vì retry vô hạn làm nghẽn hàng đợi. |
 | 119 | 2026-11-12 | Docs update | `docs/operations` | #454 | Tài liệu hoá giải pháp xử lý lỗi chịu lỗi khi dịch vụ email bên thứ ba gặp sự cố. |
 | 120 | 2026-11-12 | Hotfix | `notification-service` | #455 | Đảm bảo vẫn gửi thông báo in-app và push notification khi nhà cung cấp email lỗi. |
+| 121 | 2026-11-12 | Docs update | `docs/README.md` | #456 | Cấu trúc lại toàn bộ README, tái tổ chức thư mục docs và khởi tạo thư mục report. |
