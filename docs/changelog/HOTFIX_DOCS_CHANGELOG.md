@@ -174,3 +174,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 163 | 2026-11-12 | Hotfix | `gateway-service` | #509 | Khắc phục lỗi rớt header Authorization khi gateway chuyển tiếp request qua HTTPS. |
 | 164 | 2026-11-12 | Hotfix | `gateway-service` | #510 | Tối ưu bộ đệm Netty buffer pool giảm tiêu hao RAM khi chịu tải đồng thời cao. |
 | 165 | 2026-11-12 | Docs update | `docs/operations` | #511 | Cập nhật tài liệu cấu hình TLS/SSL và chứng chỉ bảo mật cho domain hệ thống. |
+| 166 | 2026-11-12 | Hotfix | `auth-service` | #512 | Sửa lỗi gửi mã OTP xác nhận quên mật khẩu bị chậm do thread pool đồng bộ. |
