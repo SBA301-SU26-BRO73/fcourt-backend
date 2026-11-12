@@ -141,3 +141,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 130 | 2026-11-12 | Hotfix | `voucher-service` | #476 | Khắc phục lỗi mã giảm giá bị áp dụng vượt số lần cho phép của một tài khoản. |
 | 131 | 2026-11-12 | Hotfix | `voucher-service` | #477 | Bổ sung index cho cột voucher_code và expired_at trong bảng voucher để tăng tốc query. |
 | 132 | 2026-11-12 | Docs update | `docs/reference` | #478 | Cập nhật tài liệu gRPC schema protobuf cho voucher-service phiên bản v2. |
+| 133 | 2026-11-12 | Hotfix | `auth-service` | #479 | Sửa lỗi mã hoá mật khẩu BCrypt bị chậm do độ phức tạp cost factor quá cao trên staging. |
