@@ -75,3 +75,9 @@ Test sources and fixtures listed here are navigation aids, not a report of passi
 - [GlobalExceptionHandlerTest.java](../../slot-hold-engine/src/test/java/com/fcourt/hold/exception/GlobalExceptionHandlerTest.java)
 
 From the repository root, the standard Maven verification entry point is `mvn -B -f slot-hold-engine/pom.xml verify`. Check the descriptor and environment requirements first.
+
+## Database scripts and migrations
+
+Review script contents and application configuration to distinguish initialization scripts from migrations loaded at runtime. Do not infer execution order across these two locations, or execute scripts against a shared database merely because they are listed here.
+
+- [V1__init_schema.sql](../../slot-hold-engine/database/V1__init_schema.sql)
