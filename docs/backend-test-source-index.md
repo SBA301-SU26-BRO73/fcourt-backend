@@ -88,3 +88,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | discovery-service | [CourtSlotServiceTest.java](../discovery-service/src/test/java/com/fcourt/discovery/service/CourtSlotServiceTest.java) |
 | discovery-service | [ReviewImageServiceTest.java](../discovery-service/src/test/java/com/fcourt/discovery/service/ReviewImageServiceTest.java) |
 | facility-service | [BranchImageApiIntegrationTest.java](../facility-service/src/test/java/com/fcourt/facility/BranchImageApiIntegrationTest.java) |
+| facility-service | [CourtImageApiIntegrationTest.java](../facility-service/src/test/java/com/fcourt/facility/CourtImageApiIntegrationTest.java) |
