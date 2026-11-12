@@ -41,3 +41,4 @@
 - [docs/report/README.md](../docs/report/README.md) — Báo cáo cuối kỳ
 - [facility-service/README.md](../facility-service/README.md) — facility-service
 - [notification-service/PUSH_REMINDERS.md](../notification-service/PUSH_REMINDERS.md) — Push delivery and booking reminders
+- [notification-service/README.md](../notification-service/README.md) — notification-service
