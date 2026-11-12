@@ -128,3 +128,33 @@ Java files are grouped by their tracked source directory. Package location alone
 For REST behavior, begin with controller classes in the source map and the existing service documentation; this inventory does not infer endpoints from class names.
 
 No `.proto` files are tracked in this service directory. This does not imply that the service makes no calls to other services.
+
+## Test inventory
+
+Test sources and fixtures listed here are navigation aids, not a report of passing tests. Review the test setup for Docker, Testcontainers, external services, and profile requirements before execution.
+
+- [NotificationFlowIntegrationTest.java](../../notification-service/src/test/java/com/fcourt/notification/NotificationFlowIntegrationTest.java)
+- [OpenApiDocsTest.java](../../notification-service/src/test/java/com/fcourt/notification/OpenApiDocsTest.java)
+- [DeviceControllerIntegrationTest.java](../../notification-service/src/test/java/com/fcourt/notification/device/DeviceControllerIntegrationTest.java)
+- [DeviceServiceTest.java](../../notification-service/src/test/java/com/fcourt/notification/device/DeviceServiceTest.java)
+- [EmailPlannerTest.java](../../notification-service/src/test/java/com/fcourt/notification/event/EmailPlannerTest.java)
+- [GlobalExceptionHandlerTest.java](../../notification-service/src/test/java/com/fcourt/notification/exception/GlobalExceptionHandlerTest.java)
+- [HttpBranchDirectoryTest.java](../../notification-service/src/test/java/com/fcourt/notification/inapp/HttpBranchDirectoryTest.java)
+- [InAppEventHandlerTest.java](../../notification-service/src/test/java/com/fcourt/notification/inapp/InAppEventHandlerTest.java)
+- [InAppNotificationIntegrationTest.java](../../notification-service/src/test/java/com/fcourt/notification/inapp/InAppNotificationIntegrationTest.java)
+- [InAppPlannerTest.java](../../notification-service/src/test/java/com/fcourt/notification/inapp/InAppPlannerTest.java)
+- [NotificationServiceTest.java](../../notification-service/src/test/java/com/fcourt/notification/inbox/NotificationServiceTest.java)
+- [KafkaErrorHandlingConfigurationTest.java](../../notification-service/src/test/java/com/fcourt/notification/kafka/KafkaErrorHandlingConfigurationTest.java)
+- [NotificationTopicsTest.java](../../notification-service/src/test/java/com/fcourt/notification/kafka/NotificationTopicsTest.java)
+- [RedactingDeadLetterPublishingRecovererTest.java](../../notification-service/src/test/java/com/fcourt/notification/kafka/RedactingDeadLetterPublishingRecovererTest.java)
+- [SmtpEmailSenderTest.java](../../notification-service/src/test/java/com/fcourt/notification/mail/SmtpEmailSenderTest.java)
+- [TemplateRendererTest.java](../../notification-service/src/test/java/com/fcourt/notification/mail/TemplateRendererTest.java)
+- [PushDeliveryServiceTest.java](../../notification-service/src/test/java/com/fcourt/notification/push/PushDeliveryServiceTest.java)
+- [PushPlannerTest.java](../../notification-service/src/test/java/com/fcourt/notification/push/PushPlannerTest.java)
+- [SnsPushSenderTest.java](../../notification-service/src/test/java/com/fcourt/notification/push/SnsPushSenderTest.java)
+- [ReminderProjectionTest.java](../../notification-service/src/test/java/com/fcourt/notification/reminder/ReminderProjectionTest.java)
+- [ReminderScheduleProjectionTest.java](../../notification-service/src/test/java/com/fcourt/notification/reminder/ReminderScheduleProjectionTest.java)
+- [ReminderSchedulerTest.java](../../notification-service/src/test/java/com/fcourt/notification/reminder/ReminderSchedulerTest.java)
+- [ReminderWorkerTest.java](../../notification-service/src/test/java/com/fcourt/notification/reminder/ReminderWorkerTest.java)
+
+From the repository root, the standard Maven verification entry point is `mvn -B -f notification-service/pom.xml verify`. Check the descriptor and environment requirements first.
