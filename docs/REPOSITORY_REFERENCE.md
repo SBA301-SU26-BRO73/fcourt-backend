@@ -68,3 +68,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/super-admin/stats/saas-revenue` doanh thu SaaS.
 - `GET /api/super-admin/stats/subscriptions` thống kê đăng ký gói.
 
+## 6. facility-service
+- `GET /api/admin/branches` danh sách chi nhánh của chủ sân.
