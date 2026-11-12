@@ -89,3 +89,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 78 | 2026-11-09 | Hotfix | `facility-service` | #233 | Công khai số điện thoại, giờ mở cửa, ảnh sân và bổ sung trường card cho discovery. |
 | 79 | 2026-11-09 | Docs update | `docs/business` | #234 | Tài liệu hoá quy trình vận hành và đối soát giao dịch tiền mặt của chi nhánh. |
 | 80 | 2026-11-09 | Hotfix | `booking-service` | #235 | Cho phép khách vãng lai tra cứu và huỷ booking qua mã booking và số điện thoại. |
+| 81 | 2026-11-09 | Hotfix | `payment-service` | #238 | Sửa lỗi không chuyển số điện thoại khách từ booking view sang sổ cái chi nhánh. |
