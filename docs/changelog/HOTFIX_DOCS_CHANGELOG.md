@@ -48,3 +48,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 37 | 2026-11-04 | Hotfix | `payment-service` | #71 | Sửa lỗi mất kết nối webhook từ cổng PayOS khi header signature chứa ký tự đặc biệt. |
 | 38 | 2026-11-04 | Hotfix | `payment-service` | #72 | Bổ sung transaction lock ngăn chặn 2 lần xác nhận thanh toán cùng 1 mã giao dịch. |
 | 39 | 2026-11-04 | Docs update | `docs/reference` | #73 | Tài liệu hoá chi tiết schema bảng biểu và migration script của booking-service. |
+| 40 | 2026-11-05 | Hotfix | `booking-service` | #74 | Khắc phục lỗi mất thông tin ghi chú khách hàng khi chuyển trạng thái booking. |
