@@ -50,3 +50,9 @@ Java files are grouped by their tracked source directory. Package location alone
 - [BlockedPathsFilter.java](../../gateway-service/src/main/java/com/fcourt/gateway/security/BlockedPathsFilter.java)
 - [Problems.java](../../gateway-service/src/main/java/com/fcourt/gateway/security/Problems.java)
 - [SecurityConfiguration.java](../../gateway-service/src/main/java/com/fcourt/gateway/security/SecurityConfiguration.java)
+
+## Protocol definitions
+
+For REST behavior, begin with controller classes in the source map and the existing service documentation; this inventory does not infer endpoints from class names.
+
+No `.proto` files are tracked in this service directory. This does not imply that the service makes no calls to other services.
