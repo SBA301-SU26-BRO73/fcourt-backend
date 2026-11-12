@@ -119,3 +119,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 108 | 2026-11-11 | Hotfix | `payment-service` | #285 | Sửa lỗi mất thông tin chi nhánh thụ hưởng trong giao dịch thanh toán trực tuyến. |
 | 109 | 2026-11-11 | Docs update | `docs/reference` | #290 | Tài liệu hoá quy chuẩn xử lý ngoại lệ toàn cục GlobalExceptionHandler cho Spring Boot. |
 | 110 | 2026-11-11 | Hotfix | `booking-service` | #295 | Sửa lỗi hiển thị sai tổng tiền đơn khi áp dụng voucher giảm giá có giới hạn tối đa. |
+| 111 | 2026-11-11 | Hotfix | `tools` | #338 | Thay ảnh ngoại cảnh chi nhánh bằng ảnh sân thể thao thực tế chất lượng cao. |
