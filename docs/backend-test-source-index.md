@@ -117,3 +117,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | gateway-service | [GatewaySecurityTests.java](../gateway-service/src/test/java/com/fcourt/gateway/GatewaySecurityTests.java) |
 | gateway-service | [RateLimitGatewayTests.java](../gateway-service/src/test/java/com/fcourt/gateway/RateLimitGatewayTests.java) |
 | gateway-service | [RateLimitRedisDownTests.java](../gateway-service/src/test/java/com/fcourt/gateway/RateLimitRedisDownTests.java) |
+| gateway-service | [RouteTableTests.java](../gateway-service/src/test/java/com/fcourt/gateway/RouteTableTests.java) |
