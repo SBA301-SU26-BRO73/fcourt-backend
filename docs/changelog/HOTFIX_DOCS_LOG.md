@@ -31,3 +31,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 21 | 2026-11-09 | CI/CD | `.github` | #175 | Chỉ build và push image của service có thay đổi lên Amazon ECR. |
 | 22 | 2026-11-09 | Feature | `eureka-server` | #176 | Eureka registry độc lập trên Spring Boot 4 (về sau được gỡ ở #249). |
 | 23 | 2026-11-09 | CI/CD | `eureka-server` | #177 | Build image eureka-server khi push; gateway-service đã khớp pattern `*-service`. |
+| 24 | 2026-11-09 | Feature | `gateway-service` | #178 | Spring Cloud Gateway kiểm tra JWT và gộp Swagger của tất cả service. |
