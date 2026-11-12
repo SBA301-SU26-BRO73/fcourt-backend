@@ -193,3 +193,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 182 | 2026-11-12 | Hotfix | `payment-service` | #528 | Sửa lỗi không thể upload chứng từ hoàn tiền có định dạng ảnh WebP lên S3. |
 | 183 | 2026-11-12 | Docs update | `docs/business` | #529 | Tài liệu hoá quy trình kiểm toán tài chính và đối soát dòng tiền đa chi nhánh. |
 | 184 | 2026-11-12 | Hotfix | `notification-service` | #530 | Sửa lỗi tiêu đề thông báo push bị cắt cụt ký tự khi vượt quá 65 bytes tiếng Việt. |
+| 185 | 2026-11-12 | Hotfix | `notification-service` | #531 | Bổ sung cơ chế chống spam thông báo cho khách hàng khi có nhiều sự kiện liên tiếp. |
