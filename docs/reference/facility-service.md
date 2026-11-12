@@ -106,3 +106,9 @@ Java files are grouped by their tracked source directory. Package location alone
 - [SlotTemplateEngine.java](../../facility-service/src/main/java/com/fcourt/facility/service/SlotTemplateEngine.java)
 - [SlotWindows.java](../../facility-service/src/main/java/com/fcourt/facility/service/SlotWindows.java)
 - [TemplateService.java](../../facility-service/src/main/java/com/fcourt/facility/service/TemplateService.java)
+
+## Protocol definitions
+
+For REST behavior, begin with controller classes in the source map and the existing service documentation; this inventory does not infer endpoints from class names.
+
+No `.proto` files are tracked in this service directory. This does not imply that the service makes no calls to other services.
