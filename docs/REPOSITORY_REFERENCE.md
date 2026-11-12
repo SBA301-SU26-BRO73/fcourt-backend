@@ -114,3 +114,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 
 ## 8. slot-hold-engine
 - `POST /api/bookings/hold-slots` giữ chỗ tạm thời và trả về `holdToken`.
+- `DELETE /api/bookings/hold-slots/{holdToken}` nhả chỗ đã giữ.
+
