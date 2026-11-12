@@ -158,3 +158,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 147 | 2026-11-12 | Docs update | `docs/reference` | #493 | Cập nhật tài liệu API chi tiết cho endpoint gia hạn thời gian giữ chỗ (extend hold). |
 | 148 | 2026-11-12 | Hotfix | `payment-service` | #494 | Sửa lỗi trùng lặp mã thanh toán PayOS orderCode khi chạy nhiều cụm payment container. |
 | 149 | 2026-11-12 | Hotfix | `payment-service` | #495 | Bổ sung cơ chế retry cấp số nhân (exponential backoff) khi gọi API kiểm tra giao dịch PayOS. |
+| 150 | 2026-11-12 | Docs update | `docs/operations` | #496 | Tài liệu hoá hướng dẫn xử lý sự cố khi cổng thanh toán trực tuyến bị gián đoạn. |
