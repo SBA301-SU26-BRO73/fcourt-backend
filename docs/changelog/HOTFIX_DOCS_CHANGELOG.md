@@ -78,3 +78,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 67 | 2026-11-09 | Docs update | `docs/architecture` | #174 | Chuẩn hoá và tài liệu hoá cấu trúc package đồng nhất cho 12 microservices. |
 | 68 | 2026-11-09 | Hotfix | `notification-service` | #175 | Khắc phục lỗi gửi email trùng lặp khi subscriber nhận message retry từ hàng đợi. |
 | 69 | 2026-11-09 | Hotfix | `facility-service` | #188 | Sửa lỗi tính sai giá tiền slot theo khung giờ cao điểm (Peak Hours Pricing). |
+| 70 | 2026-11-09 | Docs update | `docs/operations` | #210 | Mô tả thiết kế lưu trữ S3, LocalStack và seed data không phụ thuộc Cloudinary. |
