@@ -39,3 +39,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 28 | 2026-11-02 | Docs update | `docs/operations` | #47 | Cập nhật tài liệu hướng dẫn chạy smoke test cho hệ thống microservice tại local. |
 | 29 | 2026-11-02 | Hotfix | `gateway-service` | #48 | Sửa lỗi route gateway bị nghẽn do cấu hình max idle connection của Netty quá thấp. |
 | 30 | 2026-11-02 | Hotfix | `slot-hold-engine` | #49 | Đảm bảo giải phóng key hold slot khi Redis nhận lệnh DEL từ background cleanup job. |
+| 31 | 2026-11-02 | Docs update | `docs/architecture` | #50 | Tài liệu hoá thiết kế luồng xử lý saga điều phối đặt sân giữa booking và slot-hold. |
