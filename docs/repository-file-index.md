@@ -59,3 +59,4 @@
 - [staff-operations-service/VALIDATION_SCRUM_61.md](../staff-operations-service/VALIDATION_SCRUM_61.md) — SCRUM-61 validation
 - [staff-operations-service/VALIDATION_SCRUM_63.md](../staff-operations-service/VALIDATION_SCRUM_63.md) — SCRUM-63 validation
 - [staff-operations-service/VALIDATION_SCRUM_65.md](../staff-operations-service/VALIDATION_SCRUM_65.md) — SCRUM-65 validation
+- [subscription-service/README.md](../subscription-service/README.md) — subscription-service
