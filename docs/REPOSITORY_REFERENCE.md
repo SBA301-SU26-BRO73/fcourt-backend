@@ -167,3 +167,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `POST /api/vouchers/apply` áp dụng voucher vào booking.
 - `DELETE /api/vouchers/apply/{bookingId}` gỡ voucher khỏi booking.
 
+## 12. staff-operations-service
