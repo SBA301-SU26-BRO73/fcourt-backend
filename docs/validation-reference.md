@@ -65,3 +65,4 @@ aids and do not establish runtime validation results.
 | LockController | [facility-service/src/main/java/com/fcourt/facility/api/LockController.java](../facility-service/src/main/java/com/fcourt/facility/api/LockController.java) |
 | PricingController | [facility-service/src/main/java/com/fcourt/facility/api/PricingController.java](../facility-service/src/main/java/com/fcourt/facility/api/PricingController.java) |
 | ReservationController | [facility-service/src/main/java/com/fcourt/facility/api/ReservationController.java](../facility-service/src/main/java/com/fcourt/facility/api/ReservationController.java) |
+| TemplateController | [facility-service/src/main/java/com/fcourt/facility/api/TemplateController.java](../facility-service/src/main/java/com/fcourt/facility/api/TemplateController.java) |
