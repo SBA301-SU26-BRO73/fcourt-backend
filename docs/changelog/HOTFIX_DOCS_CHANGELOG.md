@@ -43,3 +43,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 32 | 2026-11-02 | Hotfix | `facility-service` | #66 | Đồng bộ quyền SUPER_ADMIN, chỉ số todayRevenue và cách tính booking đã huỷ. |
 | 33 | 2026-11-03 | Docs update | `docs/reference` | #67 | Tài liệu hoá cấu trúc response chuẩn API ResponseWrapper cho toàn bộ microservices. |
 | 34 | 2026-11-03 | Hotfix | `auth-service` | #68 | Sửa lỗi trả về HTTP 500 thay vì 401 khi access token hết hạn nhưng không có header auth. |
+| 35 | 2026-11-03 | Hotfix | `discovery-service` | #69 | Tối ưu câu truy vấn tìm kiếm slot khả dụng, loại bỏ N+1 query trên PostgreSQL. |
