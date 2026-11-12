@@ -166,3 +166,11 @@ Review script contents and application configuration to distinguish initializati
 - [V7__password_reset_tokens.sql](../../auth-service/src/main/resources/db/migration/V7__password_reset_tokens.sql)
 - [V8__outbox_sensitive_payloads.sql](../../auth-service/src/main/resources/db/migration/V8__outbox_sensitive_payloads.sql)
 - [V9__users_password_changed_at.sql](../../auth-service/src/main/resources/db/migration/V9__users_password_changed_at.sql)
+
+## Related documentation
+
+Read the existing service documentation for behavior, setup instructions, and recorded validation details. Historical validation notes describe the run they record and are not fresh verification results.
+
+- [README.md](../../auth-service/README.md)
+
+For shared runtime setup, see [Docker Compose operations](../operations/docker-compose.md). For request routing, see [gateway operations](../operations/gateway.md).
