@@ -34,3 +34,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | auth-service | [StaffAccountCommandsTest.java](../auth-service/src/test/java/com/fcourt/auth/staff/StaffAccountCommandsTest.java) |
 | auth-service | [StaffAccountsTest.java](../auth-service/src/test/java/com/fcourt/auth/staff/StaffAccountsTest.java) |
 | auth-service | [StaffReactivationTest.java](../auth-service/src/test/java/com/fcourt/auth/staff/StaffReactivationTest.java) |
+| auth-service | [PlatformStatsRepositoryIntegrationTest.java](../auth-service/src/test/java/com/fcourt/auth/superadmin/PlatformStatsRepositoryIntegrationTest.java) |
