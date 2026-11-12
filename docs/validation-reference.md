@@ -58,3 +58,4 @@ aids and do not establish runtime validation results.
 | ReviewController | [discovery-service/src/main/java/com/fcourt/discovery/controller/ReviewController.java](../discovery-service/src/main/java/com/fcourt/discovery/controller/ReviewController.java) |
 | BookingContextController | [facility-service/src/main/java/com/fcourt/facility/api/BookingContextController.java](../facility-service/src/main/java/com/fcourt/facility/api/BookingContextController.java) |
 | BranchController | [facility-service/src/main/java/com/fcourt/facility/api/BranchController.java](../facility-service/src/main/java/com/fcourt/facility/api/BranchController.java) |
+| BranchImageController | [facility-service/src/main/java/com/fcourt/facility/api/BranchImageController.java](../facility-service/src/main/java/com/fcourt/facility/api/BranchImageController.java) |
