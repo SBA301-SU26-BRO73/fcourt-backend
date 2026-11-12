@@ -7,3 +7,4 @@
 - [booking-service/ONLINE_BOOKING.md](../booking-service/ONLINE_BOOKING.md) — Online booking authority — SCRUM-91
 - [booking-service/README.md](../booking-service/README.md) — Booking history — SCRUM-53
 - [discovery-service/README.md](../discovery-service/README.md) — Discovery service
+- [discovery-service/REQUEST_REVIEW.md](../discovery-service/REQUEST_REVIEW.md) — Review BE Discovery - Initialize service and public branch search
