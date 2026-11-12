@@ -15,3 +15,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 5 | 2026-11-02 | Hotfix | `facility-service` | #66 | Đồng bộ quyền SUPER_ADMIN, chỉ số todayRevenue và cách tính booking đã huỷ với monolith cũ. |
 | 6 | 2026-11-07 | Test | `staff-operations-service` | #81 | Kiểm thử hợp đồng opaque ticket khi nhân viên check-in. |
 | 7 | 2026-11-07 | Hotfix | `tools` | #82 | Căn chỉnh dữ liệu demo runtime cho khớp schema hiện tại của các service. |
+| 8 | 2026-11-08 | Feature | `slot-hold-engine` | #103 | Broadcast thay đổi lịch sân theo thời gian thực (SCRUM-108). |
