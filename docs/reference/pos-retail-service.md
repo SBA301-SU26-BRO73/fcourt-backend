@@ -21,3 +21,44 @@ Inspect the Maven descriptor for dependencies and plugins, and the Dockerfile or
 Tracked application resources are listed below. Inspect property placeholders and profile selection before choosing local values; do not copy credentials into documentation.
 
 - [application.yml](../../pos-retail-service/src/main/resources/application.yml)
+
+## Java source map
+
+Java files are grouped by their tracked source directory. Package location alone does not establish an API contract or runtime dependency.
+
+### `com/fcourt/pos`
+
+- [PosApplication.java](../../pos-retail-service/src/main/java/com/fcourt/pos/PosApplication.java)
+
+### `com/fcourt/pos/api`
+
+- [PosController.java](../../pos-retail-service/src/main/java/com/fcourt/pos/api/PosController.java)
+- [PosErrors.java](../../pos-retail-service/src/main/java/com/fcourt/pos/api/PosErrors.java)
+- [PosRequests.java](../../pos-retail-service/src/main/java/com/fcourt/pos/api/PosRequests.java)
+- [PosViews.java](../../pos-retail-service/src/main/java/com/fcourt/pos/api/PosViews.java)
+
+### `com/fcourt/pos/config`
+
+- [OpenApiConfig.java](../../pos-retail-service/src/main/java/com/fcourt/pos/config/OpenApiConfig.java)
+- [PosConfiguration.java](../../pos-retail-service/src/main/java/com/fcourt/pos/config/PosConfiguration.java)
+- [PosSecurity.java](../../pos-retail-service/src/main/java/com/fcourt/pos/config/PosSecurity.java)
+
+### `com/fcourt/pos/dto/response`
+
+- [ProductPageResponse.java](../../pos-retail-service/src/main/java/com/fcourt/pos/dto/response/ProductPageResponse.java)
+
+### `com/fcourt/pos/integration`
+
+- [PosUpstreams.java](../../pos-retail-service/src/main/java/com/fcourt/pos/integration/PosUpstreams.java)
+
+### `com/fcourt/pos/persistence`
+
+- [PosStore.java](../../pos-retail-service/src/main/java/com/fcourt/pos/persistence/PosStore.java)
+
+### `com/fcourt/pos/service`
+
+- [PosCommands.java](../../pos-retail-service/src/main/java/com/fcourt/pos/service/PosCommands.java)
+- [PosDispatchWorker.java](../../pos-retail-service/src/main/java/com/fcourt/pos/service/PosDispatchWorker.java)
+- [ProductService.java](../../pos-retail-service/src/main/java/com/fcourt/pos/service/ProductService.java)
+- [SalesService.java](../../pos-retail-service/src/main/java/com/fcourt/pos/service/SalesService.java)
+- [SettlementService.java](../../pos-retail-service/src/main/java/com/fcourt/pos/service/SettlementService.java)
