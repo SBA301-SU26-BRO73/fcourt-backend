@@ -17,3 +17,9 @@ Inspect the Maven descriptor for dependencies and plugins, and the Dockerfile or
 - [mvnw](../../voucher-service/mvnw)
 - [mvnw.cmd](../../voucher-service/mvnw.cmd)
 - [pom.xml](../../voucher-service/pom.xml)
+
+## Application resources
+
+Tracked application resources are listed below. Inspect property placeholders and profile selection before choosing local values; do not copy credentials into documentation.
+
+- [application.yml](../../voucher-service/src/main/resources/application.yml)
