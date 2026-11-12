@@ -130,3 +130,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/internal/courts/{court}/slot-occupancy` tình trạng chiếm chỗ.
 - `GET /api/internal/branches/{branch}/schedule` lịch của chi nhánh.
 - `POST /api/internal/bookings/walk-in` tạo booking tại quầy.
+- `POST /api/internal/bookings/walk-in/reconcile` đối soát booking offline.
+- `GET /api/internal/bookings/{id}/checkout-preview` xem trước trả sân.
