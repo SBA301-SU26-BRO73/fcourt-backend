@@ -91,3 +91,4 @@ aids and do not establish runtime validation results.
 | ExportController | [reporting-service/src/main/java/com/fcourt/reporting/api/ExportController.java](../reporting-service/src/main/java/com/fcourt/reporting/api/ExportController.java) |
 | SuperAdminDashboardController | [reporting-service/src/main/java/com/fcourt/reporting/api/SuperAdminDashboardController.java](../reporting-service/src/main/java/com/fcourt/reporting/api/SuperAdminDashboardController.java) |
 | ReportingSecurity | [reporting-service/src/main/java/com/fcourt/reporting/config/ReportingSecurity.java](../reporting-service/src/main/java/com/fcourt/reporting/config/ReportingSecurity.java) |
+| HoldController | [slot-hold-engine/src/main/java/com/fcourt/hold/HoldController.java](../slot-hold-engine/src/main/java/com/fcourt/hold/HoldController.java) |
