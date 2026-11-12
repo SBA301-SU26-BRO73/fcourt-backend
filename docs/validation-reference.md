@@ -82,3 +82,4 @@ aids and do not establish runtime validation results.
 | PublicRefundController | [payment-service/src/main/java/com/fcourt/payment/PublicRefundController.java](../payment-service/src/main/java/com/fcourt/payment/PublicRefundController.java) |
 | ReceiptController | [payment-service/src/main/java/com/fcourt/payment/ReceiptController.java](../payment-service/src/main/java/com/fcourt/payment/ReceiptController.java) |
 | RefundController | [payment-service/src/main/java/com/fcourt/payment/RefundController.java](../payment-service/src/main/java/com/fcourt/payment/RefundController.java) |
+| TicketController | [payment-service/src/main/java/com/fcourt/payment/TicketController.java](../payment-service/src/main/java/com/fcourt/payment/TicketController.java) |
