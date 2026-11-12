@@ -72,3 +72,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | discovery-service | [ReviewImageCleanupTest.java](../discovery-service/src/test/java/com/fcourt/discovery/component/ReviewImageCleanupTest.java) |
 | discovery-service | [ReviewImagePolicyTest.java](../discovery-service/src/test/java/com/fcourt/discovery/component/ReviewImagePolicyTest.java) |
 | discovery-service | [ReviewImageValidatorTest.java](../discovery-service/src/test/java/com/fcourt/discovery/component/ReviewImageValidatorTest.java) |
+| discovery-service | [ReviewUploadLimiterTest.java](../discovery-service/src/test/java/com/fcourt/discovery/component/ReviewUploadLimiterTest.java) |
