@@ -179,3 +179,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | slot-hold-engine | [HoldIntegrationTest.java](../slot-hold-engine/src/test/java/com/fcourt/hold/HoldIntegrationTest.java) |
 | slot-hold-engine | [OpenApiDocsTest.java](../slot-hold-engine/src/test/java/com/fcourt/hold/OpenApiDocsTest.java) |
 | slot-hold-engine | [GlobalExceptionHandlerTest.java](../slot-hold-engine/src/test/java/com/fcourt/hold/exception/GlobalExceptionHandlerTest.java) |
+| staff-operations-service | [AvailabilityGatewayTest.java](../staff-operations-service/src/test/java/com/fcourt/staff/AvailabilityGatewayTest.java) |
