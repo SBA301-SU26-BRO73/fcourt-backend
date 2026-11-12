@@ -64,3 +64,4 @@
 - [tools/demo_seed/REASSESSMENT.md](../tools/demo_seed/REASSESSMENT.md) — SCRUM-92 reassessment — 2026-11-05
 - [tools/production_smoke/LIVE_VALIDATION.md](../tools/production_smoke/LIVE_VALIDATION.md) — SCRUM-107 validation evidence
 - [tools/production_smoke/README.md](../tools/production_smoke/README.md) — SCRUM-107: Backend production smoke preparation
+- [tools/seed-assets/REVIEW.md](../tools/seed-assets/REVIEW.md) — Review anh san va chi nhanh (seed demo)
