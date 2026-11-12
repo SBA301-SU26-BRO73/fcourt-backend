@@ -159,3 +159,4 @@
 - [booking-service/src/test/java/com/fcourt/booking/StaffAuthorityTest.java](../booking-service/src/test/java/com/fcourt/booking/StaffAuthorityTest.java) — Java test source; inspect fixtures and assertions before running.
 - [booking-service/src/test/java/com/fcourt/booking/StaffCounterTest.java](../booking-service/src/test/java/com/fcourt/booking/StaffCounterTest.java) — Java test source; inspect fixtures and assertions before running.
 - [booking-service/src/test/java/com/fcourt/booking/exception/GlobalExceptionHandlerTest.java](../booking-service/src/test/java/com/fcourt/booking/exception/GlobalExceptionHandlerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [discovery-service/src/test/java/com/fcourt/discovery/DiscoveryIntegrationTest.java](../discovery-service/src/test/java/com/fcourt/discovery/DiscoveryIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
