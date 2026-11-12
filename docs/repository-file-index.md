@@ -57,3 +57,4 @@
 - [staff-operations-service/VALIDATION_SCRUM_28.md](../staff-operations-service/VALIDATION_SCRUM_28.md) — SCRUM-28 validation
 - [staff-operations-service/VALIDATION_SCRUM_30.md](../staff-operations-service/VALIDATION_SCRUM_30.md) — SCRUM-30 validation
 - [staff-operations-service/VALIDATION_SCRUM_61.md](../staff-operations-service/VALIDATION_SCRUM_61.md) — SCRUM-61 validation
+- [staff-operations-service/VALIDATION_SCRUM_63.md](../staff-operations-service/VALIDATION_SCRUM_63.md) — SCRUM-63 validation
