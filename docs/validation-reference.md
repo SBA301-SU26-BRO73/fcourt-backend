@@ -85,3 +85,4 @@ aids and do not establish runtime validation results.
 | TicketController | [payment-service/src/main/java/com/fcourt/payment/TicketController.java](../payment-service/src/main/java/com/fcourt/payment/TicketController.java) |
 | UnifiedLedgerController | [payment-service/src/main/java/com/fcourt/payment/UnifiedLedgerController.java](../payment-service/src/main/java/com/fcourt/payment/UnifiedLedgerController.java) |
 | PosController | [pos-retail-service/src/main/java/com/fcourt/pos/api/PosController.java](../pos-retail-service/src/main/java/com/fcourt/pos/api/PosController.java) |
+| PosSecurity | [pos-retail-service/src/main/java/com/fcourt/pos/config/PosSecurity.java](../pos-retail-service/src/main/java/com/fcourt/pos/config/PosSecurity.java) |
