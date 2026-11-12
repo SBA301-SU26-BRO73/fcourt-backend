@@ -138,3 +138,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 127 | 2026-11-12 | Hotfix | `pos-retail-service` | #473 | Sửa lỗi không đồng bộ mã hoá đơn bán lẻ với hệ thống kế toán chi nhánh. |
 | 128 | 2026-11-12 | Hotfix | `pos-retail-service` | #474 | Thêm kiểm tra số lượng tồn kho trước khi in phiếu tạm tính cho khách hàng. |
 | 129 | 2026-11-12 | Docs update | `docs/business` | #475 | Tài liệu hoá quy trình quản lý tồn kho dụng cụ thể thao tại quầy bán lẻ. |
+| 130 | 2026-11-12 | Hotfix | `voucher-service` | #476 | Khắc phục lỗi mã giảm giá bị áp dụng vượt số lần cho phép của một tài khoản. |
