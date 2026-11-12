@@ -75,3 +75,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | discovery-service | [ReviewUploadLimiterTest.java](../discovery-service/src/test/java/com/fcourt/discovery/component/ReviewUploadLimiterTest.java) |
 | discovery-service | [ReviewerNamesTest.java](../discovery-service/src/test/java/com/fcourt/discovery/component/ReviewerNamesTest.java) |
 | discovery-service | [ReviewerProfileClientTest.java](../discovery-service/src/test/java/com/fcourt/discovery/component/ReviewerProfileClientTest.java) |
+| discovery-service | [S3ImageStorageTest.java](../discovery-service/src/test/java/com/fcourt/discovery/component/S3ImageStorageTest.java) |
