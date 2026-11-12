@@ -168,3 +168,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 157 | 2026-11-12 | Hotfix | `staff-operations-service` | #503 | Sửa lỗi không cho phép check-in đối với các slot kéo dài qua mốc 0h sáng ngày hôm sau. |
 | 158 | 2026-11-12 | Hotfix | `staff-operations-service` | #504 | Bổ sung quyền ghi chú check-in cho nhân viên quản lý quầy khi khách đến trễ. |
 | 159 | 2026-11-12 | Docs update | `docs/business` | #505 | Tài liệu hoá quy chuẩn phục vụ và hướng dẫn thao tác quầy dành cho nhân viên tiếp tân. |
+| 160 | 2026-11-12 | Hotfix | `subscription-service` | #506 | Sửa lỗi cho phép chủ sân tạo thêm sân mới khi đã vượt quá hạn mức gói Standard. |
