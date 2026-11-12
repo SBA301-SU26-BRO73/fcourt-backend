@@ -36,3 +36,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 25 | 2026-11-01 | Docs update | `docs/business` | #33 | Tài liệu hoá chính sách hoàn huỷ sân và quy tắc tính phí huỷ theo thời gian. |
 | 26 | 2026-11-01 | Hotfix | `staff-operations-service` | #45 | Từ chối check-in cho ngày đã qua; lịch trong ngày chấp nhận slot qua nửa đêm. |
 | 27 | 2026-11-01 | Hotfix | `staff-operations-service` | #46 | Sửa lỗi không hiển thị tên sân trong danh sách check-in của nhân viên quầy. |
+| 28 | 2026-11-02 | Docs update | `docs/operations` | #47 | Cập nhật tài liệu hướng dẫn chạy smoke test cho hệ thống microservice tại local. |
