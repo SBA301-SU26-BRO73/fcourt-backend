@@ -54,3 +54,13 @@ Java files are grouped by their tracked source directory. Package location alone
 ### `com/fcourt/hold/exception`
 
 - [GlobalExceptionHandler.java](../../slot-hold-engine/src/main/java/com/fcourt/hold/exception/GlobalExceptionHandler.java)
+
+## Protocol definitions
+
+For REST behavior, begin with controller classes in the source map and the existing service documentation; this inventory does not infer endpoints from class names.
+
+Tracked Protocol Buffer definitions:
+
+- [slot_safety.proto](../../slot-hold-engine/src/main/proto/slot_safety.proto)
+
+Consult the Maven descriptor for generation plugins before regenerating clients.
