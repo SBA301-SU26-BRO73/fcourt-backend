@@ -12,3 +12,4 @@ contract. Follow the owning component's README for execution and build commands.
 | --- | --- |
 | discovery review notes | [discovery-service/REQUEST_REVIEW.md](../discovery-service/REQUEST_REVIEW.md) |
 | discovery validation notes | [discovery-service/VALIDATION.md](../discovery-service/VALIDATION.md) |
+| pos integration contracts | [pos-retail-service/CONTRACTS.md](../pos-retail-service/CONTRACTS.md) |
