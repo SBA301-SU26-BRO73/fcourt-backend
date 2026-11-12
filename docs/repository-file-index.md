@@ -35,3 +35,4 @@
 - [docs/reference/pos-retail-service.md](../docs/reference/pos-retail-service.md) — pos-retail-service: repository reference
 - [docs/reference/reporting-service.md](../docs/reference/reporting-service.md) — reporting-service: repository reference
 - [docs/reference/slot-hold-engine.md](../docs/reference/slot-hold-engine.md) — slot-hold-engine: repository reference
+- [docs/reference/staff-operations-service.md](../docs/reference/staff-operations-service.md) — staff-operations-service: repository reference
