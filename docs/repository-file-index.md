@@ -47,3 +47,4 @@
 - [pos-retail-service/README.md](../pos-retail-service/README.md) — POS retail Backend — SCRUM-106
 - [pos-retail-service/VALIDATION.md](../pos-retail-service/VALIDATION.md) — SCRUM-106 Backend validation
 - [reporting-service/README.md](../reporting-service/README.md) — reporting-service
+- [slot-hold-engine/README.md](../slot-hold-engine/README.md) — Slot hold engine — SCRUM-24
