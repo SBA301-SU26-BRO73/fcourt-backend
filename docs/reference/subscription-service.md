@@ -91,3 +91,33 @@ Java files are grouped by their tracked source directory. Package location alone
 For REST behavior, begin with controller classes in the source map and the existing service documentation; this inventory does not infer endpoints from class names.
 
 No `.proto` files are tracked in this service directory. This does not imply that the service makes no calls to other services.
+
+## Test inventory
+
+Test sources and fixtures listed here are navigation aids, not a report of passing tests. Review the test setup for Docker, Testcontainers, external services, and profile requirements before execution.
+
+- [CatalogApiIntegrationTest.java](../../subscription-service/src/test/java/com/fcourt/subscription/CatalogApiIntegrationTest.java)
+- [IntegrationSupport.java](../../subscription-service/src/test/java/com/fcourt/subscription/IntegrationSupport.java)
+- [OpenApiDocsTest.java](../../subscription-service/src/test/java/com/fcourt/subscription/OpenApiDocsTest.java)
+- [BillingApiIntegrationTest.java](../../subscription-service/src/test/java/com/fcourt/subscription/billing/BillingApiIntegrationTest.java)
+- [BillingControllerTest.java](../../subscription-service/src/test/java/com/fcourt/subscription/billing/BillingControllerTest.java)
+- [BillingCycleTest.java](../../subscription-service/src/test/java/com/fcourt/subscription/billing/BillingCycleTest.java)
+- [FacilityUsageClientTest.java](../../subscription-service/src/test/java/com/fcourt/subscription/billing/FacilityUsageClientTest.java)
+- [InternalLimitsControllerTest.java](../../subscription-service/src/test/java/com/fcourt/subscription/billing/InternalLimitsControllerTest.java)
+- [PaymentServiceTest.java](../../subscription-service/src/test/java/com/fcourt/subscription/billing/PaymentServiceTest.java)
+- [SubscriptionServiceTest.java](../../subscription-service/src/test/java/com/fcourt/subscription/billing/SubscriptionServiceTest.java)
+- [WebhookFixtures.java](../../subscription-service/src/test/java/com/fcourt/subscription/billing/WebhookFixtures.java)
+- [PageResponseTest.java](../../subscription-service/src/test/java/com/fcourt/subscription/common/PageResponseTest.java)
+- [SecurityConfigurationTest.java](../../subscription-service/src/test/java/com/fcourt/subscription/config/SecurityConfigurationTest.java)
+- [CourtTypeControllerTest.java](../../subscription-service/src/test/java/com/fcourt/subscription/courttype/CourtTypeControllerTest.java)
+- [CourtTypeServiceTest.java](../../subscription-service/src/test/java/com/fcourt/subscription/courttype/CourtTypeServiceTest.java)
+- [PayosPropertiesTest.java](../../subscription-service/src/test/java/com/fcourt/subscription/payos/PayosPropertiesTest.java)
+- [PayosSignatureTest.java](../../subscription-service/src/test/java/com/fcourt/subscription/payos/PayosSignatureTest.java)
+- [RestPayosClientTest.java](../../subscription-service/src/test/java/com/fcourt/subscription/payos/RestPayosClientTest.java)
+- [PlanControllerTest.java](../../subscription-service/src/test/java/com/fcourt/subscription/plan/PlanControllerTest.java)
+- [PlanServiceTest.java](../../subscription-service/src/test/java/com/fcourt/subscription/plan/PlanServiceTest.java)
+- [SaasRevenueControllerTest.java](../../subscription-service/src/test/java/com/fcourt/subscription/stats/SaasRevenueControllerTest.java)
+- [SaasRevenueStatsIntegrationTest.java](../../subscription-service/src/test/java/com/fcourt/subscription/stats/SaasRevenueStatsIntegrationTest.java)
+- [application.properties](../../subscription-service/src/test/resources/application.properties)
+
+From the repository root, the standard Maven verification entry point is `mvn -B -f subscription-service/pom.xml verify`. Check the descriptor and environment requirements first.
