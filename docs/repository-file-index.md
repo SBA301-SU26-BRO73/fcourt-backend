@@ -66,3 +66,4 @@
 - [tools/production_smoke/README.md](../tools/production_smoke/README.md) — SCRUM-107: Backend production smoke preparation
 - [tools/seed-assets/REVIEW.md](../tools/seed-assets/REVIEW.md) — Review anh san va chi nhanh (seed demo)
 - [tools/system_tests/LIVE_VALIDATION.md](../tools/system_tests/LIVE_VALIDATION.md) — SCRUM-91 validation evidence
+- [tools/system_tests/README.md](../tools/system_tests/README.md) — SCRUM-91: gateway flow and Saga
