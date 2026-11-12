@@ -174,3 +174,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/admin/staff/accounts/{userId}` tra nhân viên theo tài khoản.
 - `GET /api/staff/me` thông tin nhân viên đang đăng nhập.
 - `GET /api/staff/schedule/today` lịch hôm nay.
+- `GET /api/staff/schedule` lịch theo tuần.
