@@ -27,3 +27,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | auth-service | [PasswordChangeTokenValidatorTest.java](../auth-service/src/test/java/com/fcourt/auth/account/PasswordChangeTokenValidatorTest.java) |
 | auth-service | [PasswordControllerTest.java](../auth-service/src/test/java/com/fcourt/auth/account/PasswordControllerTest.java) |
 | auth-service | [PasswordServiceTest.java](../auth-service/src/test/java/com/fcourt/auth/account/PasswordServiceTest.java) |
+| auth-service | [S3DocumentStorageContainerTest.java](../auth-service/src/test/java/com/fcourt/auth/account/S3DocumentStorageContainerTest.java) |
