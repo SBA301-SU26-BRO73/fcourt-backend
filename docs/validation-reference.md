@@ -51,3 +51,4 @@ aids and do not establish runtime validation results.
 | StaffCounterController | [booking-service/src/main/java/com/fcourt/booking/StaffCounterController.java](../booking-service/src/main/java/com/fcourt/booking/StaffCounterController.java) |
 | GuestBookingCancelController | [booking-service/src/main/java/com/fcourt/booking/controller/GuestBookingCancelController.java](../booking-service/src/main/java/com/fcourt/booking/controller/GuestBookingCancelController.java) |
 | GuestBookingLookupController | [booking-service/src/main/java/com/fcourt/booking/controller/GuestBookingLookupController.java](../booking-service/src/main/java/com/fcourt/booking/controller/GuestBookingLookupController.java) |
+| DiscoverySecurity | [discovery-service/src/main/java/com/fcourt/discovery/config/DiscoverySecurity.java](../discovery-service/src/main/java/com/fcourt/discovery/config/DiscoverySecurity.java) |
