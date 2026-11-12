@@ -70,3 +70,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 
 ## 6. facility-service
 - `GET /api/admin/branches` danh sách chi nhánh của chủ sân.
+- `POST /api/admin/branches` tạo chi nhánh.
+- `GET`, `PUT`, `DELETE` trên `/api/admin/branches/{id}`.
