@@ -124,3 +124,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | notification-service | [OpenApiDocsTest.java](../notification-service/src/test/java/com/fcourt/notification/OpenApiDocsTest.java) |
 | notification-service | [DeviceControllerIntegrationTest.java](../notification-service/src/test/java/com/fcourt/notification/device/DeviceControllerIntegrationTest.java) |
 | notification-service | [DeviceServiceTest.java](../notification-service/src/test/java/com/fcourt/notification/device/DeviceServiceTest.java) |
+| notification-service | [EmailPlannerTest.java](../notification-service/src/test/java/com/fcourt/notification/event/EmailPlannerTest.java) |
