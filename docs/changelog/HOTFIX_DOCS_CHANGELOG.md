@@ -133,3 +133,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 122 | 2026-11-12 | Docs update | `docs/README.md` | #457 | Dịch toàn bộ README sang tiếng Việt và tích hợp sơ đồ kiến trúc microservices. |
 | 123 | 2026-11-12 | Hotfix | `staff-operations-service` | #459 | Trả lý do từ chối chi tiết khi check-in không hợp lệ và mở route đăng ký thiết bị. |
 | 124 | 2026-11-12 | Hotfix | `staff-operations-service` | #461 | Hỗ trợ nhân viên check-in trực tiếp theo mã booking ID ngay trên màn hình lịch ngày. |
+| 125 | 2026-11-12 | Docs update | `docs/reference` | #463 | Bổ sung hướng dẫn điều hướng mã nguồn chi tiết cho tất cả 12 microservices. |
