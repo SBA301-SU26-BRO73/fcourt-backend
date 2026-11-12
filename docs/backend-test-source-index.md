@@ -42,3 +42,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | auth-service | [SigningKeyConfigurationTest.java](../auth-service/src/test/java/com/fcourt/auth/token/SigningKeyConfigurationTest.java) |
 | booking-service | [AdminBookingApiTest.java](../booking-service/src/test/java/com/fcourt/booking/AdminBookingApiTest.java) |
 | booking-service | [AdminBookingCancelApiTest.java](../booking-service/src/test/java/com/fcourt/booking/AdminBookingCancelApiTest.java) |
+| booking-service | [AdminBranchAuthorityTest.java](../booking-service/src/test/java/com/fcourt/booking/AdminBranchAuthorityTest.java) |
