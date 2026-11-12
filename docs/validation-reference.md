@@ -25,3 +25,4 @@ contract. Follow the owning component's README for execution and build commands.
 | demo seed reassessment | [tools/demo_seed/REASSESSMENT.md](../tools/demo_seed/REASSESSMENT.md) |
 | demo seed tests | [tools/demo_seed/test_seed.py](../tools/demo_seed/test_seed.py) |
 | production smoke evidence | [tools/production_smoke/LIVE_VALIDATION.md](../tools/production_smoke/LIVE_VALIDATION.md) |
+| production smoke tests | [tools/production_smoke/test_smoke.py](../tools/production_smoke/test_smoke.py) |
