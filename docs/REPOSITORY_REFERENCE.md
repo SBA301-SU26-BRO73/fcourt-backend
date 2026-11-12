@@ -106,3 +106,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 ## 7. discovery-service
 - `GET /api/public/branches` tìm kiếm chi nhánh công khai.
 - `GET /api/public/courts/{courtId}/slots` xem khung giờ còn trống của sân.
+- `GET /api/internal/courts/{courtId}/slot-conflicts` kiểm tra xung đột khung giờ.
+- `POST /api/reviews` khách gửi đánh giá.
