@@ -84,3 +84,23 @@ Java files are grouped by their tracked source directory. Package location alone
 For REST behavior, begin with controller classes in the source map and the existing service documentation; this inventory does not infer endpoints from class names.
 
 No `.proto` files are tracked in this service directory. This does not imply that the service makes no calls to other services.
+
+## Test inventory
+
+Test sources and fixtures listed here are navigation aids, not a report of passing tests. Review the test setup for Docker, Testcontainers, external services, and profile requirements before execution.
+
+- [ReportingIntegrationTest.java](../../reporting-service/src/test/java/com/fcourt/reporting/ReportingIntegrationTest.java)
+- [OpenApiDocsTest.java](../../reporting-service/src/test/java/com/fcourt/reporting/api/OpenApiDocsTest.java)
+- [ReportingAuthorizationTest.java](../../reporting-service/src/test/java/com/fcourt/reporting/api/ReportingAuthorizationTest.java)
+- [FacilityCircuitBreakerTest.java](../../reporting-service/src/test/java/com/fcourt/reporting/client/FacilityCircuitBreakerTest.java)
+- [FacilityClientWireMockTest.java](../../reporting-service/src/test/java/com/fcourt/reporting/client/FacilityClientWireMockTest.java)
+- [EventTranslatorTest.java](../../reporting-service/src/test/java/com/fcourt/reporting/events/EventTranslatorTest.java)
+- [ReportQueryStoreIntegrationTest.java](../../reporting-service/src/test/java/com/fcourt/reporting/persistence/ReportQueryStoreIntegrationTest.java)
+- [AnalyticsServiceTest.java](../../reporting-service/src/test/java/com/fcourt/reporting/service/AnalyticsServiceTest.java)
+- [DashboardServiceTest.java](../../reporting-service/src/test/java/com/fcourt/reporting/service/DashboardServiceTest.java)
+- [RevenueExportServiceTest.java](../../reporting-service/src/test/java/com/fcourt/reporting/service/RevenueExportServiceTest.java)
+- [RevenueReportTest.java](../../reporting-service/src/test/java/com/fcourt/reporting/service/RevenueReportTest.java)
+- [SuperAdminDetailsServiceTest.java](../../reporting-service/src/test/java/com/fcourt/reporting/service/SuperAdminDetailsServiceTest.java)
+- [SuperAdminOverviewServiceTest.java](../../reporting-service/src/test/java/com/fcourt/reporting/service/SuperAdminOverviewServiceTest.java)
+
+From the repository root, the standard Maven verification entry point is `mvn -B -f reporting-service/pom.xml verify`. Check the descriptor and environment requirements first.
