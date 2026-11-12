@@ -80,3 +80,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/public/branches/{branchId}/courts` sân của chi nhánh (công khai).
 - `GET /api/staff/branches/{branchId}/courts` sân của chi nhánh (nhân viên).
 - `GET`, `POST` trên `/api/admin/branches/{branchId}/courts`.
+- `GET`, `PUT`, `DELETE` trên `/api/admin/courts/{id}`.
+- `PATCH /api/admin/courts/{id}/status` đổi trạng thái sân.
