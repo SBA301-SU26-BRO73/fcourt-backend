@@ -181,3 +181,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/staff/offline/tickets` tải vé cho chế độ offline.
 - `POST /api/staff/check-in/offline` đồng bộ check-in offline.
 - `POST /api/staff/walk-in` tạo booking tại quầy.
+- `GET /api/staff/bookings/{id}/checkout-preview` xem trước trả sân.
