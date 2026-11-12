@@ -153,3 +153,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 142 | 2026-11-12 | Hotfix | `booking-service` | #488 | Khắc phục lỗi không hoàn tiền khi khách vãng lai thanh toán thừa số tiền quy định. |
 | 143 | 2026-11-12 | Hotfix | `booking-service` | #489 | Đảm bảo log chi tiết nguyên nhân khi huỷ booking từ phía chủ sân hoặc quản trị viên. |
 | 144 | 2026-11-12 | Docs update | `docs/business` | #490 | Tài liệu hoá quy định phạt tiền huỷ sân muộn (Late Cancellation Penalty Rules). |
+| 145 | 2026-11-12 | Hotfix | `slot-hold-engine` | #491 | Sửa lỗi rò rỉ kết nối Redis Connection khi có exception trong hàm holdMultipleSlots. |
