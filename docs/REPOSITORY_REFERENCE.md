@@ -185,3 +185,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `PUT /api/staff/bookings/{id}/checkout` trả sân.
 
 ## 13. pos-retail-service
+- `GET /api/staff/pos/products` sản phẩm cho nhân viên bán hàng.
