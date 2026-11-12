@@ -118,3 +118,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 
 ## 9. booking-service
 - `GET /api/bookings/my` danh sách booking của tôi.
+- `GET /api/bookings/{id}` chi tiết booking.
+- `GET /api/bookings/{id}/cancellation-policy` xem chính sách hủy.
