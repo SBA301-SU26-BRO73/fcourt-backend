@@ -193,3 +193,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | staff-operations-service | [WalkInPricingTest.java](../staff-operations-service/src/test/java/com/fcourt/staff/WalkInPricingTest.java) |
 | staff-operations-service | [StaffDirectoryControllerTest.java](../staff-operations-service/src/test/java/com/fcourt/staff/api/StaffDirectoryControllerTest.java) |
 | subscription-service | [CatalogApiIntegrationTest.java](../subscription-service/src/test/java/com/fcourt/subscription/CatalogApiIntegrationTest.java) |
+| subscription-service | [OpenApiDocsTest.java](../subscription-service/src/test/java/com/fcourt/subscription/OpenApiDocsTest.java) |
