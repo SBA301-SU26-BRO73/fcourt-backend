@@ -52,3 +52,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `PUT /api/super-admin/court-admins/{id}/reject` từ chối chủ sân.
 - `PUT /api/super-admin/users/{id}/toggle-status` khóa hoặc mở khóa tài khoản.
 - `GET /api/super-admin/stats/accounts` thống kê tài khoản.
+- `GET /api/super-admin/stats/owner-names` tra tên chủ sân theo id.
+
