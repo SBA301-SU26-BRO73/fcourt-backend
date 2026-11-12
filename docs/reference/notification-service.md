@@ -16,3 +16,19 @@ Inspect the Maven descriptor for dependencies and plugins, and the Dockerfile or
 - [mvnw](../../notification-service/mvnw)
 - [mvnw.cmd](../../notification-service/mvnw.cmd)
 - [pom.xml](../../notification-service/pom.xml)
+
+## Application resources
+
+Tracked application resources are listed below. Inspect property placeholders and profile selection before choosing local values; do not copy credentials into documentation.
+
+- [application.yml](../../notification-service/src/main/resources/application.yml)
+- [booking-cancelled.html](../../notification-service/src/main/resources/mail/booking-cancelled.html)
+- [booking-cancelled.txt](../../notification-service/src/main/resources/mail/booking-cancelled.txt)
+- [booking-confirmed.html](../../notification-service/src/main/resources/mail/booking-confirmed.html)
+- [booking-confirmed.txt](../../notification-service/src/main/resources/mail/booking-confirmed.txt)
+- [booking-reminder.html](../../notification-service/src/main/resources/mail/booking-reminder.html)
+- [booking-reminder.txt](../../notification-service/src/main/resources/mail/booking-reminder.txt)
+- [owner-approved.html](../../notification-service/src/main/resources/mail/owner-approved.html)
+- [owner-approved.txt](../../notification-service/src/main/resources/mail/owner-approved.txt)
+- [password-reset.html](../../notification-service/src/main/resources/mail/password-reset.html)
+- [password-reset.txt](../../notification-service/src/main/resources/mail/password-reset.txt)
