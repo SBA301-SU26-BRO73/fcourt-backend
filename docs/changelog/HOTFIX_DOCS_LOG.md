@@ -105,3 +105,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 95 | 2026-11-12 | Docs update | `README.md` | #456 | Viết lại README, sắp xếp lại thư mục docs và thêm thư mục report. |
 | 96 | 2026-11-12 | Docs update | `README.md` | #457 | Dịch README sang tiếng Việt và dùng ảnh sơ đồ kiến trúc. |
 | 97 | 2026-11-12 | Hotfix | `staff-operations-service` | #459 | Trả lý do khi check-in bị từ chối và mở route đăng ký thiết bị nhận thông báo. |
+| 98 | 2026-11-12 | Feature | `staff-operations-service` | #461 | Check-in booking theo id ngay từ lịch hôm nay. |
