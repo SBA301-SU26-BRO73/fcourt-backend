@@ -17,3 +17,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 7 | 2026-11-07 | Hotfix | `tools` | #82 | Căn chỉnh dữ liệu demo runtime cho khớp schema hiện tại của các service. |
 | 8 | 2026-11-08 | Feature | `slot-hold-engine` | #103 | Broadcast thay đổi lịch sân theo thời gian thực (SCRUM-108). |
 | 9 | 2026-11-08 | Chore | `facility-service` | #116 | Nạp file `facility-service/.env` tuỳ chọn cho cấu hình local (SCRUM-47). |
+| 10 | 2026-11-08 | Hotfix | `discovery-service` | #129 | Cho route slot-conflicts (đã kiểm token) đi qua security chain, tránh bị chặn nhầm (SCRUM-246). |
