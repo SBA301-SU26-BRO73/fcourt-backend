@@ -97,3 +97,4 @@
 - [discovery-service/Dockerfile](../discovery-service/Dockerfile) — Container image build definition.
 - [facility-service/Dockerfile](../facility-service/Dockerfile) — Container image build definition.
 - [gateway-service/Dockerfile](../gateway-service/Dockerfile) — Container image build definition.
+- [notification-service/Dockerfile](../notification-service/Dockerfile) — Container image build definition.
