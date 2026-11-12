@@ -204,3 +204,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/super-admin/dashboard/overview` tổng quan nền tảng.
 - `GET /api/super-admin/dashboard/details` chi tiết nền tảng.
 
+## 15. notification-service
