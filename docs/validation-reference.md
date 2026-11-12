@@ -63,3 +63,4 @@ aids and do not establish runtime validation results.
 | CourtController | [facility-service/src/main/java/com/fcourt/facility/api/CourtController.java](../facility-service/src/main/java/com/fcourt/facility/api/CourtController.java) |
 | CourtImageController | [facility-service/src/main/java/com/fcourt/facility/api/CourtImageController.java](../facility-service/src/main/java/com/fcourt/facility/api/CourtImageController.java) |
 | LockController | [facility-service/src/main/java/com/fcourt/facility/api/LockController.java](../facility-service/src/main/java/com/fcourt/facility/api/LockController.java) |
+| PricingController | [facility-service/src/main/java/com/fcourt/facility/api/PricingController.java](../facility-service/src/main/java/com/fcourt/facility/api/PricingController.java) |
