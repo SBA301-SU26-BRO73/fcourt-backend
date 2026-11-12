@@ -17,3 +17,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 6 | 2026-10-27 | Docs update | `docs/operations` | #11 | Tài liệu hoá hướng dẫn cài đặt và khởi chạy môi trường dev qua Docker Compose. |
 | 7 | 2026-10-27 | Hotfix | `facility-service` | #12 | Sửa lỗi trùng lặp mã chi nhánh (branch_code) khi seed dữ liệu ban đầu. |
 | 8 | 2026-10-27 | Hotfix | `facility-service` | #13 | Bổ sung validate định dạng số điện thoại chuẩn E.164 cho chi nhánh. |
+| 9 | 2026-10-28 | Docs update | `docs/architecture` | #14 | Viết tài liệu mô hình phân bổ database riêng biệt (database-per-service) trên PostgreSQL. |
