@@ -213,3 +213,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | subscription-service | [SaasRevenueControllerTest.java](../subscription-service/src/test/java/com/fcourt/subscription/stats/SaasRevenueControllerTest.java) |
 | subscription-service | [SaasRevenueStatsIntegrationTest.java](../subscription-service/src/test/java/com/fcourt/subscription/stats/SaasRevenueStatsIntegrationTest.java) |
 | voucher-service | [OpenApiDocsTest.java](../voucher-service/src/test/java/com/fcourt/voucher/OpenApiDocsTest.java) |
+| voucher-service | [VoucherApiTest.java](../voucher-service/src/test/java/com/fcourt/voucher/VoucherApiTest.java) |
