@@ -42,3 +42,4 @@ aids and do not establish runtime validation results.
 | PlatformStatsController | [auth-service/src/main/java/com/fcourt/auth/superadmin/PlatformStatsController.java](../auth-service/src/main/java/com/fcourt/auth/superadmin/PlatformStatsController.java) |
 | SuperAdminController | [auth-service/src/main/java/com/fcourt/auth/superadmin/SuperAdminController.java](../auth-service/src/main/java/com/fcourt/auth/superadmin/SuperAdminController.java) |
 | JwksController | [auth-service/src/main/java/com/fcourt/auth/token/JwksController.java](../auth-service/src/main/java/com/fcourt/auth/token/JwksController.java) |
+| AdminBookingController | [booking-service/src/main/java/com/fcourt/booking/AdminBookingController.java](../booking-service/src/main/java/com/fcourt/booking/AdminBookingController.java) |
