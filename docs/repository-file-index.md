@@ -82,3 +82,4 @@
 - [pos-retail-service/pom.xml](../pos-retail-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
 - [reporting-service/pom.xml](../reporting-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
 - [slot-hold-engine/pom.xml](../slot-hold-engine/pom.xml) — Maven dependencies, build plugins, and verification configuration.
+- [staff-operations-service/pom.xml](../staff-operations-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
