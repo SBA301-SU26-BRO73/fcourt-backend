@@ -86,3 +86,4 @@ aids and do not establish runtime validation results.
 | UnifiedLedgerController | [payment-service/src/main/java/com/fcourt/payment/UnifiedLedgerController.java](../payment-service/src/main/java/com/fcourt/payment/UnifiedLedgerController.java) |
 | PosController | [pos-retail-service/src/main/java/com/fcourt/pos/api/PosController.java](../pos-retail-service/src/main/java/com/fcourt/pos/api/PosController.java) |
 | PosSecurity | [pos-retail-service/src/main/java/com/fcourt/pos/config/PosSecurity.java](../pos-retail-service/src/main/java/com/fcourt/pos/config/PosSecurity.java) |
+| AnalyticsController | [reporting-service/src/main/java/com/fcourt/reporting/api/AnalyticsController.java](../reporting-service/src/main/java/com/fcourt/reporting/api/AnalyticsController.java) |
