@@ -7,3 +7,12 @@ This reference maps tracked files to their purpose for repository navigation. It
 ## Service directory
 
 The service lives in [`reporting-service/`](../../reporting-service/). Its build descriptor is [`pom.xml`](../../reporting-service/pom.xml). Paths below are relative to the repository root. Generated output and untracked local configuration are excluded.
+
+## Build and container entry points
+
+Inspect the Maven descriptor for dependencies and plugins, and the Dockerfile or Compose descriptor when present for container behavior. These links identify definitions; they do not execute them.
+
+- [Dockerfile](../../reporting-service/Dockerfile)
+- [mvnw](../../reporting-service/mvnw)
+- [mvnw.cmd](../../reporting-service/mvnw.cmd)
+- [pom.xml](../../reporting-service/pom.xml)
