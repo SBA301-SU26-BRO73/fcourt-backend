@@ -104,3 +104,4 @@ aids and do not establish runtime validation results.
 | CourtTypeController | [subscription-service/src/main/java/com/fcourt/subscription/courttype/CourtTypeController.java](../subscription-service/src/main/java/com/fcourt/subscription/courttype/CourtTypeController.java) |
 | PlanController | [subscription-service/src/main/java/com/fcourt/subscription/plan/PlanController.java](../subscription-service/src/main/java/com/fcourt/subscription/plan/PlanController.java) |
 | SaasRevenueController | [subscription-service/src/main/java/com/fcourt/subscription/stats/SaasRevenueController.java](../subscription-service/src/main/java/com/fcourt/subscription/stats/SaasRevenueController.java) |
+| VoucherApplyController | [voucher-service/src/main/java/com/fcourt/voucher/VoucherApplyController.java](../voucher-service/src/main/java/com/fcourt/voucher/VoucherApplyController.java) |
