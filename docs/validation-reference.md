@@ -99,3 +99,4 @@ aids and do not establish runtime validation results.
 | WalkInController | [staff-operations-service/src/main/java/com/fcourt/staff/api/WalkInController.java](../staff-operations-service/src/main/java/com/fcourt/staff/api/WalkInController.java) |
 | WeekScheduleController | [staff-operations-service/src/main/java/com/fcourt/staff/api/WeekScheduleController.java](../staff-operations-service/src/main/java/com/fcourt/staff/api/WeekScheduleController.java) |
 | StaffSecurity | [staff-operations-service/src/main/java/com/fcourt/staff/config/StaffSecurity.java](../staff-operations-service/src/main/java/com/fcourt/staff/config/StaffSecurity.java) |
+| BillingController | [subscription-service/src/main/java/com/fcourt/subscription/billing/BillingController.java](../subscription-service/src/main/java/com/fcourt/subscription/billing/BillingController.java) |
