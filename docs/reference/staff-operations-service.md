@@ -15,3 +15,9 @@ Inspect the Maven descriptor for dependencies and plugins, and the Dockerfile or
 - [Dockerfile](../../staff-operations-service/Dockerfile)
 - [compose.yml](../../staff-operations-service/compose.yml)
 - [pom.xml](../../staff-operations-service/pom.xml)
+
+## Application resources
+
+Tracked application resources are listed below. Inspect property placeholders and profile selection before choosing local values; do not copy credentials into documentation.
+
+- [application.yml](../../staff-operations-service/src/main/resources/application.yml)
