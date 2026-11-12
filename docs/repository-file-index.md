@@ -49,3 +49,4 @@
 - [reporting-service/README.md](../reporting-service/README.md) — reporting-service
 - [slot-hold-engine/README.md](../slot-hold-engine/README.md) — Slot hold engine — SCRUM-24
 - [staff-operations-service/CONTRACTS.md](../staff-operations-service/CONTRACTS.md) — Proposed staff integration contracts
+- [staff-operations-service/FLUTTER_SUPPORT.md](../staff-operations-service/FLUTTER_SUPPORT.md) — Flutter API support
