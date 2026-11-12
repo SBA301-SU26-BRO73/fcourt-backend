@@ -8,3 +8,5 @@ FCOURT là hệ thống đặt sân thể thao theo kiến trúc microservices.
 Mỗi service nằm trong một folder riêng ở gốc repo.
 Mỗi service sở hữu một database PostgreSQL riêng, schema do Flyway tạo.
 Các service giao tiếp qua REST nội bộ (`/api/internal/**`) và sự kiện outbox.
+Không còn service registry (Eureka): gateway tìm service bằng DNS tĩnh.
+
