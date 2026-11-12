@@ -69,3 +69,4 @@ aids and do not establish runtime validation results.
 | FacilitySecurity | [facility-service/src/main/java/com/fcourt/facility/config/FacilitySecurity.java](../facility-service/src/main/java/com/fcourt/facility/config/FacilitySecurity.java) |
 | DeviceController | [notification-service/src/main/java/com/fcourt/notification/device/DeviceController.java](../notification-service/src/main/java/com/fcourt/notification/device/DeviceController.java) |
 | DeviceSecurity | [notification-service/src/main/java/com/fcourt/notification/device/DeviceSecurity.java](../notification-service/src/main/java/com/fcourt/notification/device/DeviceSecurity.java) |
+| InAppNotificationController | [notification-service/src/main/java/com/fcourt/notification/inapp/InAppNotificationController.java](../notification-service/src/main/java/com/fcourt/notification/inapp/InAppNotificationController.java) |
