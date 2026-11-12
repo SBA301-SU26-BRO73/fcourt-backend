@@ -1,0 +1,18 @@
+# Backend test source index
+
+Find Java test sources by module and class name, followed by the Python tests
+for the demo seed, production smoke runner, and system-flow tooling. Java entries
+use the tracked `*Test.java` and `*Tests.java` naming patterns; supporting fixtures
+and classes with other names are outside this index.
+
+These links identify source files, not test execution results or coverage claims.
+Read the owning module's README and build configuration for dependencies and
+commands. Some tests require Docker, PostgreSQL, Kafka, Redis, or other services.
+Opening a source file does not execute it.
+
+Paths are relative to this document. Entries reflect the source tree when this
+index was prepared and should be updated when a linked file moves or is removed.
+
+| Module or tool | Test source |
+| --- | --- |
+| auth-service | [OpenApiDocsTest.java](../auth-service/src/test/java/com/fcourt/auth/OpenApiDocsTest.java) |
