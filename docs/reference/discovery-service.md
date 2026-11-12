@@ -141,3 +141,14 @@ Test sources and fixtures listed here are navigation aids, not a report of passi
 - [application.properties](../../discovery-service/src/test/resources/application.properties)
 
 From the repository root, the standard Maven verification entry point is `mvn -B -f discovery-service/pom.xml verify`. Check the descriptor and environment requirements first.
+
+## Database scripts and migrations
+
+Review script contents and application configuration to distinguish initialization scripts from migrations loaded at runtime. Do not infer execution order across these two locations, or execute scripts against a shared database merely because they are listed here.
+
+- [.gitkeep](../../discovery-service/database/.gitkeep)
+- [V1__branch_read_model.sql](../../discovery-service/src/main/resources/db/migration/V1__branch_read_model.sql)
+- [V2__search_text_city_district.sql](../../discovery-service/src/main/resources/db/migration/V2__search_text_city_district.sql)
+- [V3__reviews_and_branch_ratings.sql](../../discovery-service/src/main/resources/db/migration/V3__reviews_and_branch_ratings.sql)
+- [V4__review_reviewer_snapshot.sql](../../discovery-service/src/main/resources/db/migration/V4__review_reviewer_snapshot.sql)
+- [V5__branch_card_fields.sql](../../discovery-service/src/main/resources/db/migration/V5__branch_card_fields.sql)
