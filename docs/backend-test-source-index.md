@@ -112,3 +112,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | facility-service | [PricingEngineTest.java](../facility-service/src/test/java/com/fcourt/facility/service/PricingEngineTest.java) |
 | facility-service | [PricingServiceValidationTest.java](../facility-service/src/test/java/com/fcourt/facility/service/PricingServiceValidationTest.java) |
 | facility-service | [ReservationServiceTest.java](../facility-service/src/test/java/com/fcourt/facility/service/ReservationServiceTest.java) |
+| facility-service | [SlotTemplateEngineTest.java](../facility-service/src/test/java/com/fcourt/facility/service/SlotTemplateEngineTest.java) |
