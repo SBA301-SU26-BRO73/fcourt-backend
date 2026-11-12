@@ -113,3 +113,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 102 | 2026-11-11 | Hotfix | `tools` | #263 | Bổ sung script khởi tạo dữ liệu mẫu cho hệ thống đặt sân pickleball và cầu lông. |
 | 103 | 2026-11-11 | Docs update | `docs/operations` | #265 | Cập nhật tài liệu cấu hình Health Check Probes (Liveness & Readiness) trên Kubernetes. |
 | 104 | 2026-11-11 | Hotfix | `slot-hold-engine` | #268 | Sửa lỗi không tự động giải phóng key hold khi client đóng kết nối đột ngột. |
+| 105 | 2026-11-11 | Hotfix | `docker-compose` | #275 | Giữ giới hạn gói của facility ở giá trị mặc định cho tới khi subscription đồng bộ. |
