@@ -75,3 +75,4 @@ aids and do not establish runtime validation results.
 | BranchLedgerController | [payment-service/src/main/java/com/fcourt/payment/BranchLedgerController.java](../payment-service/src/main/java/com/fcourt/payment/BranchLedgerController.java) |
 | CheckoutController | [payment-service/src/main/java/com/fcourt/payment/CheckoutController.java](../payment-service/src/main/java/com/fcourt/payment/CheckoutController.java) |
 | CompactPaymentStatusController | [payment-service/src/main/java/com/fcourt/payment/CompactPaymentStatusController.java](../payment-service/src/main/java/com/fcourt/payment/CompactPaymentStatusController.java) |
+| CustomerPaymentsController | [payment-service/src/main/java/com/fcourt/payment/CustomerPaymentsController.java](../payment-service/src/main/java/com/fcourt/payment/CustomerPaymentsController.java) |
