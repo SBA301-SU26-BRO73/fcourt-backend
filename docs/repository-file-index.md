@@ -51,3 +51,4 @@
 - [staff-operations-service/CONTRACTS.md](../staff-operations-service/CONTRACTS.md) — Proposed staff integration contracts
 - [staff-operations-service/FLUTTER_SUPPORT.md](../staff-operations-service/FLUTTER_SUPPORT.md) — Flutter API support
 - [staff-operations-service/README.md](../staff-operations-service/README.md) — Staff operations — SCRUM-26
+- [staff-operations-service/REASSESSMENT_SCRUM_65.md](../staff-operations-service/REASSESSMENT_SCRUM_65.md) — SCRUM-65 — opaque ticket contract, 2026-11-05
