@@ -58,3 +58,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 48 | 2026-11-09 | Docs update | `staff-operations-service` | #199 | Bổ sung Swagger/OpenAPI (springdoc) cho staff-operations-service. |
 | 49 | 2026-11-09 | Docs update | `pos-retail-service` | #201 | Bổ sung Swagger/OpenAPI (springdoc) cho pos-retail-service. |
 | 50 | 2026-11-09 | Feature | `voucher-service` | #197 | Gọi facility-service qua OpenFeign kèm Resilience4J (circuit breaker, retry). |
+| 51 | 2026-11-09 | Docs update | `facility-service` | #188 | Bổ sung Swagger/OpenAPI (springdoc) cho facility-service. |
