@@ -145,3 +145,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 134 | 2026-11-12 | Hotfix | `auth-service` | #480 | Bổ sung validate độ dài tối thiểu 8 ký tự kèm chữ hoa, số và ký tự đặc biệt cho mật khẩu. |
 | 135 | 2026-11-12 | Docs update | `docs/architecture` | #481 | Tài liệu hoá cơ chế phân tán Session và Token Revocation List với Redis Pub/Sub. |
 | 136 | 2026-11-12 | Hotfix | `facility-service` | #482 | Sửa lỗi sai trạng thái bảo trì sân (MAINTENANCE) không được cập nhật lên giao diện đặt sân. |
+| 137 | 2026-11-12 | Hotfix | `facility-service` | #483 | Thêm ràng buộc khoá ngoại giữa court và court_type để tránh dữ liệu mồ côi. |
