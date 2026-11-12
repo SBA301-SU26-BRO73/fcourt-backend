@@ -16,3 +16,9 @@ Inspect the Maven descriptor for dependencies and plugins, and the Dockerfile or
 - [mvnw](../../reporting-service/mvnw)
 - [mvnw.cmd](../../reporting-service/mvnw.cmd)
 - [pom.xml](../../reporting-service/pom.xml)
+
+## Application resources
+
+Tracked application resources are listed below. Inspect property placeholders and profile selection before choosing local values; do not copy credentials into documentation.
+
+- [application.yml](../../reporting-service/src/main/resources/application.yml)
