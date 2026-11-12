@@ -151,3 +151,4 @@
 - [booking-service/src/test/java/com/fcourt/booking/ReceiptUrlsTest.java](../booking-service/src/test/java/com/fcourt/booking/ReceiptUrlsTest.java) — Java test source; inspect fixtures and assertions before running.
 - [booking-service/src/test/java/com/fcourt/booking/SlotFanoutLatencyTest.java](../booking-service/src/test/java/com/fcourt/booking/SlotFanoutLatencyTest.java) — Java test source; inspect fixtures and assertions before running.
 - [booking-service/src/test/java/com/fcourt/booking/SlotLatencyHarness.java](../booking-service/src/test/java/com/fcourt/booking/SlotLatencyHarness.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/SlotOccupancyTest.java](../booking-service/src/test/java/com/fcourt/booking/SlotOccupancyTest.java) — Java test source; inspect fixtures and assertions before running.
