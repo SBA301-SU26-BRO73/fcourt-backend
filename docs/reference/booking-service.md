@@ -16,3 +16,10 @@ Inspect the Maven descriptor for dependencies and plugins, and the Dockerfile or
 - [mvnw](../../booking-service/mvnw)
 - [mvnw.cmd](../../booking-service/mvnw.cmd)
 - [pom.xml](../../booking-service/pom.xml)
+
+## Application resources
+
+Tracked application resources are listed below. Inspect property placeholders and profile selection before choosing local values; do not copy credentials into documentation.
+
+- [application-realtime.yml](../../booking-service/src/main/resources/application-realtime.yml)
+- [application.yml](../../booking-service/src/main/resources/application.yml)
