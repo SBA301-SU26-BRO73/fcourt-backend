@@ -244,3 +244,4 @@
 - [payment-service/src/test/java/com/fcourt/payment/GuestRefundLifecycleTest.java](../payment-service/src/test/java/com/fcourt/payment/GuestRefundLifecycleTest.java) — Java test source; inspect fixtures and assertions before running.
 - [payment-service/src/test/java/com/fcourt/payment/JwtVerificationTest.java](../payment-service/src/test/java/com/fcourt/payment/JwtVerificationTest.java) — Java test source; inspect fixtures and assertions before running.
 - [payment-service/src/test/java/com/fcourt/payment/LocalFixtureApplication.java](../payment-service/src/test/java/com/fcourt/payment/LocalFixtureApplication.java) — Java test source; inspect fixtures and assertions before running.
+- [payment-service/src/test/java/com/fcourt/payment/OpenApiDocsTest.java](../payment-service/src/test/java/com/fcourt/payment/OpenApiDocsTest.java) — Java test source; inspect fixtures and assertions before running.
