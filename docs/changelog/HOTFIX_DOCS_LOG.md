@@ -82,3 +82,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 72 | 2026-11-09 | Feature | `booking-service` | #237 | Trả số điện thoại khách trong booking view để payment-service sử dụng. |
 | 73 | 2026-11-09 | Test | `payment-service` | #238 | Kiểm thử truyền số điện thoại khách từ booking view sang sổ cái (ledger). |
 | 74 | 2026-11-09 | Feature | `facility-service` | #239 | Tải lên, thay thế và xoá ảnh sân. |
+| 75 | 2026-11-09 | Feature | `docker-compose` | #240 | Chạy toàn bộ hệ thống bằng Docker Compose profiles. |
