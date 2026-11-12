@@ -10,3 +10,4 @@
 - [discovery-service/REQUEST_REVIEW.md](../discovery-service/REQUEST_REVIEW.md) — Review BE Discovery - Initialize service and public branch search
 - [discovery-service/SCRUM-22_AVAILABLE_SLOTS.md](../discovery-service/SCRUM-22_AVAILABLE_SLOTS.md) — SCRUM-22 — Available slots by court and date
 - [discovery-service/VALIDATION.md](../discovery-service/VALIDATION.md) — Validation evidence
+- [docs/README.md](../docs/README.md) — Tài liệu backend FCourt
