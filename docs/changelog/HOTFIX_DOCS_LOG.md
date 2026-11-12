@@ -56,3 +56,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 46 | 2026-11-09 | Feature | `booking-service` | #204 | Thêm `@RestControllerAdvice` trả lỗi chuẩn RFC 7807 ProblemDetail. |
 | 47 | 2026-11-09 | Docs update | `payment-service` | #193 | Bổ sung Swagger/OpenAPI (springdoc) cho payment-service. |
 | 48 | 2026-11-09 | Docs update | `staff-operations-service` | #199 | Bổ sung Swagger/OpenAPI (springdoc) cho staff-operations-service. |
+| 49 | 2026-11-09 | Docs update | `pos-retail-service` | #201 | Bổ sung Swagger/OpenAPI (springdoc) cho pos-retail-service. |
