@@ -186,3 +186,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 
 ## 13. pos-retail-service
 - `GET /api/staff/pos/products` sản phẩm cho nhân viên bán hàng.
+- `GET`, `POST` trên `/api/admin/pos/products` quản lý sản phẩm.
