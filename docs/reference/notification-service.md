@@ -169,3 +169,12 @@ Review script contents and application configuration to distinguish initializati
 - [V3__user_devices.sql](../../notification-service/src/main/resources/db/migration/V3__user_devices.sql)
 - [V4__push_delivery_and_reminders.sql](../../notification-service/src/main/resources/db/migration/V4__push_delivery_and_reminders.sql)
 - [V5__in_app_notifications.sql](../../notification-service/src/main/resources/db/migration/V5__in_app_notifications.sql)
+
+## Related documentation
+
+Read the existing service documentation for behavior, setup instructions, and recorded validation details. Historical validation notes describe the run they record and are not fresh verification results.
+
+- [PUSH_REMINDERS.md](../../notification-service/PUSH_REMINDERS.md)
+- [README.md](../../notification-service/README.md)
+
+For shared runtime setup, see [Docker Compose operations](../operations/docker-compose.md). For request routing, see [gateway operations](../operations/gateway.md).
