@@ -45,3 +45,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 34 | 2026-11-03 | Hotfix | `auth-service` | #68 | Sửa lỗi trả về HTTP 500 thay vì 401 khi access token hết hạn nhưng không có header auth. |
 | 35 | 2026-11-03 | Hotfix | `discovery-service` | #69 | Tối ưu câu truy vấn tìm kiếm slot khả dụng, loại bỏ N+1 query trên PostgreSQL. |
 | 36 | 2026-11-04 | Docs update | `docs/operations` | #70 | Cập nhật sơ đồ phân vùng mạng (network partition) và cấu hình port các service. |
+| 37 | 2026-11-04 | Hotfix | `payment-service` | #71 | Sửa lỗi mất kết nối webhook từ cổng PayOS khi header signature chứa ký tự đặc biệt. |
