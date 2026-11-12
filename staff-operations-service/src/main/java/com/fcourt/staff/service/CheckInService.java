@@ -51,16 +51,25 @@ public class CheckInService {
 
     @Transactional(timeout = 20)
     public CheckInResult verify(Jwt jwt, UUID key, String code, String channel) {
+        return checkIn(jwt, key, code.strip(), null, channel);
+    }
+
+    /** One-tap check-in from today's schedule: the booking id replaces the ticket code, same rules and reasons. */
+    @Transactional(timeout = 20)
+    public CheckInResult verifyBooking(Jwt jwt, UUID key, long bookingId) {
+        return checkIn(jwt, key, null, bookingId, "MANUAL");
+    }
+
+    private CheckInResult checkIn(Jwt jwt, UUID key, String normalized, Long bookingId, String channel) {
         var assignment = staff.assigned(jwt);
         long actor = Long.parseLong(jwt.getSubject());
         LocalDate date = LocalDate.now(clock.withZone(zone));
-        String normalized = code.strip();
-        String fingerprint = commands.fingerprint(List.of(assignment.branchId(), normalized, channel));
+        String fingerprint = commands.fingerprint(List.of(assignment.branchId(), bookingId == null ? normalized : "booking:" + bookingId, channel));
         var replay = commands.replay(actor, key, "BookingCheckedInEvent", fingerprint, CheckInResult.class);
         if (replay != null) return replay;
         var result = booking.checkIn(new BookingGateway.CheckInCommand(assignment.branchId(), actor, normalized,
-                date, clock.instant(), channel), "staff:check-in:" + actor + ":" + key, jwt.getTokenValue());
-        if (result.bookingId() <= 0 || result.branchId() != assignment.branchId() || result.date() == null
+                date, clock.instant(), channel, bookingId), "staff:check-in:" + actor + ":" + key, jwt.getTokenValue());
+        if (result.bookingId() <= 0 || (bookingId != null && result.bookingId() != bookingId) || result.branchId() != assignment.branchId() || result.date() == null
                 || !result.date().equals(date) || !"CHECKED_IN".equals(result.status()) || result.checkedInAt() == null
                 || !result.checkedInAt().atZone(zone).toLocalDate().equals(result.date())) throw BookingGateway.unavailable();
         commands.auditCheckIn(actor, key, result.bookingId(), assignment.branchId(), channel, result.checkedInAt());

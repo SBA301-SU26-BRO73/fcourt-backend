@@ -121,6 +121,64 @@ class StaffAdmissionsTest {
         assertCheckInReason("ALREADY_CHECKED_IN", 7, "CHECKED_IN");
     }
 
+    private org.springframework.test.web.servlet.ResultActions checkInByBooking(long branch, Object bookingId, String key) throws Exception {
+        var request = new HashMap<String, Object>();
+        request.put("branchId", branch);
+        request.put("actorId", 100);
+        request.put("date", date.toString());
+        request.put("checkedInAt", "2026-11-01T02:15:00Z");
+        request.put("bookingId", bookingId);
+        request.put("channel", "MANUAL");
+        return mvc.perform(post("/api/internal/bookings/check-in")
+                .with(jwt().jwt(j -> j.subject("100")))
+                .header("Idempotency-Key", key)
+                .contentType("application/json")
+                .content(json.writeValueAsString(request)));
+    }
+
+    @Test
+    void checkInByBookingIdAppliesTheSameRulesAndReasons() throws Exception {
+        // Unknown booking, bad id.
+        checkInByBooking(7, 999, "staff:check-in:100:" + UUID.randomUUID()).andExpect(status().isNotFound());
+        checkInByBooking(7, -1, "staff:check-in:100:" + UUID.randomUUID()).andExpect(status().isBadRequest());
+        // Another branch's booking with a ticket code.
+        checkInByBooking(8, 42, "staff:check-in:100:" + UUID.randomUUID())
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.reason").value("WRONG_BRANCH"));
+        // Wrong date.
+        jdbc.update("UPDATE bookings SET date=? WHERE id=42", date.minusDays(1));
+        jdbc.update("UPDATE booking_slots SET booking_date=? WHERE booking_id=42", date.minusDays(1));
+        checkInByBooking(7, 42, "staff:check-in:100:" + UUID.randomUUID())
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.reason").value("WRONG_DATE"));
+        jdbc.update("UPDATE bookings SET date=? WHERE id=42", date);
+        jdbc.update("UPDATE booking_slots SET booking_date=? WHERE booking_id=42", date);
+        // Too early.
+        jdbc.update("UPDATE booking_slots SET slot_start='10:00',slot_end='10:30' WHERE booking_id=42");
+        checkInByBooking(7, 42, "staff:check-in:100:" + UUID.randomUUID())
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.reason").value("CHECKIN_TOO_EARLY"));
+        jdbc.update("UPDATE booking_slots SET slot_start='09:00',slot_end='09:30' WHERE booking_id=42");
+        // A booking without a ticket (not paid yet) cannot be checked in.
+        jdbc.update("UPDATE bookings SET checkin_code=NULL,status='PENDING_PAYMENT' WHERE id=42");
+        checkInByBooking(7, 42, "staff:check-in:100:" + UUID.randomUUID()).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.reason").doesNotExist());
+        checkInByBooking(8, 42, "staff:check-in:100:" + UUID.randomUUID()).andExpect(status().isNotFound());
+        jdbc.update("UPDATE bookings SET checkin_code='ticket',status='CONFIRMED' WHERE id=42");
+        // Success, replay with the same key, then already checked in with a new key.
+        String key = "staff:check-in:100:" + UUID.randomUUID();
+        for (int i = 0; i < 2; i++)
+            checkInByBooking(7, 42, key).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.bookingId").value(42)).andExpect(jsonPath("$.status").value("CHECKED_IN"));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM booking_staff_commands", Integer.class)).isEqualTo(1);
+        checkInByBooking(7, 42, "staff:check-in:100:" + UUID.randomUUID())
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.reason").value("ALREADY_CHECKED_IN"));
+        // The booking-id flow is manual only.
+        var qr = new HashMap<String, Object>(Map.of("branchId", 7, "actorId", 100, "date", date.toString(),
+                "checkedInAt", "2026-11-01T02:15:00Z", "bookingId", 42, "channel", "QR"));
+        mvc.perform(post("/api/internal/bookings/check-in").with(jwt().jwt(j -> j.subject("100")))
+                .header("Idempotency-Key", "staff:check-in:100:" + UUID.randomUUID())
+                .contentType("application/json").content(json.writeValueAsString(qr)))
+                .andExpect(status().isBadRequest());
+    }
+
     private void assertCheckInConflictWithoutReason() throws Exception {
         var request = new HashMap<String, Object>();
         request.put("branchId", 7);
