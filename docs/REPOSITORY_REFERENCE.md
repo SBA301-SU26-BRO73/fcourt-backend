@@ -157,3 +157,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `PUT /api/admin/refunds/{id}/approve` duyệt hoàn tiền.
 - `PUT /api/admin/refunds/{id}/reject` từ chối hoàn tiền.
 - `PUT /api/admin/refunds/{id}/complete` hoàn tất, kèm chứng từ chuyển tiền.
+- `POST /api/internal/payments/booking-expiry` xử lý booking hết hạn thanh toán.
