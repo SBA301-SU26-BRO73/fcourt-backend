@@ -102,3 +102,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 91 | 2026-11-10 | Docs update | `docs/architecture` | #251 | Tài liệu hoá quy trình loại bỏ Eureka Server và chuyển sang Docker DNS resolution. |
 | 92 | 2026-11-10 | Hotfix | `gateway-service` | #252 | Cập nhật định tuyến tĩnh qua docker internal network sau khi gỡ Eureka client. |
 | 93 | 2026-11-10 | Hotfix | `facility-service` | #253 | Sửa lỗi không hiển thị danh sách tiện ích đi kèm của sân (wifi, phòng tắm, gửi xe). |
+| 94 | 2026-11-10 | Docs update | `docs/reference` | #254 | Tài liệu hoá API quản lý nhân viên và phân quyền chi nhánh trong staff-operations. |
