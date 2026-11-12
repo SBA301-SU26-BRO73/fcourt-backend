@@ -26,3 +26,4 @@
 - [docs/operations/storage-s3.md](../docs/operations/storage-s3.md) — Lưu trữ file và ảnh trên AWS S3
 - [docs/reference/README.md](../docs/reference/README.md) — Service file references
 - [docs/reference/auth-service.md](../docs/reference/auth-service.md) — auth-service: repository reference
+- [docs/reference/booking-service.md](../docs/reference/booking-service.md) — booking-service: repository reference
