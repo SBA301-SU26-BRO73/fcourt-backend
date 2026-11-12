@@ -164,3 +164,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 153 | 2026-11-12 | Docs update | `docs/architecture` | #499 | Tài liệu hoá mô hình Message Bus sử dụng RabbitMQ / Kafka cho các luồng thông báo sự kiện. |
 | 154 | 2026-11-12 | Hotfix | `reporting-service` | #500 | Khắc phục lỗi xuất file Excel báo cáo doanh thu bị lỗi font tiếng Việt có dấu. |
 | 155 | 2026-11-12 | Hotfix | `reporting-service` | #501 | Tối ưu câu truy vấn tổng hợp báo cáo tài chính tháng theo từng môn thể thao. |
+| 156 | 2026-11-12 | Docs update | `docs/reference` | #502 | Tài liệu hoá cấu trúc dữ liệu xuất báo cáo định dạng CSV và Excel của reporting-service. |
