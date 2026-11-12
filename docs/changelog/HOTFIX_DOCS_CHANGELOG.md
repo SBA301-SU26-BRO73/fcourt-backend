@@ -105,3 +105,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 94 | 2026-11-10 | Docs update | `docs/reference` | #254 | Tài liệu hoá API quản lý nhân viên và phân quyền chi nhánh trong staff-operations. |
 | 95 | 2026-11-10 | Hotfix | `staff-operations-service` | #255 | Sửa lỗi nhân viên chi nhánh A có thể xem nhầm lịch check-in của chi nhánh B. |
 | 96 | 2026-11-10 | Hotfix | `notification-service` | #256 | Khắc phục lỗi định dạng chuỗi JSON khi gửi push payload sang Firebase FCM/SNS. |
+| 97 | 2026-11-10 | Docs update | `docs/operations` | #257 | Tài liệu hoá quy trình deploy các microservices lên Amazon EKS với Helm Charts. |
