@@ -48,3 +48,4 @@ aids and do not establish runtime validation results.
 | BookingSecurity | [booking-service/src/main/java/com/fcourt/booking/BookingSecurity.java](../booking-service/src/main/java/com/fcourt/booking/BookingSecurity.java) |
 | BookingVoucherController | [booking-service/src/main/java/com/fcourt/booking/BookingVoucherController.java](../booking-service/src/main/java/com/fcourt/booking/BookingVoucherController.java) |
 | StaffAdmissionController | [booking-service/src/main/java/com/fcourt/booking/StaffAdmissionController.java](../booking-service/src/main/java/com/fcourt/booking/StaffAdmissionController.java) |
+| StaffCounterController | [booking-service/src/main/java/com/fcourt/booking/StaffCounterController.java](../booking-service/src/main/java/com/fcourt/booking/StaffCounterController.java) |
