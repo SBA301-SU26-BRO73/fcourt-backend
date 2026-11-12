@@ -98,3 +98,4 @@
 - [facility-service/Dockerfile](../facility-service/Dockerfile) — Container image build definition.
 - [gateway-service/Dockerfile](../gateway-service/Dockerfile) — Container image build definition.
 - [notification-service/Dockerfile](../notification-service/Dockerfile) — Container image build definition.
+- [payment-service/Dockerfile](../payment-service/Dockerfile) — Container image build definition.
