@@ -32,3 +32,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 
 ## 4. auth-service
 - `POST /api/auth/register/customer` đăng ký khách hàng.
+- `POST /api/auth/register/court-owner` đăng ký chủ sân (multipart, kèm giấy tờ).
+- `POST /api/auth/login` đăng nhập bằng email và mật khẩu.
