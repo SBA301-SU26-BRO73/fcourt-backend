@@ -163,3 +163,13 @@ Review script contents and application configuration to distinguish initializati
 - [V7__online_booking_commands.sql](../../booking-service/src/main/resources/db/migration/V7__online_booking_commands.sql)
 - [V8__booking_vouchers.sql](../../booking-service/src/main/resources/db/migration/V8__booking_vouchers.sql)
 - [V9__full_court_packages.sql](../../booking-service/src/main/resources/db/migration/V9__full_court_packages.sql)
+
+## Related documentation
+
+Read the existing service documentation for behavior, setup instructions, and recorded validation details. Historical validation notes describe the run they record and are not fresh verification results.
+
+- [FULL_COURT.md](../../booking-service/FULL_COURT.md)
+- [ONLINE_BOOKING.md](../../booking-service/ONLINE_BOOKING.md)
+- [README.md](../../booking-service/README.md)
+
+For shared runtime setup, see [Docker Compose operations](../operations/docker-compose.md). For request routing, see [gateway operations](../operations/gateway.md).
