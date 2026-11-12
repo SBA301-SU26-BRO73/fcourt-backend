@@ -30,3 +30,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 | `reporting-service` | `reporting_db` | Báo cáo và thống kê |
 | `notification-service` | `notification_db` | Thông báo đẩy tới thiết bị |
 
+## 4. auth-service
+- `POST /api/auth/register/customer` đăng ký khách hàng.
