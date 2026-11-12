@@ -47,3 +47,4 @@ vào `dev` với task triển khai, và ghi task gốc với ticket review.
 | 36 | [SCRUM-123](https://bro73.atlassian.net/browse/SCRUM-123) | Code review | Review | To Do | [SCRUM-25](https://bro73.atlassian.net/browse/SCRUM-25) | Flutter Booking — SCRUM-25 |
 | 37 | [SCRUM-124](https://bro73.atlassian.net/browse/SCRUM-124) | Review approach | Review | To Do | [SCRUM-32](https://bro73.atlassian.net/browse/SCRUM-32) | BE payment-service — SCRUM-32 checkout info |
 | 38 | [SCRUM-125](https://bro73.atlassian.net/browse/SCRUM-125) | Code review | Review | To Do | [SCRUM-32](https://bro73.atlassian.net/browse/SCRUM-32) | BE payment-service — SCRUM-32 |
+| 39 | [SCRUM-126](https://bro73.atlassian.net/browse/SCRUM-126) | Review approach | Review | To Do | [SCRUM-33](https://bro73.atlassian.net/browse/SCRUM-33) | Flutter Payment — SCRUM-33 VietQR checkout |
