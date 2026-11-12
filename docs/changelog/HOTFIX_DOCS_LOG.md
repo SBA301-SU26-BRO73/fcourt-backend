@@ -71,3 +71,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 61 | 2026-11-09 | Feature | `subscription-service` | #232 | Endpoint thống kê danh sách gói đăng ký cho super admin. |
 | 62 | 2026-11-09 | Feature | `reporting-service` | #231 | Các endpoint chi tiết cho dashboard super admin. |
 | 63 | 2026-11-09 | Feature | `subscription-service` | #224 | Trả số chi nhánh/sân đã dùng trong `my-subscription`. |
+| 64 | 2026-11-09 | Feature | `voucher-service` | #227 | Endpoint kiểm tra voucher và gỡ voucher đã áp dụng. |
