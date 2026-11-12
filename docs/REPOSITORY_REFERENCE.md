@@ -12,3 +12,5 @@ Không còn service registry (Eureka): gateway tìm service bằng DNS tĩnh.
 
 ## 2. Phân quyền theo tiền tố đường dẫn
 Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/admin` là chủ sân, `/api/staff` là nhân viên, `/api/super-admin` là quản trị nền tảng, `/api/internal` là gọi nội bộ.
+
+## 3. Danh sách service
