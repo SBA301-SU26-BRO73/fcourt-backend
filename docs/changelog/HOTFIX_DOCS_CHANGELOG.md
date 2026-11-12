@@ -20,3 +20,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 9 | 2026-10-28 | Docs update | `docs/architecture` | #14 | Viết tài liệu mô hình phân bổ database riêng biệt (database-per-service) trên PostgreSQL. |
 | 10 | 2026-10-28 | Hotfix | `slot-hold-engine` | #15 | Khắc phục race condition nhả Redis distributed lock khi 2 luồng cùng hold 1 slot. |
 | 11 | 2026-10-28 | Docs update | `docs/reference` | #16 | Tài liệu hoá cấu trúc hợp đồng dữ liệu giữa slot-hold-engine và booking-service. |
+| 12 | 2026-10-28 | Hotfix | `tools` | #18 | Thêm production readiness probes cho bộ smoke test của các service. |
