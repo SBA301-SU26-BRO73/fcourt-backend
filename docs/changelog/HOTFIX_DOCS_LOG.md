@@ -102,3 +102,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 92 | 2026-11-12 | Hotfix | `payment-service` | #452 | Tạo yêu cầu hoàn tiền khi khách vãng lai hoặc chủ sân huỷ booking. |
 | 93 | 2026-11-12 | Hotfix | `payment-service` | #453 | Bỏ qua sự kiện hoàn tiền đã cũ thay vì retry vô hạn. |
 | 94 | 2026-11-12 | Hotfix | `notification-service` | #454 | Vẫn gửi thông báo in-app và push khi gửi email thất bại. |
+| 95 | 2026-11-12 | Docs update | `README.md` | #456 | Viết lại README, sắp xếp lại thư mục docs và thêm thư mục report. |
