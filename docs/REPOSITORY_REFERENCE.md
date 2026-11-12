@@ -192,3 +192,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/super-admin/pos/products` xem sản phẩm toàn nền tảng.
 - `POST /api/staff/pos/orders` tạo đơn bán lẻ.
 - `GET /api/staff/pos/orders` và `/{id}` xem đơn.
+- `POST /api/internal/pos/settlements` quyết toán đơn gắn với booking.
