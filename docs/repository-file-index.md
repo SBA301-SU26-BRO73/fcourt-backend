@@ -13,3 +13,4 @@
 - [docs/README.md](../docs/README.md) — Tài liệu backend FCourt
 - [docs/REPOSITORY_REFERENCE.md](../docs/REPOSITORY_REFERENCE.md) — FCOURT Backend — Repository Reference
 - [docs/architecture/aws-architecture.md](../docs/architecture/aws-architecture.md) — Kiến trúc AWS và phương án triển khai FCOURT
+- [docs/architecture/code-structure.md](../docs/architecture/code-structure.md) — Cấu trúc package chuẩn của backend FCourt
