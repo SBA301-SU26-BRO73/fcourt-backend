@@ -173,3 +173,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `POST /api/admin/staff/{id}/reactivate` kích hoạt lại nhân viên.
 - `GET /api/admin/staff/accounts/{userId}` tra nhân viên theo tài khoản.
 - `GET /api/staff/me` thông tin nhân viên đang đăng nhập.
+- `GET /api/staff/schedule/today` lịch hôm nay.
