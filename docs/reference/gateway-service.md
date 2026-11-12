@@ -76,3 +76,11 @@ From the repository root, the standard Maven verification entry point is `mvn -B
 Review script contents and application configuration to distinguish initialization scripts from migrations loaded at runtime. Do not infer execution order across these two locations, or execute scripts against a shared database merely because they are listed here.
 
 No files are tracked in `database/` or `src/main/resources/db/migration/` for this service. Consult configuration and the existing documentation for its persistence model.
+
+## Related documentation
+
+Read the existing service documentation for behavior, setup instructions, and recorded validation details. Historical validation notes describe the run they record and are not fresh verification results.
+
+This service has no tracked Markdown document in its directory. Start with the [repository README](../../README.md) and [documentation index](../README.md).
+
+For shared runtime setup, see [Docker Compose operations](../operations/docker-compose.md). For request routing, see [gateway operations](../operations/gateway.md).
