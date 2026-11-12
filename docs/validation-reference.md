@@ -11,3 +11,4 @@ contract. Follow the owning component's README for execution and build commands.
 | Reference | Source |
 | --- | --- |
 | discovery review notes | [discovery-service/REQUEST_REVIEW.md](../discovery-service/REQUEST_REVIEW.md) |
+| discovery validation notes | [discovery-service/VALIDATION.md](../discovery-service/VALIDATION.md) |
