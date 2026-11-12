@@ -121,3 +121,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | gateway-service | [StaticDiscoveryTests.java](../gateway-service/src/test/java/com/fcourt/gateway/StaticDiscoveryTests.java) |
 | gateway-service | [RateLimitUnitTests.java](../gateway-service/src/test/java/com/fcourt/gateway/ratelimit/RateLimitUnitTests.java) |
 | notification-service | [NotificationFlowIntegrationTest.java](../notification-service/src/test/java/com/fcourt/notification/NotificationFlowIntegrationTest.java) |
+| notification-service | [OpenApiDocsTest.java](../notification-service/src/test/java/com/fcourt/notification/OpenApiDocsTest.java) |
