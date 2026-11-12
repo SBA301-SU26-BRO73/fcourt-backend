@@ -155,3 +155,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/refunds/booking/{bookingId}` xem hoàn tiền của booking.
 - `GET /api/admin/refunds/pending` danh sách hoàn tiền chờ xử lý.
 - `PUT /api/admin/refunds/{id}/approve` duyệt hoàn tiền.
+- `PUT /api/admin/refunds/{id}/reject` từ chối hoàn tiền.
