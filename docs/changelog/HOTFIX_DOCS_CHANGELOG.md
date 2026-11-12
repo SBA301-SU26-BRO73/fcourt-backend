@@ -76,3 +76,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 65 | 2026-11-09 | Hotfix | `booking-service` | #135 | Sửa lỗi deadlock khi đặt đồng thời nhiều slot trên cùng một sân đấu. |
 | 66 | 2026-11-09 | Hotfix | `booking-service` | #136 | Đảm bảo hoàn tiền tự động khi saga đặt sân thất bại tại bước trừ voucher. |
 | 67 | 2026-11-09 | Docs update | `docs/architecture` | #174 | Chuẩn hoá và tài liệu hoá cấu trúc package đồng nhất cho 12 microservices. |
+| 68 | 2026-11-09 | Hotfix | `notification-service` | #175 | Khắc phục lỗi gửi email trùng lặp khi subscriber nhận message retry từ hàng đợi. |
