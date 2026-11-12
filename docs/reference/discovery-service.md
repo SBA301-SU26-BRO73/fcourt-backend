@@ -112,3 +112,32 @@ Java files are grouped by their tracked source directory. Package location alone
 For REST behavior, begin with controller classes in the source map and the existing service documentation; this inventory does not infer endpoints from class names.
 
 No `.proto` files are tracked in this service directory. This does not imply that the service makes no calls to other services.
+
+## Test inventory
+
+Test sources and fixtures listed here are navigation aids, not a report of passing tests. Review the test setup for Docker, Testcontainers, external services, and profile requirements before execution.
+
+- [DiscoveryIntegrationTest.java](../../discovery-service/src/test/java/com/fcourt/discovery/DiscoveryIntegrationTest.java)
+- [ReviewIntegrationTest.java](../../discovery-service/src/test/java/com/fcourt/discovery/ReviewIntegrationTest.java)
+- [BranchEventListenerTest.java](../../discovery-service/src/test/java/com/fcourt/discovery/component/BranchEventListenerTest.java)
+- [ReviewImageCleanupTest.java](../../discovery-service/src/test/java/com/fcourt/discovery/component/ReviewImageCleanupTest.java)
+- [ReviewImagePolicyTest.java](../../discovery-service/src/test/java/com/fcourt/discovery/component/ReviewImagePolicyTest.java)
+- [ReviewImageValidatorTest.java](../../discovery-service/src/test/java/com/fcourt/discovery/component/ReviewImageValidatorTest.java)
+- [ReviewUploadLimiterTest.java](../../discovery-service/src/test/java/com/fcourt/discovery/component/ReviewUploadLimiterTest.java)
+- [ReviewerNamesTest.java](../../discovery-service/src/test/java/com/fcourt/discovery/component/ReviewerNamesTest.java)
+- [ReviewerProfileClientTest.java](../../discovery-service/src/test/java/com/fcourt/discovery/component/ReviewerProfileClientTest.java)
+- [S3ImageStorageTest.java](../../discovery-service/src/test/java/com/fcourt/discovery/component/S3ImageStorageTest.java)
+- [SlotSourceClientTest.java](../../discovery-service/src/test/java/com/fcourt/discovery/component/SlotSourceClientTest.java)
+- [InternalSlotConflictsSecurityTest.java](../../discovery-service/src/test/java/com/fcourt/discovery/config/InternalSlotConflictsSecurityTest.java)
+- [KafkaConfigurationTest.java](../../discovery-service/src/test/java/com/fcourt/discovery/config/KafkaConfigurationTest.java)
+- [OpenApiDocsTest.java](../../discovery-service/src/test/java/com/fcourt/discovery/config/OpenApiDocsTest.java)
+- [BranchControllerTest.java](../../discovery-service/src/test/java/com/fcourt/discovery/controller/BranchControllerTest.java)
+- [CourtSlotControllerTest.java](../../discovery-service/src/test/java/com/fcourt/discovery/controller/CourtSlotControllerTest.java)
+- [SlotHoldRepositoryTest.java](../../discovery-service/src/test/java/com/fcourt/discovery/repository/SlotHoldRepositoryTest.java)
+- [BranchAvailabilitySearchTest.java](../../discovery-service/src/test/java/com/fcourt/discovery/service/BranchAvailabilitySearchTest.java)
+- [BranchSearchServiceTest.java](../../discovery-service/src/test/java/com/fcourt/discovery/service/BranchSearchServiceTest.java)
+- [CourtSlotServiceTest.java](../../discovery-service/src/test/java/com/fcourt/discovery/service/CourtSlotServiceTest.java)
+- [ReviewImageServiceTest.java](../../discovery-service/src/test/java/com/fcourt/discovery/service/ReviewImageServiceTest.java)
+- [application.properties](../../discovery-service/src/test/resources/application.properties)
+
+From the repository root, the standard Maven verification entry point is `mvn -B -f discovery-service/pom.xml verify`. Check the descriptor and environment requirements first.
