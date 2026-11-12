@@ -86,3 +86,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `POST /api/admin/courts/lock-slots` khóa khung giờ.
 - `GET /api/admin/courts/lock-slots` xem các khung đang khóa.
 - `DELETE /api/admin/courts/lock-slots/{id}` mở khóa.
+- `POST /api/admin/courts/out-of-service` đặt sân ngừng hoạt động.
+- `DELETE /api/admin/courts/out-of-service/{groupId}` hủy ngừng hoạt động.
