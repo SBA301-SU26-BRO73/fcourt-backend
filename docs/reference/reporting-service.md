@@ -104,3 +104,12 @@ Test sources and fixtures listed here are navigation aids, not a report of passi
 - [SuperAdminOverviewServiceTest.java](../../reporting-service/src/test/java/com/fcourt/reporting/service/SuperAdminOverviewServiceTest.java)
 
 From the repository root, the standard Maven verification entry point is `mvn -B -f reporting-service/pom.xml verify`. Check the descriptor and environment requirements first.
+
+## Database scripts and migrations
+
+Review script contents and application configuration to distinguish initialization scripts from migrations loaded at runtime. Do not infer execution order across these two locations, or execute scripts against a shared database merely because they are listed here.
+
+- [.gitkeep](../../reporting-service/database/.gitkeep)
+- [V1__reporting_read_model.sql](../../reporting-service/src/main/resources/db/migration/V1__reporting_read_model.sql)
+- [V50__analytics_read_model.sql](../../reporting-service/src/main/resources/db/migration/V50__analytics_read_model.sql)
+- [V51__booking_customer_name.sql](../../reporting-service/src/main/resources/db/migration/V51__booking_customer_name.sql)
