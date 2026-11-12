@@ -39,3 +39,4 @@ aids and do not establish runtime validation results.
 | GoogleLoginController | [auth-service/src/main/java/com/fcourt/auth/account/GoogleLoginController.java](../auth-service/src/main/java/com/fcourt/auth/account/GoogleLoginController.java) |
 | PasswordController | [auth-service/src/main/java/com/fcourt/auth/account/PasswordController.java](../auth-service/src/main/java/com/fcourt/auth/account/PasswordController.java) |
 | StaffAccountController | [auth-service/src/main/java/com/fcourt/auth/staff/StaffAccountController.java](../auth-service/src/main/java/com/fcourt/auth/staff/StaffAccountController.java) |
+| PlatformStatsController | [auth-service/src/main/java/com/fcourt/auth/superadmin/PlatformStatsController.java](../auth-service/src/main/java/com/fcourt/auth/superadmin/PlatformStatsController.java) |
