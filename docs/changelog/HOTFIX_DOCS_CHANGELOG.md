@@ -201,3 +201,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 190 | 2026-11-12 | Hotfix | `reporting-service` | #536 | Khắc phục lỗi lệch số liệu thống kê giữa biểu đồ doanh thu theo giờ và danh sách chi tiết. |
 | 191 | 2026-11-12 | Hotfix | `reporting-service` | #537 | Tối ưu thời gian render báo cáo tổng kết năm giảm từ 12s xuống dưới 1.5s. |
 | 192 | 2026-11-12 | Docs update | `docs/architecture` | #538 | Tài liệu hoá giải pháp tách riêng cơ sở dữ liệu đọc/ghi (Read/Write CQRS) cho báo cáo. |
+| 193 | 2026-11-12 | Hotfix | `voucher-service` | #539 | Sửa lỗi tính sai số tiền giảm khi kết hợp voucher phần trăm với đơn đặt nhiều sân. |
