@@ -66,3 +66,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 55 | 2026-11-08 | Hotfix | `facility-service` | #91 | Khắc phục lỗi không thể cập nhật toạ độ GPS (vĩ độ, kinh độ) của chi nhánh mới. |
 | 56 | 2026-11-08 | Docs update | `docs/architecture` | #92 | Tài liệu hoá luồng phát hành sự kiện Domain Events giữa các microservices qua Kafka. |
 | 57 | 2026-11-08 | Hotfix | `notification-service` | #93 | Khắc phục rò rỉ bộ nhớ (memory leak) trong emitter kết nối SSE của notification-service. |
+| 58 | 2026-11-08 | Hotfix | `slot-hold-engine` | #104 | Sửa lỗi không gửi thông báo WebSocket khi slot được mở khoá trước hạn. |
