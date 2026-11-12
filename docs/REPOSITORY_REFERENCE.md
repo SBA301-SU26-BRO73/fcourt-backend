@@ -210,3 +210,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - Service lưu `processed_events` để chống xử lý trùng sự kiện.
 
 ## 16. Hạ tầng và tài liệu liên quan
+- `docker-compose.yml` chạy hạ tầng, core hoặc toàn hệ thống theo profile.
