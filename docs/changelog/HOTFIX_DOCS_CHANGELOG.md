@@ -155,3 +155,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 144 | 2026-11-12 | Docs update | `docs/business` | #490 | Tài liệu hoá quy định phạt tiền huỷ sân muộn (Late Cancellation Penalty Rules). |
 | 145 | 2026-11-12 | Hotfix | `slot-hold-engine` | #491 | Sửa lỗi rò rỉ kết nối Redis Connection khi có exception trong hàm holdMultipleSlots. |
 | 146 | 2026-11-12 | Hotfix | `slot-hold-engine` | #492 | Tăng độ chính xác thời gian đếm ngược countdown hold slot từ giây sang mili-giây. |
+| 147 | 2026-11-12 | Docs update | `docs/reference` | #493 | Cập nhật tài liệu API chi tiết cho endpoint gia hạn thời gian giữ chỗ (extend hold). |
