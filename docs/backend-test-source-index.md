@@ -168,3 +168,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | reporting-service | [FacilityCircuitBreakerTest.java](../reporting-service/src/test/java/com/fcourt/reporting/client/FacilityCircuitBreakerTest.java) |
 | reporting-service | [FacilityClientWireMockTest.java](../reporting-service/src/test/java/com/fcourt/reporting/client/FacilityClientWireMockTest.java) |
 | reporting-service | [EventTranslatorTest.java](../reporting-service/src/test/java/com/fcourt/reporting/events/EventTranslatorTest.java) |
+| reporting-service | [ReportQueryStoreIntegrationTest.java](../reporting-service/src/test/java/com/fcourt/reporting/persistence/ReportQueryStoreIntegrationTest.java) |
