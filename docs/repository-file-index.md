@@ -109,3 +109,4 @@
 - [auth-service/src/test/java/com/fcourt/auth/SuperAdminApiIntegrationTest.java](../auth-service/src/test/java/com/fcourt/auth/SuperAdminApiIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
 - [auth-service/src/test/java/com/fcourt/auth/account/AuthApiIntegrationTest.java](../auth-service/src/test/java/com/fcourt/auth/account/AuthApiIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
 - [auth-service/src/test/java/com/fcourt/auth/account/AuthControllerTest.java](../auth-service/src/test/java/com/fcourt/auth/account/AuthControllerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/account/AuthServiceTest.java](../auth-service/src/test/java/com/fcourt/auth/account/AuthServiceTest.java) — Java test source; inspect fixtures and assertions before running.
