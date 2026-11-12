@@ -72,3 +72,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 61 | 2026-11-08 | Hotfix | `discovery-service` | #129 | Cho route slot-conflicts (đã kiểm token) đi qua security chain, tránh bị chặn nhầm. |
 | 62 | 2026-11-08 | Hotfix | `gateway-service` | #130 | Chặn workflow chạy trùng lặp và tăng tốc độ build gateway-service trên CI. |
 | 63 | 2026-11-08 | Hotfix | `tools` | #131 | Sửa demo seed script cho khớp schema mới của voucher-service và discount percent. |
+| 64 | 2026-11-09 | Docs update | `docs/business` | #134 | Phân tích khoảng trống nghiệp vụ so với monolith cũ và phương án kiến trúc AWS. |
