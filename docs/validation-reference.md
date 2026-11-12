@@ -108,3 +108,4 @@ aids and do not establish runtime validation results.
 | VoucherController | [voucher-service/src/main/java/com/fcourt/voucher/VoucherController.java](../voucher-service/src/main/java/com/fcourt/voucher/VoucherController.java) |
 | VoucherSecurity | [voucher-service/src/main/java/com/fcourt/voucher/VoucherSecurity.java](../voucher-service/src/main/java/com/fcourt/voucher/VoucherSecurity.java) |
 | VoucherUsageController | [voucher-service/src/main/java/com/fcourt/voucher/VoucherUsageController.java](../voucher-service/src/main/java/com/fcourt/voucher/VoucherUsageController.java) |
+| DocumentStorageConfiguration | [auth-service/src/main/java/com/fcourt/auth/account/DocumentStorageConfiguration.java](../auth-service/src/main/java/com/fcourt/auth/account/DocumentStorageConfiguration.java) |
