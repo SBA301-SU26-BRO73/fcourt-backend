@@ -111,3 +111,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 100 | 2026-11-11 | Docs update | `docs/reference` | #260 | Tài liệu hoá cấu trúc bảng giá linh hoạt theo thứ trong tuần và ngày lễ. |
 | 101 | 2026-11-11 | Hotfix | `facility-service` | #261 | Sửa lỗi áp dụng sai giá ngày lễ khi timezone hệ thống máy chủ bị lệch. |
 | 102 | 2026-11-11 | Hotfix | `tools` | #263 | Bổ sung script khởi tạo dữ liệu mẫu cho hệ thống đặt sân pickleball và cầu lông. |
+| 103 | 2026-11-11 | Docs update | `docs/operations` | #265 | Cập nhật tài liệu cấu hình Health Check Probes (Liveness & Readiness) trên Kubernetes. |
