@@ -43,3 +43,4 @@
 - [notification-service/PUSH_REMINDERS.md](../notification-service/PUSH_REMINDERS.md) — Push delivery and booking reminders
 - [notification-service/README.md](../notification-service/README.md) — notification-service
 - [payment-service/README.md](../payment-service/README.md) — Payment service — SCRUM-32
+- [pos-retail-service/CONTRACTS.md](../pos-retail-service/CONTRACTS.md) — Proposed POS contracts — SCRUM-106 Backend
