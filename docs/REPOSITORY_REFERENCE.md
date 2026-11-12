@@ -150,3 +150,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `PUT /api/admin/payments/{paymentId}/confirm` xác nhận đã nhận tiền.
 - `PUT /api/admin/payments/{paymentId}/reject` từ chối biên lai.
 - `GET /api/admin/payments/transactions` sổ giao dịch của chi nhánh.
+- Thêm `transactionType` để xem sổ cái hợp nhất.
