@@ -78,3 +78,12 @@ Test sources and fixtures listed here are navigation aids, not a report of passi
 - [PosSecurityRolesTest.java](../../pos-retail-service/src/test/java/com/fcourt/pos/config/PosSecurityRolesTest.java)
 
 From the repository root, the standard Maven verification entry point is `mvn -B -f pos-retail-service/pom.xml verify`. Check the descriptor and environment requirements first.
+
+## Database scripts and migrations
+
+Review script contents and application configuration to distinguish initialization scripts from migrations loaded at runtime. Do not infer execution order across these two locations, or execute scripts against a shared database merely because they are listed here.
+
+- [V1__init_schema.sql](../../pos-retail-service/database/V1__init_schema.sql)
+- [V2__seed_sample_data.sql](../../pos-retail-service/database/V2__seed_sample_data.sql)
+- [V1__pos_schema.sql](../../pos-retail-service/src/main/resources/db/migration/V1__pos_schema.sql)
+- [V2__pos_inventory_billing.sql](../../pos-retail-service/src/main/resources/db/migration/V2__pos_inventory_billing.sql)
