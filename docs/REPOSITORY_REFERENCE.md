@@ -179,3 +179,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `POST /api/staff/check-in/preview` xem trước check-in.
 - `POST /api/staff/check-in/manual` check-in thủ công.
 - `GET /api/staff/offline/tickets` tải vé cho chế độ offline.
+- `POST /api/staff/check-in/offline` đồng bộ check-in offline.
