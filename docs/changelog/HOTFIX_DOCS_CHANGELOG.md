@@ -22,3 +22,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 11 | 2026-10-28 | Docs update | `docs/reference` | #16 | Tài liệu hoá cấu trúc hợp đồng dữ liệu giữa slot-hold-engine và booking-service. |
 | 12 | 2026-10-28 | Hotfix | `tools` | #18 | Thêm production readiness probes cho bộ smoke test của các service. |
 | 13 | 2026-10-29 | Docs update | `docs/reference` | #19 | Cập nhật tài liệu OpenAPI/Swagger 3.0 cho booking-service. |
+| 14 | 2026-10-29 | Hotfix | `booking-service` | #20 | Sửa lỗi lệch múi giờ UTC+7 khi lưu ngày đặt sân booking_date xuống PostgreSQL. |
