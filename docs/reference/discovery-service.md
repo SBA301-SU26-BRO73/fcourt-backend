@@ -152,3 +152,14 @@ Review script contents and application configuration to distinguish initializati
 - [V3__reviews_and_branch_ratings.sql](../../discovery-service/src/main/resources/db/migration/V3__reviews_and_branch_ratings.sql)
 - [V4__review_reviewer_snapshot.sql](../../discovery-service/src/main/resources/db/migration/V4__review_reviewer_snapshot.sql)
 - [V5__branch_card_fields.sql](../../discovery-service/src/main/resources/db/migration/V5__branch_card_fields.sql)
+
+## Related documentation
+
+Read the existing service documentation for behavior, setup instructions, and recorded validation details. Historical validation notes describe the run they record and are not fresh verification results.
+
+- [README.md](../../discovery-service/README.md)
+- [REQUEST_REVIEW.md](../../discovery-service/REQUEST_REVIEW.md)
+- [SCRUM-22_AVAILABLE_SLOTS.md](../../discovery-service/SCRUM-22_AVAILABLE_SLOTS.md)
+- [VALIDATION.md](../../discovery-service/VALIDATION.md)
+
+For shared runtime setup, see [Docker Compose operations](../operations/docker-compose.md). For request routing, see [gateway operations](../operations/gateway.md).
