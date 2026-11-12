@@ -74,6 +74,7 @@ class StaffIntegrationTest {
     static volatile boolean finalClaimConflict;
     static volatile boolean bulkSchedule;
     static volatile int bookingFailure;
+    static volatile String bookingFailureReason = "";
     static volatile boolean wrongBranch;
     static volatile int bookingDateShift;
     static volatile int failure;
@@ -131,6 +132,7 @@ class StaffIntegrationTest {
         bulkSchedule = false;
         SLOT_SAFETY.reset();
         bookingFailure = bookingDateShift = 0;
+        bookingFailureReason = "";
         wrongBranch = false;
         ACCOUNTS.clear();
         CREATES.set(0);
@@ -482,6 +484,17 @@ class StaffIntegrationTest {
         create(UUID.randomUUID(), body(7));
         bookingFailure = status;
         assertThat(checkIn(UUID.randomUUID()).getStatusCode().value()).isEqualTo(status == 500 ? 503 : status);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_outbox", Integer.class)).isZero();
+    }
+
+    @Test
+    void checkInReasonCodeFromBookingServiceIsReturnedInProblemDetail() {
+        create(UUID.randomUUID(), body(7));
+        bookingFailure = 409;
+        bookingFailureReason = "WRONG_BRANCH";
+        var response = checkIn(UUID.randomUUID());
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody().path("reason").asText()).isEqualTo("WRONG_BRANCH");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_outbox", Integer.class)).isZero();
     }
 
@@ -911,7 +924,8 @@ class StaffIntegrationTest {
                         "date", LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(bookingDateShift).toString(),
                         "slotStart", "09:00", "slotEnd", "09:30", "status", "CONFIRMED", "customerName", "Guest"))))));
             } else if (path.equals("/api/internal/bookings/check-in")) {
-                if (bookingFailure != 0) { send(exchange, bookingFailure, Map.of()); return; }
+                if (bookingFailure != 0) { send(exchange, bookingFailure,
+                        bookingFailureReason.isBlank() ? Map.of() : Map.of("reason", bookingFailureReason)); return; }
                 JsonNode body = JSON.readTree(exchange.getRequestBody());
                 String key = exchange.getRequestHeaders().getFirst("Idempotency-Key");
                 synchronized (CHECK_IN_RESULTS) {

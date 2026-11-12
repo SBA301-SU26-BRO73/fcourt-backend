@@ -80,6 +80,22 @@ class DeviceControllerIntegrationTest {
     }
 
     @Test
+    void registersDeviceAtApiNotificationsPath() throws Exception {
+        mvc.perform(put("/api/notifications/devices").with(jwt().jwt(token -> token.subject("41")))
+                        .contentType("application/json")
+                        .content(registration("pixel-api", "token-api")))
+                .andExpect(status().isNoContent());
+        assertThat(jdbc.queryForObject(
+                "SELECT fcm_token FROM user_devices WHERE user_id = 41 AND device_id = 'pixel-api'", String.class))
+                .isEqualTo("token-api");
+        mvc.perform(delete("/api/notifications/devices/pixel-api")
+                        .with(jwt().jwt(token -> token.subject("41"))))
+                .andExpect(status().isNoContent());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM user_devices WHERE user_id = 41", Integer.class))
+                .isZero();
+    }
+
+    @Test
     void deleteRemovesOnlyTheCallersOwnDevice() throws Exception {
         jdbc.update("INSERT INTO user_devices (user_id, device_id, platform, fcm_token, endpoint_arn) VALUES (41, 'shared', 'ANDROID', 'token-41', 'arn:41')");
         jdbc.update("INSERT INTO user_devices (user_id, device_id, platform, fcm_token, endpoint_arn) VALUES (42, 'shared', 'ANDROID', 'token-42', 'arn:42')");

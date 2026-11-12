@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping("/devices")
+@RequestMapping({"/devices", "/api/notifications/devices"})
 class DeviceController {
     private final DeviceService devices;
 
