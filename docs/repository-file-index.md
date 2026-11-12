@@ -62,3 +62,4 @@
 - [subscription-service/README.md](../subscription-service/README.md) — subscription-service
 - [tools/demo_seed/README.md](../tools/demo_seed/README.md) — SCRUM-92 — Resumable demo seeder
 - [tools/demo_seed/REASSESSMENT.md](../tools/demo_seed/REASSESSMENT.md) — SCRUM-92 reassessment — 2026-11-05
+- [tools/production_smoke/LIVE_VALIDATION.md](../tools/production_smoke/LIVE_VALIDATION.md) — SCRUM-107 validation evidence
