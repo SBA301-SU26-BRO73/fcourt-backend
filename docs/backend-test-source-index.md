@@ -31,3 +31,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | auth-service | [S3DocumentStorageTest.java](../auth-service/src/test/java/com/fcourt/auth/account/S3DocumentStorageTest.java) |
 | auth-service | [SessionServiceTest.java](../auth-service/src/test/java/com/fcourt/auth/account/SessionServiceTest.java) |
 | auth-service | [SecurityConfigurationTest.java](../auth-service/src/test/java/com/fcourt/auth/config/SecurityConfigurationTest.java) |
+| auth-service | [StaffAccountCommandsTest.java](../auth-service/src/test/java/com/fcourt/auth/staff/StaffAccountCommandsTest.java) |
