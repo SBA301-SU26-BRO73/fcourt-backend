@@ -146,3 +146,20 @@ Test sources and fixtures listed here are navigation aids, not a report of passi
 - [GlobalExceptionHandlerTest.java](../../booking-service/src/test/java/com/fcourt/booking/exception/GlobalExceptionHandlerTest.java)
 
 From the repository root, the standard Maven verification entry point is `mvn -B -f booking-service/pom.xml verify`. Check the descriptor and environment requirements first.
+
+## Database scripts and migrations
+
+Review script contents and application configuration to distinguish initialization scripts from migrations loaded at runtime. Do not infer execution order across these two locations, or execute scripts against a shared database merely because they are listed here.
+
+- [V1__init_schema.sql](../../booking-service/database/V1__init_schema.sql)
+- [V2__seed_sample_data.sql](../../booking-service/database/V2__seed_sample_data.sql)
+- [V10__booking_cancelled_by.sql](../../booking-service/src/main/resources/db/migration/V10__booking_cancelled_by.sql)
+- [V1__booking_schema.sql](../../booking-service/src/main/resources/db/migration/V1__booking_schema.sql)
+- [V2__booking_read_model.sql](../../booking-service/src/main/resources/db/migration/V2__booking_read_model.sql)
+- [V3__cancellation_outbox.sql](../../booking-service/src/main/resources/db/migration/V3__cancellation_outbox.sql)
+- [V4__staff_admission_commands.sql](../../booking-service/src/main/resources/db/migration/V4__staff_admission_commands.sql)
+- [V5__counter_booking_authority.sql](../../booking-service/src/main/resources/db/migration/V5__counter_booking_authority.sql)
+- [V6__booking_pos_charges.sql](../../booking-service/src/main/resources/db/migration/V6__booking_pos_charges.sql)
+- [V7__online_booking_commands.sql](../../booking-service/src/main/resources/db/migration/V7__online_booking_commands.sql)
+- [V8__booking_vouchers.sql](../../booking-service/src/main/resources/db/migration/V8__booking_vouchers.sql)
+- [V9__full_court_packages.sql](../../booking-service/src/main/resources/db/migration/V9__full_court_packages.sql)
