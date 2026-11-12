@@ -83,3 +83,26 @@ Tracked Protocol Buffer definitions:
 - [slot_safety.proto](../../staff-operations-service/src/main/proto/slot_safety.proto)
 
 Consult the Maven descriptor for generation plugins before regenerating clients.
+
+## Test inventory
+
+Test sources and fixtures listed here are navigation aids, not a report of passing tests. Review the test setup for Docker, Testcontainers, external services, and profile requirements before execution.
+
+- [AvailabilityGatewayTest.java](../../staff-operations-service/src/test/java/com/fcourt/staff/AvailabilityGatewayTest.java)
+- [LocalClusterInfrastructure.java](../../staff-operations-service/src/test/java/com/fcourt/staff/LocalClusterInfrastructure.java)
+- [LocalFixtureApplication.java](../../staff-operations-service/src/test/java/com/fcourt/staff/LocalFixtureApplication.java)
+- [OfflinePermitTest.java](../../staff-operations-service/src/test/java/com/fcourt/staff/OfflinePermitTest.java)
+- [OpenApiDocsTest.java](../../staff-operations-service/src/test/java/com/fcourt/staff/OpenApiDocsTest.java)
+- [OutboxIntegrationTest.java](../../staff-operations-service/src/test/java/com/fcourt/staff/OutboxIntegrationTest.java)
+- [ScheduleBoundaryTest.java](../../staff-operations-service/src/test/java/com/fcourt/staff/ScheduleBoundaryTest.java)
+- [ScheduleFlagsTest.java](../../staff-operations-service/src/test/java/com/fcourt/staff/ScheduleFlagsTest.java)
+- [ShiftValidationTest.java](../../staff-operations-service/src/test/java/com/fcourt/staff/ShiftValidationTest.java)
+- [SlotSafetyFixture.java](../../staff-operations-service/src/test/java/com/fcourt/staff/SlotSafetyFixture.java)
+- [SlotSafetyGatewayTest.java](../../staff-operations-service/src/test/java/com/fcourt/staff/SlotSafetyGatewayTest.java)
+- [StaffBootstrapTest.java](../../staff-operations-service/src/test/java/com/fcourt/staff/StaffBootstrapTest.java)
+- [StaffIntegrationTest.java](../../staff-operations-service/src/test/java/com/fcourt/staff/StaffIntegrationTest.java)
+- [StaffUpstreamContractTest.java](../../staff-operations-service/src/test/java/com/fcourt/staff/StaffUpstreamContractTest.java)
+- [WalkInPricingTest.java](../../staff-operations-service/src/test/java/com/fcourt/staff/WalkInPricingTest.java)
+- [StaffDirectoryControllerTest.java](../../staff-operations-service/src/test/java/com/fcourt/staff/api/StaffDirectoryControllerTest.java)
+
+From the repository root, the standard Maven verification entry point is `mvn -B -f staff-operations-service/pom.xml verify`. Check the descriptor and environment requirements first.
