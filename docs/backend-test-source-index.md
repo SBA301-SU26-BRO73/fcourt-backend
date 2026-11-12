@@ -134,3 +134,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | notification-service | [KafkaErrorHandlingConfigurationTest.java](../notification-service/src/test/java/com/fcourt/notification/kafka/KafkaErrorHandlingConfigurationTest.java) |
 | notification-service | [NotificationTopicsTest.java](../notification-service/src/test/java/com/fcourt/notification/kafka/NotificationTopicsTest.java) |
 | notification-service | [RedactingDeadLetterPublishingRecovererTest.java](../notification-service/src/test/java/com/fcourt/notification/kafka/RedactingDeadLetterPublishingRecovererTest.java) |
+| notification-service | [SmtpEmailSenderTest.java](../notification-service/src/test/java/com/fcourt/notification/mail/SmtpEmailSenderTest.java) |
