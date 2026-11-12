@@ -81,3 +81,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | discovery-service | [KafkaConfigurationTest.java](../discovery-service/src/test/java/com/fcourt/discovery/config/KafkaConfigurationTest.java) |
 | discovery-service | [OpenApiDocsTest.java](../discovery-service/src/test/java/com/fcourt/discovery/config/OpenApiDocsTest.java) |
 | discovery-service | [BranchControllerTest.java](../discovery-service/src/test/java/com/fcourt/discovery/controller/BranchControllerTest.java) |
+| discovery-service | [CourtSlotControllerTest.java](../discovery-service/src/test/java/com/fcourt/discovery/controller/CourtSlotControllerTest.java) |
