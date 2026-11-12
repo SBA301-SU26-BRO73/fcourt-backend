@@ -50,3 +50,4 @@ aids and do not establish runtime validation results.
 | StaffAdmissionController | [booking-service/src/main/java/com/fcourt/booking/StaffAdmissionController.java](../booking-service/src/main/java/com/fcourt/booking/StaffAdmissionController.java) |
 | StaffCounterController | [booking-service/src/main/java/com/fcourt/booking/StaffCounterController.java](../booking-service/src/main/java/com/fcourt/booking/StaffCounterController.java) |
 | GuestBookingCancelController | [booking-service/src/main/java/com/fcourt/booking/controller/GuestBookingCancelController.java](../booking-service/src/main/java/com/fcourt/booking/controller/GuestBookingCancelController.java) |
+| GuestBookingLookupController | [booking-service/src/main/java/com/fcourt/booking/controller/GuestBookingLookupController.java](../booking-service/src/main/java/com/fcourt/booking/controller/GuestBookingLookupController.java) |
