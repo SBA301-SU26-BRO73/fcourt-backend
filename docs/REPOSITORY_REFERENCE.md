@@ -82,3 +82,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET`, `POST` trên `/api/admin/branches/{branchId}/courts`.
 - `GET`, `PUT`, `DELETE` trên `/api/admin/courts/{id}`.
 - `PATCH /api/admin/courts/{id}/status` đổi trạng thái sân.
+- `POST`, `DELETE` trên `/api/admin/courts/{id}/image` quản lý ảnh sân.
+- `POST /api/admin/courts/lock-slots` khóa khung giờ.
