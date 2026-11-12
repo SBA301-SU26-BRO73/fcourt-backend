@@ -42,3 +42,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `POST /api/auth/password/forgot` yêu cầu đặt lại mật khẩu.
 - `POST /api/auth/password/reset` đặt lại mật khẩu bằng mã.
 - `PATCH /api/auth/password` đổi mật khẩu khi đã đăng nhập.
+- `GET /.well-known/jwks.json` công bố khóa để các service kiểm tra JWT.
+- `GET /api/auth/me` thông tin tài khoản hiện tại.
