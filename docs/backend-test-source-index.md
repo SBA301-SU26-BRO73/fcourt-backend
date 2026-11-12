@@ -47,3 +47,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | booking-service | [BookingCancellationTest.java](../booking-service/src/test/java/com/fcourt/booking/BookingCancellationTest.java) |
 | booking-service | [CancellationRefundContractTest.java](../booking-service/src/test/java/com/fcourt/booking/CancellationRefundContractTest.java) |
 | booking-service | [CounterSafetyServerTest.java](../booking-service/src/test/java/com/fcourt/booking/CounterSafetyServerTest.java) |
+| booking-service | [FullCourtCatalogTest.java](../booking-service/src/test/java/com/fcourt/booking/FullCourtCatalogTest.java) |
