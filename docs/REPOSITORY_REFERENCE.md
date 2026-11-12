@@ -199,3 +199,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/admin/dashboard/stats` số liệu tổng quan của chủ sân.
 - `GET /api/admin/dashboard/revenue-chart` biểu đồ doanh thu.
 - `GET /api/admin/dashboard/analytics/top-courts` sân hiệu quả nhất.
+- `GET /api/admin/dashboard/analytics/peak-hours` khung giờ cao điểm.
