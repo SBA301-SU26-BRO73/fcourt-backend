@@ -124,3 +124,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `POST /api/public/bookings/lookup` tra cứu booking bằng thông tin liên hệ.
 - `POST /api/public/bookings/cancel` hủy booking không cần tài khoản.
 - `GET /api/admin/bookings` danh sách booking của các chi nhánh.
+- `GET /api/internal/bookings/{id}/voucher-snapshot` ảnh chụp voucher đã áp dụng.
+- `POST`, `DELETE` trên `/api/internal/bookings/{id}/voucher` gắn hoặc gỡ voucher.
