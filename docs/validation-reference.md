@@ -35,3 +35,4 @@ aids and do not establish runtime validation results.
 | system flow tests | [tools/system_tests/test_flow.py](../tools/system_tests/test_flow.py) |
 | booking slot safety contract | [booking-service/src/main/proto/slot_safety.proto](../booking-service/src/main/proto/slot_safety.proto) |
 | AuthController | [auth-service/src/main/java/com/fcourt/auth/account/AuthController.java](../auth-service/src/main/java/com/fcourt/auth/account/AuthController.java) |
+| AvatarController | [auth-service/src/main/java/com/fcourt/auth/account/AvatarController.java](../auth-service/src/main/java/com/fcourt/auth/account/AvatarController.java) |
