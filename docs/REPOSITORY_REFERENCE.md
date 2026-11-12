@@ -198,3 +198,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - Reporting dùng read model `booking_facts`, `branch_snapshots`, `processed_events`.
 - `GET /api/admin/dashboard/stats` số liệu tổng quan của chủ sân.
 - `GET /api/admin/dashboard/revenue-chart` biểu đồ doanh thu.
+- `GET /api/admin/dashboard/analytics/top-courts` sân hiệu quả nhất.
