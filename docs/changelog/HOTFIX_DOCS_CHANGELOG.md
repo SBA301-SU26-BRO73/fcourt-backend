@@ -65,3 +65,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 54 | 2026-11-08 | Hotfix | `voucher-service` | #90 | Sửa lỗi áp dụng voucher giảm 100% gây lỗi chia cho 0 khi tính phí giao dịch PayOS. |
 | 55 | 2026-11-08 | Hotfix | `facility-service` | #91 | Khắc phục lỗi không thể cập nhật toạ độ GPS (vĩ độ, kinh độ) của chi nhánh mới. |
 | 56 | 2026-11-08 | Docs update | `docs/architecture` | #92 | Tài liệu hoá luồng phát hành sự kiện Domain Events giữa các microservices qua Kafka. |
+| 57 | 2026-11-08 | Hotfix | `notification-service` | #93 | Khắc phục rò rỉ bộ nhớ (memory leak) trong emitter kết nối SSE của notification-service. |
