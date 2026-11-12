@@ -206,3 +206,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | subscription-service | [CourtTypeControllerTest.java](../subscription-service/src/test/java/com/fcourt/subscription/courttype/CourtTypeControllerTest.java) |
 | subscription-service | [CourtTypeServiceTest.java](../subscription-service/src/test/java/com/fcourt/subscription/courttype/CourtTypeServiceTest.java) |
 | subscription-service | [PayosPropertiesTest.java](../subscription-service/src/test/java/com/fcourt/subscription/payos/PayosPropertiesTest.java) |
+| subscription-service | [PayosSignatureTest.java](../subscription-service/src/test/java/com/fcourt/subscription/payos/PayosSignatureTest.java) |
