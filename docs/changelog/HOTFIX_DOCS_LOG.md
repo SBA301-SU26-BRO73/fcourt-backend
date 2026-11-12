@@ -99,3 +99,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 89 | 2026-11-12 | Feature | `subscription-service` | #387 | Endpoint nội bộ trả giới hạn gói; trả lý do từ chối khi đăng nhập. |
 | 90 | 2026-11-12 | Feature | `notification-service` | #375 | Thông báo in-app và REST API cho chuông thông báo trên web. |
 | 91 | 2026-11-12 | Chore | `tools` | #429 | Thay ảnh card chất lượng thấp của chi nhánh 3 và 10 trong seed. |
+| 92 | 2026-11-12 | Hotfix | `payment-service` | #452 | Tạo yêu cầu hoàn tiền khi khách vãng lai hoặc chủ sân huỷ booking. |
