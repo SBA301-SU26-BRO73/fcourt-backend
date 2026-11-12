@@ -22,3 +22,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 | `facility-service` | `facility_db` | Chi nhánh, sân, khung giờ, giá |
 | `discovery-service` | `discovery_db` | Tìm kiếm công khai và đánh giá |
 | `slot-hold-engine` | `slot_hold_db` | Giữ chỗ tạm thời cho khung giờ |
+| `booking-service` | `booking_db` | Đặt sân, hủy sân, check-in |
+| `payment-service` | `payment_db` | Thanh toán, hoàn tiền, vé |
