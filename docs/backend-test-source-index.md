@@ -144,3 +144,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | notification-service | [ReminderSchedulerTest.java](../notification-service/src/test/java/com/fcourt/notification/reminder/ReminderSchedulerTest.java) |
 | notification-service | [ReminderWorkerTest.java](../notification-service/src/test/java/com/fcourt/notification/reminder/ReminderWorkerTest.java) |
 | payment-service | [AdminRefundProofCleanupTest.java](../payment-service/src/test/java/com/fcourt/payment/AdminRefundProofCleanupTest.java) |
+| payment-service | [AutomaticRefundServiceTest.java](../payment-service/src/test/java/com/fcourt/payment/AutomaticRefundServiceTest.java) |
