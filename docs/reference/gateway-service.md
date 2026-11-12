@@ -22,3 +22,31 @@ Inspect the Maven descriptor for dependencies and plugins, and the Dockerfile or
 Tracked application resources are listed below. Inspect property placeholders and profile selection before choosing local values; do not copy credentials into documentation.
 
 - [application.yml](../../gateway-service/src/main/resources/application.yml)
+
+## Java source map
+
+Java files are grouped by their tracked source directory. Package location alone does not establish an API contract or runtime dependency.
+
+### `com/fcourt/gateway`
+
+- [GatewayApplication.java](../../gateway-service/src/main/java/com/fcourt/gateway/GatewayApplication.java)
+
+### `com/fcourt/gateway/config`
+
+- [GatewayProperties.java](../../gateway-service/src/main/java/com/fcourt/gateway/config/GatewayProperties.java)
+- [SwaggerAggregationConfiguration.java](../../gateway-service/src/main/java/com/fcourt/gateway/config/SwaggerAggregationConfiguration.java)
+
+### `com/fcourt/gateway/ratelimit`
+
+- [ClientKeyResolver.java](../../gateway-service/src/main/java/com/fcourt/gateway/ratelimit/ClientKeyResolver.java)
+- [PolicyRateLimiter.java](../../gateway-service/src/main/java/com/fcourt/gateway/ratelimit/PolicyRateLimiter.java)
+- [RateLimitBackend.java](../../gateway-service/src/main/java/com/fcourt/gateway/ratelimit/RateLimitBackend.java)
+- [RateLimitConfiguration.java](../../gateway-service/src/main/java/com/fcourt/gateway/ratelimit/RateLimitConfiguration.java)
+- [RateLimitProblemFilter.java](../../gateway-service/src/main/java/com/fcourt/gateway/ratelimit/RateLimitProblemFilter.java)
+- [RateLimitProperties.java](../../gateway-service/src/main/java/com/fcourt/gateway/ratelimit/RateLimitProperties.java)
+
+### `com/fcourt/gateway/security`
+
+- [BlockedPathsFilter.java](../../gateway-service/src/main/java/com/fcourt/gateway/security/BlockedPathsFilter.java)
+- [Problems.java](../../gateway-service/src/main/java/com/fcourt/gateway/security/Problems.java)
+- [SecurityConfiguration.java](../../gateway-service/src/main/java/com/fcourt/gateway/security/SecurityConfiguration.java)
