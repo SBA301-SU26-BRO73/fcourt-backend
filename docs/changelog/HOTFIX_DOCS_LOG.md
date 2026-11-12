@@ -65,3 +65,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 55 | 2026-11-09 | Test | `shared storage` | #219 | Pin image MinIO Testcontainers theo digest để test ổn định, tái lập được. |
 | 56 | 2026-11-09 | Feature | `auth-service` | #221 | Danh sách người dùng phân trang cho super admin: `GET /api/super-admin/users`. |
 | 57 | 2026-11-09 | Feature | `facility-service` | #222 | Cập nhật mẫu khung giờ: `PUT /api/admin/time-slot-templates/{id}`. |
+| 58 | 2026-11-09 | Refactor | `booking-service` | #223 | Bỏ rate limiter tra cứu khách trong service, chuyển trách nhiệm lên gateway. |
