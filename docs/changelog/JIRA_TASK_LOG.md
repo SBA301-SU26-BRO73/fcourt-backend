@@ -107,3 +107,4 @@ vào `dev` với task triển khai, và ghi task gốc với ticket review.
 | 96 | [SCRUM-223](https://bro73.atlassian.net/browse/SCRUM-223) | Code review | Review | To Do | [SCRUM-85](https://bro73.atlassian.net/browse/SCRUM-85) | Flutter: Admin Voucher — Quản lý mã khuyến mãi (SCRUM-85) |
 | 97 | [SCRUM-224](https://bro73.atlassian.net/browse/SCRUM-224) | Review approach | Review | To Do | [SCRUM-87](https://bro73.atlassian.net/browse/SCRUM-87) | Flutter: Customer Booking — Nhập voucher và cập nhật VietQR (SCRUM-87) |
 | 98 | [SCRUM-225](https://bro73.atlassian.net/browse/SCRUM-225) | Code review | Review | To Do | [SCRUM-87](https://bro73.atlassian.net/browse/SCRUM-87) | Flutter: Customer Booking — Voucher và VietQR (SCRUM-87) |
+| 99 | [SCRUM-226](https://bro73.atlassian.net/browse/SCRUM-226) | Review approach | Review | To Do | [SCRUM-89](https://bro73.atlassian.net/browse/SCRUM-89) | Flutter: Admin Voucher — Lịch sử khách dùng mã (SCRUM-89) |
