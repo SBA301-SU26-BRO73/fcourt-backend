@@ -219,3 +219,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | voucher-service | [VoucherAuthorityWireMockTest.java](../voucher-service/src/test/java/com/fcourt/voucher/VoucherAuthorityWireMockTest.java) |
 | voucher-service | [VoucherGrpcServerTest.java](../voucher-service/src/test/java/com/fcourt/voucher/VoucherGrpcServerTest.java) |
 | voucher-service | [VoucherPhoneTest.java](../voucher-service/src/test/java/com/fcourt/voucher/VoucherPhoneTest.java) |
+| voucher-service | [VoucherPricingTest.java](../voucher-service/src/test/java/com/fcourt/voucher/VoucherPricingTest.java) |
