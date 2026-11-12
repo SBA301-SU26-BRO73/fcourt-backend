@@ -54,3 +54,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/super-admin/stats/accounts` thống kê tài khoản.
 - `GET /api/super-admin/stats/owner-names` tra tên chủ sân theo id.
 
+## 5. subscription-service
+- `GET /api/subscription-plans` danh sách gói đang bán.
