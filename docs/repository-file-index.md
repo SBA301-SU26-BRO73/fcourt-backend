@@ -76,3 +76,4 @@
 - [booking-service/pom.xml](../booking-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
 - [discovery-service/pom.xml](../discovery-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
 - [facility-service/pom.xml](../facility-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
+- [gateway-service/pom.xml](../gateway-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
