@@ -16,3 +16,9 @@ Inspect the Maven descriptor for dependencies and plugins, and the Dockerfile or
 - [mvnw](../../facility-service/mvnw)
 - [mvnw.cmd](../../facility-service/mvnw.cmd)
 - [pom.xml](../../facility-service/pom.xml)
+
+## Application resources
+
+Tracked application resources are listed below. Inspect property placeholders and profile selection before choosing local values; do not copy credentials into documentation.
+
+- [application.yml](../../facility-service/src/main/resources/application.yml)
