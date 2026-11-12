@@ -15,3 +15,9 @@ Inspect the Maven descriptor for dependencies and plugins, and the Dockerfile or
 - [Dockerfile](../../pos-retail-service/Dockerfile)
 - [compose.yml](../../pos-retail-service/compose.yml)
 - [pom.xml](../../pos-retail-service/pom.xml)
+
+## Application resources
+
+Tracked application resources are listed below. Inspect property placeholders and profile selection before choosing local values; do not copy credentials into documentation.
+
+- [application.yml](../../pos-retail-service/src/main/resources/application.yml)
