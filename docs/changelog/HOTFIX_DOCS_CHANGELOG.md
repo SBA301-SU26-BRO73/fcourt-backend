@@ -34,3 +34,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 23 | 2026-10-31 | Hotfix | `notification-service` | #31 | Sửa lỗi template email xác nhận đặt sân bị mất logo và sai biến thời gian. |
 | 24 | 2026-10-31 | Docs update | `docs/architecture` | #32 | Tài liệu hoá kiến trúc gửi email bất đồng bộ qua hàng đợi AWS SQS / SES. |
 | 25 | 2026-11-01 | Docs update | `docs/business` | #33 | Tài liệu hoá chính sách hoàn huỷ sân và quy tắc tính phí huỷ theo thời gian. |
+| 26 | 2026-11-01 | Hotfix | `staff-operations-service` | #45 | Từ chối check-in cho ngày đã qua; lịch trong ngày chấp nhận slot qua nửa đêm. |
