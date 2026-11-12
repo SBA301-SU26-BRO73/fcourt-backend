@@ -72,3 +72,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 62 | 2026-11-09 | Feature | `reporting-service` | #231 | Các endpoint chi tiết cho dashboard super admin. |
 | 63 | 2026-11-09 | Feature | `subscription-service` | #224 | Trả số chi nhánh/sân đã dùng trong `my-subscription`. |
 | 64 | 2026-11-09 | Feature | `voucher-service` | #227 | Endpoint kiểm tra voucher và gỡ voucher đã áp dụng. |
+| 65 | 2026-11-09 | Feature | `booking-service` | #228 | Cho khách vãng lai tạo booking online bằng hold token. |
