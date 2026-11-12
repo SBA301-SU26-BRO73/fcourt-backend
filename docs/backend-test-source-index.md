@@ -43,3 +43,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | booking-service | [AdminBookingApiTest.java](../booking-service/src/test/java/com/fcourt/booking/AdminBookingApiTest.java) |
 | booking-service | [AdminBookingCancelApiTest.java](../booking-service/src/test/java/com/fcourt/booking/AdminBookingCancelApiTest.java) |
 | booking-service | [AdminBranchAuthorityTest.java](../booking-service/src/test/java/com/fcourt/booking/AdminBranchAuthorityTest.java) |
+| booking-service | [BookingApiTest.java](../booking-service/src/test/java/com/fcourt/booking/BookingApiTest.java) |
