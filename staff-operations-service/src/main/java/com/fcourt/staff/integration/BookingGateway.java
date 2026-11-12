@@ -127,7 +127,9 @@ public class BookingGateway {
     public record Session(long bookingId, LocalDate date, LocalTime slotStart, LocalTime slotEnd,
                           String status, String customerName, String guestPhone) { }
     public record CheckInCommand(long branchId, long actorId, String checkInCode, LocalDate date,
-                                 Instant checkedInAt, String channel) { }
+                                 Instant checkedInAt, String channel,
+                                 @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+                                 Long bookingId) { }
     public record CheckInResult(long bookingId, long branchId, LocalDate date, String status, Instant checkedInAt) { }
     public record PreviewCommand(long branchId, long actorId, String checkInCode, LocalDate date) {
         @Override public String toString() { return "PreviewCommand[code=REDACTED]"; }

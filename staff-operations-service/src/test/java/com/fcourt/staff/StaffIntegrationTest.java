@@ -801,6 +801,52 @@ class StaffIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT result::text FROM staff_booking_commands", String.class)).doesNotContain(code);
     }
 
+    ResponseEntity<JsonNode> byBooking(UUID key, Object bookingId, String jwtRole) {
+        return call(HttpMethod.POST, "/api/staff/check-in/by-booking", Map.of("bookingId", bookingId),
+                token("100", jwtRole), key);
+    }
+
+    @Test
+    void byBookingChecksInOnceIsIdempotentAndNeverSendsOrStoresACode() {
+        create(UUID.randomUUID(), body(7));
+        UUID key = UUID.randomUUID();
+        var response = byBooking(key, 42, "STAFF");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().path("status").asText()).isEqualTo("CHECKED_IN");
+        assertThat(byBooking(key, 42, "STAFF").getBody()).isEqualTo(response.getBody());
+        assertThat(CHECK_IN_REQUESTS.values()).singleElement().asString().contains("\"bookingId\":42", "MANUAL");
+        var audit = jdbc.queryForMap("SELECT actor_id, branch_id, booking_id, channel FROM staff_check_in_audit");
+        assertThat(audit.get("booking_id")).isEqualTo(42L);
+        assertThat(audit.get("channel")).isEqualTo("MANUAL");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_outbox", Integer.class)).isEqualTo(1);
+        // A second tap with a new key is the already-checked-in conflict of the code flow.
+        assertThat(byBooking(UUID.randomUUID(), 42, "STAFF").getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_check_in_audit", Integer.class)).isEqualTo(1);
+    }
+
+    @Test
+    void byBookingReturnsTheSameReasonCodesAsTheCodeFlow() {
+        create(UUID.randomUUID(), body(7));
+        for (String reason : List.of("CHECKIN_TOO_EARLY", "WRONG_DATE", "WRONG_BRANCH", "ALREADY_CHECKED_IN")) {
+            bookingFailure = 409;
+            bookingFailureReason = reason;
+            var response = byBooking(UUID.randomUUID(), 42, "STAFF");
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+            assertThat(response.getBody().path("reason").asText()).isEqualTo(reason);
+        }
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_outbox", Integer.class)).isZero();
+    }
+
+    @Test
+    void byBookingValidatesInputAndRequiresStaffAndKey() {
+        create(UUID.randomUUID(), body(7));
+        assertThat(byBooking(UUID.randomUUID(), 0, "STAFF").getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(byBooking(UUID.randomUUID(), 43, "STAFF").getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(byBooking(null, 42, "STAFF").getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(byBooking(UUID.randomUUID(), 42, "CUSTOMER").getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM staff_check_in_audit", Integer.class)).isZero();
+    }
+
     @Test
     void manualRequiresStaffAndIdempotencyKeyBeforeAdmission() {
         create(UUID.randomUUID(), body(7));
@@ -935,7 +981,7 @@ class StaffIntegrationTest {
                         send(exchange, 409, Map.of()); return;
                     }
                     if (CHECK_IN_RESULTS.containsKey(key)) { send(exchange, 200, CHECK_IN_RESULTS.get(key)); return; }
-                    if (!body.path("checkInCode").asText().equals(ticketCode)) { send(exchange, 404, Map.of()); return; }
+                    if (!body.path("checkInCode").asText().equals(ticketCode) && body.path("bookingId").asLong() != 42) { send(exchange, 404, Map.of()); return; }
                     if (!CHECKED_IN.compareAndSet(false, true)) { send(exchange, 409, Map.of()); return; }
                     var response = Map.<String, Object>of("bookingId", 42, "branchId", wrongBranch ? 8 : 7,
                             "date", LocalDate.parse(body.path("date").asText()).plusDays(bookingDateShift).toString(),

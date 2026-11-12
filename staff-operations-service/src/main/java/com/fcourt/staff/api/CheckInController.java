@@ -43,6 +43,14 @@ class CheckInController {
         @Override public String toString() { return "Code[REDACTED]"; }
     }
 
+    @PostMapping("/api/staff/check-in/by-booking")
+    ResponseEntity<BookingGateway.CheckInResult> byBooking(@AuthenticationPrincipal Jwt jwt,
+            @RequestHeader("Idempotency-Key") UUID key, @Valid @RequestBody BookingRef request) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.verifyBooking(jwt, key, request.bookingId()));
+    }
+
+    record BookingRef(@jakarta.validation.constraints.Positive long bookingId) { }
+
     @PostMapping("/api/staff/check-in/manual")
     ResponseEntity<BookingGateway.CheckInResult> manual(@AuthenticationPrincipal Jwt jwt,
             @RequestHeader("Idempotency-Key") UUID key, @Valid @RequestBody Code request) {
