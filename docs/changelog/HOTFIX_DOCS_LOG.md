@@ -14,3 +14,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 4 | 2026-11-02 | Test | `tools` | #18 | Thêm production readiness probes cho bộ smoke test. |
 | 5 | 2026-11-02 | Hotfix | `facility-service` | #66 | Đồng bộ quyền SUPER_ADMIN, chỉ số todayRevenue và cách tính booking đã huỷ với monolith cũ. |
 | 6 | 2026-11-07 | Test | `staff-operations-service` | #81 | Kiểm thử hợp đồng opaque ticket khi nhân viên check-in. |
+| 7 | 2026-11-07 | Hotfix | `tools` | #82 | Căn chỉnh dữ liệu demo runtime cho khớp schema hiện tại của các service. |
