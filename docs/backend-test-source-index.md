@@ -222,3 +222,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | voucher-service | [VoucherPricingTest.java](../voucher-service/src/test/java/com/fcourt/voucher/VoucherPricingTest.java) |
 | voucher-service | [VoucherUsageMigrationTest.java](../voucher-service/src/test/java/com/fcourt/voucher/VoucherUsageMigrationTest.java) |
 | voucher-service | [GlobalExceptionHandlerTest.java](../voucher-service/src/test/java/com/fcourt/voucher/exception/GlobalExceptionHandlerTest.java) |
+| tools/demo_seed | [test_seed.py](../tools/demo_seed/test_seed.py) |
