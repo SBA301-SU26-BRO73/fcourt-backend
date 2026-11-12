@@ -148,3 +148,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/payments/{bookingId}/ticket` vé điện tử, `.../ticket/qr` ảnh QR.
 - `GET /api/admin/payments/pending` danh sách chờ duyệt.
 - `PUT /api/admin/payments/{paymentId}/confirm` xác nhận đã nhận tiền.
+- `PUT /api/admin/payments/{paymentId}/reject` từ chối biên lai.
