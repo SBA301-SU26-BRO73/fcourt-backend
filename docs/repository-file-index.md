@@ -38,3 +38,4 @@
 - [docs/reference/staff-operations-service.md](../docs/reference/staff-operations-service.md) — staff-operations-service: repository reference
 - [docs/reference/subscription-service.md](../docs/reference/subscription-service.md) — subscription-service: repository reference
 - [docs/reference/voucher-service.md](../docs/reference/voucher-service.md) — voucher-service: repository reference
+- [docs/report/README.md](../docs/report/README.md) — Báo cáo cuối kỳ
