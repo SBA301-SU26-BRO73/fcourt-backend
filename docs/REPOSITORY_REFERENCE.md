@@ -46,3 +46,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/auth/me` thông tin tài khoản hiện tại.
 - `/api/internal/staff-accounts` tạo, sửa, xóa, kích hoạt lại tài khoản nhân viên.
 - `GET /api/super-admin/users` danh sách người dùng.
+- `GET /api/super-admin/court-admins/pending` danh sách chủ sân chờ duyệt.
+- `GET /api/super-admin/court-admins/{id}` chi tiết hồ sơ chủ sân.
