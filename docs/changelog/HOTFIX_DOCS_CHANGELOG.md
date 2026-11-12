@@ -172,3 +172,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 161 | 2026-11-12 | Hotfix | `subscription-service` | #507 | Khắc phục lỗi tính sai ngày kết thúc chu kỳ thanh toán cho gói đăng ký 12 tháng. |
 | 162 | 2026-11-12 | Docs update | `docs/reference` | #508 | Tài liệu hoá chính sách định giá các gói dịch vụ dành cho chủ sân (Facility Plans). |
 | 163 | 2026-11-12 | Hotfix | `gateway-service` | #509 | Khắc phục lỗi rớt header Authorization khi gateway chuyển tiếp request qua HTTPS. |
+| 164 | 2026-11-12 | Hotfix | `gateway-service` | #510 | Tối ưu bộ đệm Netty buffer pool giảm tiêu hao RAM khi chịu tải đồng thời cao. |
