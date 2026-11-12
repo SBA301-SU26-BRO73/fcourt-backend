@@ -55,3 +55,4 @@
 - [staff-operations-service/REQUEST_REVIEW.md](../staff-operations-service/REQUEST_REVIEW.md) — SCRUM-26 — Staff management review preparation
 - [staff-operations-service/VALIDATION.md](../staff-operations-service/VALIDATION.md) — SCRUM-26 validation
 - [staff-operations-service/VALIDATION_SCRUM_28.md](../staff-operations-service/VALIDATION_SCRUM_28.md) — SCRUM-28 validation
+- [staff-operations-service/VALIDATION_SCRUM_30.md](../staff-operations-service/VALIDATION_SCRUM_30.md) — SCRUM-30 validation
