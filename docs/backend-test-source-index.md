@@ -58,3 +58,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | booking-service | [OpenApiDocsTest.java](../booking-service/src/test/java/com/fcourt/booking/OpenApiDocsTest.java) |
 | booking-service | [ReceiptUrlsTest.java](../booking-service/src/test/java/com/fcourt/booking/ReceiptUrlsTest.java) |
 | booking-service | [SlotFanoutLatencyTest.java](../booking-service/src/test/java/com/fcourt/booking/SlotFanoutLatencyTest.java) |
+| booking-service | [SlotOccupancyTest.java](../booking-service/src/test/java/com/fcourt/booking/SlotOccupancyTest.java) |
