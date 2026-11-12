@@ -113,3 +113,4 @@ aids and do not establish runtime validation results.
 | OpenApiConfig | [auth-service/src/main/java/com/fcourt/auth/config/OpenApiConfig.java](../auth-service/src/main/java/com/fcourt/auth/config/OpenApiConfig.java) |
 | PasswordConfiguration | [auth-service/src/main/java/com/fcourt/auth/config/PasswordConfiguration.java](../auth-service/src/main/java/com/fcourt/auth/config/PasswordConfiguration.java) |
 | SecurityConfiguration | [auth-service/src/main/java/com/fcourt/auth/config/SecurityConfiguration.java](../auth-service/src/main/java/com/fcourt/auth/config/SecurityConfiguration.java) |
+| KafkaTopicConfiguration | [auth-service/src/main/java/com/fcourt/auth/outbox/KafkaTopicConfiguration.java](../auth-service/src/main/java/com/fcourt/auth/outbox/KafkaTopicConfiguration.java) |
