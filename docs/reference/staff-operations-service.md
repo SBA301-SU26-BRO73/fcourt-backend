@@ -118,3 +118,21 @@ Review script contents and application configuration to distinguish initializati
 - [V3__booking_commands_outbox.sql](../../staff-operations-service/src/main/resources/db/migration/V3__booking_commands_outbox.sql)
 - [V4__check_in_audit.sql](../../staff-operations-service/src/main/resources/db/migration/V4__check_in_audit.sql)
 - [V5__offline_check_in_channel.sql](../../staff-operations-service/src/main/resources/db/migration/V5__offline_check_in_channel.sql)
+
+## Related documentation
+
+Read the existing service documentation for behavior, setup instructions, and recorded validation details. Historical validation notes describe the run they record and are not fresh verification results.
+
+- [CONTRACTS.md](../../staff-operations-service/CONTRACTS.md)
+- [FLUTTER_SUPPORT.md](../../staff-operations-service/FLUTTER_SUPPORT.md)
+- [README.md](../../staff-operations-service/README.md)
+- [REASSESSMENT_SCRUM_65.md](../../staff-operations-service/REASSESSMENT_SCRUM_65.md)
+- [REQUEST_REVIEW.md](../../staff-operations-service/REQUEST_REVIEW.md)
+- [VALIDATION.md](../../staff-operations-service/VALIDATION.md)
+- [VALIDATION_SCRUM_28.md](../../staff-operations-service/VALIDATION_SCRUM_28.md)
+- [VALIDATION_SCRUM_30.md](../../staff-operations-service/VALIDATION_SCRUM_30.md)
+- [VALIDATION_SCRUM_61.md](../../staff-operations-service/VALIDATION_SCRUM_61.md)
+- [VALIDATION_SCRUM_63.md](../../staff-operations-service/VALIDATION_SCRUM_63.md)
+- [VALIDATION_SCRUM_65.md](../../staff-operations-service/VALIDATION_SCRUM_65.md)
+
+For shared runtime setup, see [Docker Compose operations](../operations/docker-compose.md). For request routing, see [gateway operations](../operations/gateway.md).
