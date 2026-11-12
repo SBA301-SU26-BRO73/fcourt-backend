@@ -95,3 +95,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 84 | 2026-11-09 | Hotfix | `payment-service` | #242 | Trả mã lỗi HTTP 422 thay vì 503 khi chi nhánh chưa cấu hình tài khoản ngân hàng. |
 | 85 | 2026-11-09 | Docs update | `docs/operations` | #243 | Tài liệu hoá cấu hình presign endpoint S3 khi truy cập từ mạng nội bộ và công cộng. |
 | 86 | 2026-11-09 | Hotfix | `auth-service` | #244 | Cấu hình storage.s3.presign-endpoint cho phép mở URL tài liệu chủ sân từ web. |
+| 87 | 2026-11-09 | Hotfix | `payment-service` | #245 | Cấu hình storage.s3.presign-endpoint cho URL biên lai và chứng từ hoàn tiền. |
