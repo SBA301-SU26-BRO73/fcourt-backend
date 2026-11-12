@@ -51,3 +51,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | booking-service | [FullCourtFacilityTest.java](../booking-service/src/test/java/com/fcourt/booking/FullCourtFacilityTest.java) |
 | booking-service | [FullCourtQuoteTest.java](../booking-service/src/test/java/com/fcourt/booking/FullCourtQuoteTest.java) |
 | booking-service | [FullCourtReservationTest.java](../booking-service/src/test/java/com/fcourt/booking/FullCourtReservationTest.java) |
+| booking-service | [GuestBookingCancelApiTest.java](../booking-service/src/test/java/com/fcourt/booking/GuestBookingCancelApiTest.java) |
