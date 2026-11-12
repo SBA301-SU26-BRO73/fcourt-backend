@@ -67,3 +67,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 57 | 2026-11-09 | Feature | `facility-service` | #222 | Cập nhật mẫu khung giờ: `PUT /api/admin/time-slot-templates/{id}`. |
 | 58 | 2026-11-09 | Refactor | `booking-service` | #223 | Bỏ rate limiter tra cứu khách trong service, chuyển trách nhiệm lên gateway. |
 | 59 | 2026-11-09 | Feature | `gateway-service` | #226 | Định tuyến danh sách sản phẩm POS của super admin tới pos-retail-service. |
+| 60 | 2026-11-09 | Feature | `pos-retail-service` | #225 | Danh sách sản phẩm POS của tất cả chi nhánh cho super admin. |
