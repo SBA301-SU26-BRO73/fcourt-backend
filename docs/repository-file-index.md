@@ -104,3 +104,4 @@
 - [slot-hold-engine/Dockerfile](../slot-hold-engine/Dockerfile) — Container image build definition.
 - [staff-operations-service/Dockerfile](../staff-operations-service/Dockerfile) — Container image build definition.
 - [subscription-service/Dockerfile](../subscription-service/Dockerfile) — Container image build definition.
+- [voucher-service/Dockerfile](../voucher-service/Dockerfile) — Container image build definition.
