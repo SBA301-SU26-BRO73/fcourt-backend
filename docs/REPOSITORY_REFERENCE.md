@@ -26,3 +26,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 | `payment-service` | `payment_db` | Thanh toán, hoàn tiền, vé |
 | `voucher-service` | `voucher_db` | Mã giảm giá |
 | `staff-operations-service` | `staff_db` | Nhân viên, lịch làm việc, check-in |
+| `pos-retail-service` | `pos_retail_db` | Bán lẻ tại quầy |
+| `reporting-service` | `reporting_db` | Báo cáo và thống kê |
