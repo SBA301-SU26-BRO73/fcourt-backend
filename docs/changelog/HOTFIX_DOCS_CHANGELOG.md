@@ -80,3 +80,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 69 | 2026-11-09 | Hotfix | `facility-service` | #188 | Sửa lỗi tính sai giá tiền slot theo khung giờ cao điểm (Peak Hours Pricing). |
 | 70 | 2026-11-09 | Docs update | `docs/operations` | #210 | Mô tả thiết kế lưu trữ S3, LocalStack và seed data không phụ thuộc Cloudinary. |
 | 71 | 2026-11-09 | Hotfix | `gateway-service` | #213 | Sửa lỗi Redis RateLimiter không đếm đúng số request theo client IP thực tế. |
+| 72 | 2026-11-09 | Hotfix | `auth-service` | #214 | Khắc phục lỗi Google OAuth2 redirect URI không tương thích khi chạy qua Gateway. |
