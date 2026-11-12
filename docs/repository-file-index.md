@@ -113,3 +113,4 @@
 - [auth-service/src/test/java/com/fcourt/auth/account/AvatarControllerTest.java](../auth-service/src/test/java/com/fcourt/auth/account/AvatarControllerTest.java) — Java test source; inspect fixtures and assertions before running.
 - [auth-service/src/test/java/com/fcourt/auth/account/AvatarServiceTest.java](../auth-service/src/test/java/com/fcourt/auth/account/AvatarServiceTest.java) — Java test source; inspect fixtures and assertions before running.
 - [auth-service/src/test/java/com/fcourt/auth/account/FailedAttemptThrottleTest.java](../auth-service/src/test/java/com/fcourt/auth/account/FailedAttemptThrottleTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/account/GoogleLoginServiceTest.java](../auth-service/src/test/java/com/fcourt/auth/account/GoogleLoginServiceTest.java) — Java test source; inspect fixtures and assertions before running.
