@@ -238,3 +238,4 @@
 - [notification-service/src/test/java/com/fcourt/notification/reminder/ReminderWorkerTest.java](../notification-service/src/test/java/com/fcourt/notification/reminder/ReminderWorkerTest.java) — Java test source; inspect fixtures and assertions before running.
 - [payment-service/src/test/java/com/fcourt/payment/AdminRefundProofCleanupTest.java](../payment-service/src/test/java/com/fcourt/payment/AdminRefundProofCleanupTest.java) — Java test source; inspect fixtures and assertions before running.
 - [payment-service/src/test/java/com/fcourt/payment/AutomaticRefundServiceTest.java](../payment-service/src/test/java/com/fcourt/payment/AutomaticRefundServiceTest.java) — Java test source; inspect fixtures and assertions before running.
+- [payment-service/src/test/java/com/fcourt/payment/BookingRefundConsumerTest.java](../payment-service/src/test/java/com/fcourt/payment/BookingRefundConsumerTest.java) — Java test source; inspect fixtures and assertions before running.
