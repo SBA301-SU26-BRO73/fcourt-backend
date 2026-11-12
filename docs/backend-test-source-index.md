@@ -172,3 +172,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | reporting-service | [AnalyticsServiceTest.java](../reporting-service/src/test/java/com/fcourt/reporting/service/AnalyticsServiceTest.java) |
 | reporting-service | [DashboardServiceTest.java](../reporting-service/src/test/java/com/fcourt/reporting/service/DashboardServiceTest.java) |
 | reporting-service | [RevenueExportServiceTest.java](../reporting-service/src/test/java/com/fcourt/reporting/service/RevenueExportServiceTest.java) |
+| reporting-service | [RevenueReportTest.java](../reporting-service/src/test/java/com/fcourt/reporting/service/RevenueReportTest.java) |
