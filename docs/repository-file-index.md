@@ -18,3 +18,4 @@
 - [docs/architecture/spring-cloud.md](../docs/architecture/spring-cloud.md) — Spring Cloud: Gateway và tìm service
 - [docs/business/business-gap-a.md](../docs/business/business-gap-a.md) — Business gap analysis – Phần A (booking, payment, refund)
 - [docs/business/business-gap-b.md](../docs/business/business-gap-b.md) — Business gap analysis — part B
+- [docs/business/cancellation-refunds.md](../docs/business/cancellation-refunds.md) — booking-service
