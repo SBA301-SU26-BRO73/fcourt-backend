@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 class BookingRefundConsumerTest {
     final RefundService refunds=mock(RefundService.class);
@@ -54,11 +56,24 @@ class BookingRefundConsumerTest {
         verifyNoInteractions(refunds);
     }
 
-    @Test void invalidPaidEventFailsRatherThanCreatingWrongRefund() {
-        assertThatThrownBy(()->consumer.accept(event("null","CUSTOMER","CONFIRMED","null")))
-            .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(()->consumer.accept(event("null","CUSTOMER","CONFIRMED","80000").replace("\"id\":42","\"id\":0")))
-            .isInstanceOf(IllegalArgumentException.class);
+    @Test void invalidPaidEventIsSkippedWithoutCreatingRefund() throws Exception {
+        consumer.accept(event("null","CUSTOMER","CONFIRMED","null"));
+        consumer.accept(event("null","CUSTOMER","CONFIRMED","80000").replace("\"id\":42","\"id\":0"));
         verifyNoInteractions(refunds);
+    }
+
+    @Test void missingOrMismatchedPaymentIsSkippedSoLaterEventsAreNotBlocked() {
+        when(refunds.automatic(any())).thenThrow(new ResponseStatusException(HttpStatus.CONFLICT,"Confirmed payment required"));
+        assertThatCode(()->consumer.accept(event("null","CUSTOMER","CONFIRMED","80000"))).doesNotThrowAnyException();
+    }
+
+    @Test void transientFailureIsStillRetried() {
+        when(refunds.automatic(any())).thenThrow(new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"db down"));
+        assertThatThrownBy(()->consumer.accept(event("null","CUSTOMER","CONFIRMED","80000")))
+            .isInstanceOf(ResponseStatusException.class);
+        reset(refunds);
+        when(refunds.automatic(any())).thenThrow(new org.springframework.dao.DataAccessResourceFailureException("db down"));
+        assertThatThrownBy(()->consumer.accept(event("null","CUSTOMER","CONFIRMED","80000")))
+            .isInstanceOf(org.springframework.dao.DataAccessResourceFailureException.class);
     }
 }
