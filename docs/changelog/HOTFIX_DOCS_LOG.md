@@ -33,3 +33,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 23 | 2026-11-09 | CI/CD | `eureka-server` | #177 | Build image eureka-server khi push; gateway-service đã khớp pattern `*-service`. |
 | 24 | 2026-11-09 | Feature | `gateway-service` | #178 | Spring Cloud Gateway kiểm tra JWT và gộp Swagger của tất cả service. |
 | 25 | 2026-11-09 | Feature | `all services` | #179–#186, #215–#218 | Đăng ký 12 service với Eureka để service discovery qua registry. |
+| 26 | 2026-11-09 | Feature | `booking-service` | #187 | Tra cứu booking cho khách vãng lai: `POST /api/public/bookings/lookup`. |
