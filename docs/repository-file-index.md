@@ -100,3 +100,4 @@
 - [notification-service/Dockerfile](../notification-service/Dockerfile) — Container image build definition.
 - [payment-service/Dockerfile](../payment-service/Dockerfile) — Container image build definition.
 - [pos-retail-service/Dockerfile](../pos-retail-service/Dockerfile) — Container image build definition.
+- [reporting-service/Dockerfile](../reporting-service/Dockerfile) — Container image build definition.
