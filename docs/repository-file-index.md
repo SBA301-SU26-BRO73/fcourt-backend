@@ -126,3 +126,4 @@
 - [auth-service/src/test/java/com/fcourt/auth/staff/StaffAccountsTest.java](../auth-service/src/test/java/com/fcourt/auth/staff/StaffAccountsTest.java) — Java test source; inspect fixtures and assertions before running.
 - [auth-service/src/test/java/com/fcourt/auth/staff/StaffReactivationTest.java](../auth-service/src/test/java/com/fcourt/auth/staff/StaffReactivationTest.java) — Java test source; inspect fixtures and assertions before running.
 - [auth-service/src/test/java/com/fcourt/auth/superadmin/PlatformStatsRepositoryIntegrationTest.java](../auth-service/src/test/java/com/fcourt/auth/superadmin/PlatformStatsRepositoryIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/superadmin/PlatformStatsServiceTest.java](../auth-service/src/test/java/com/fcourt/auth/superadmin/PlatformStatsServiceTest.java) — Java test source; inspect fixtures and assertions before running.
