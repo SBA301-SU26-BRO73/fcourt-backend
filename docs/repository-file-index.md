@@ -70,3 +70,4 @@
 - [tools/system_tests/REASSESSMENT.md](../tools/system_tests/REASSESSMENT.md) — SCRUM-91 — reassessment and local integration evidence
 - [booking-service/src/main/proto/slot_safety.proto](../booking-service/src/main/proto/slot_safety.proto) — Protocol Buffer contract; inspect service and message definitions here.
 - [slot-hold-engine/src/main/proto/slot_safety.proto](../slot-hold-engine/src/main/proto/slot_safety.proto) — Protocol Buffer contract; inspect service and message definitions here.
+- [staff-operations-service/src/main/proto/slot_safety.proto](../staff-operations-service/src/main/proto/slot_safety.proto) — Protocol Buffer contract; inspect service and message definitions here.
