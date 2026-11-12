@@ -88,3 +88,4 @@
 - [discovery-service/compose.yml](../discovery-service/compose.yml) — Docker Compose service and dependency configuration.
 - [docker-compose.yml](../docker-compose.yml) — Docker Compose service and dependency configuration.
 - [payment-service/compose.yml](../payment-service/compose.yml) — Docker Compose service and dependency configuration.
+- [pos-retail-service/compose.yml](../pos-retail-service/compose.yml) — Docker Compose service and dependency configuration.
