@@ -114,12 +114,18 @@ SELECT b.*,s.first_start,s.last_end FROM bookings b JOIN spans s ON s.booking_id
     @Transactional(timeout = 15)
     Result online(Jwt jwt, Online command, String key) {
         authority.require(jwt, command.branchId(), command.actorId());
-        if (command.checkInCode() == null
-                || command.checkInCode().isBlank()
-                || command.checkInCode().length() > 128
+        String code = command.checkInCode();
+        if (command.bookingId() != null) {
+            // One-tap check-in from the schedule: the staff app only knows the booking id, never the ticket code.
+            if (command.bookingId() <= 0 || !"MANUAL".equals(command.channel())) throw bad();
+            code = ticketCodeOf(command.bookingId(), command.branchId());
+        }
+        if (code == null
+                || code.isBlank()
+                || code.length() > 128
                 || !Set.of("QR", "MANUAL")
                         .contains(Objects.requireNonNullElse(command.channel(), ""))) throw bad();
-        String normalized = command.checkInCode().strip();
+        String normalized = code.strip();
         if (!key.startsWith("staff:check-in:" + command.actorId() + ":")) throw bad();
         try {
             UUID.fromString(key.substring(key.lastIndexOf(':') + 1));
@@ -213,6 +219,18 @@ SELECT b.*,s.first_start,s.last_end FROM bookings b JOIN spans s ON s.booking_id
             throw new IllegalStateException("Cannot persist admission");
         }
         return result;
+    }
+
+    /** Ticket code of a booking, resolved server side. A booking of another branch looks like a missing one unless it has a code (then the usual WRONG_BRANCH rule applies). */
+    private String ticketCodeOf(long bookingId, long branch) {
+        var rows = jdbc.queryForList("SELECT checkin_code,branch_id FROM bookings WHERE id=?", bookingId);
+        if (rows.isEmpty()) throw missing();
+        var code = (String) rows.getFirst().get("checkin_code");
+        if (code == null || code.isBlank()) {
+            if (((Number) rows.getFirst().get("branch_id")).longValue() != branch) throw missing();
+            throw conflict();
+        }
+        return code;
     }
 
     private static String manualCode(String code) {
@@ -369,7 +387,8 @@ SELECT b.*,s.first_start,s.last_end FROM bookings b JOIN spans s ON s.booking_id
             String checkInCode,
             LocalDate date,
             java.time.Instant checkedInAt,
-            String channel) {
+            String channel,
+            Long bookingId) {
         @Override
         public String toString() {
             return "Online[REDACTED]";

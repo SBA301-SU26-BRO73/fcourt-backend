@@ -222,6 +222,13 @@ aliases such as `FC-89234` remain supported by the booking authority.
 Unknown code is 404, wrong date/status or already checked-in is 409; invalid
 body is 400. A code in another branch must not reveal that booking.
 
+POST /api/staff/check-in/by-booking accepts `{"bookingId":42}` (the id from
+GET /api/staff/schedule/today) with the same STAFF Bearer and Idempotency-Key,
+so the app can check in with one tap without ever holding the ticket code. The
+booking authority resolves the code server side and applies the same rules; 409
+bodies carry the same `reason` (`CHECKIN_TOO_EARLY`, `WRONG_DATE`, `WRONG_BRANCH`,
+`ALREADY_CHECKED_IN`). Unknown booking is 404, bookingId <= 0 is 400.
+
 Flyway V4 records successful QR/manual audit with actor, booking, branch,
 channel, command key, authoritative check-in time and local recorded time.
 Audit, command result and event commit together; rollback requires retrying the
