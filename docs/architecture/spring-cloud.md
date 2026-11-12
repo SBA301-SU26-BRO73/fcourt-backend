@@ -1,6 +1,6 @@
 # Spring Cloud: Gateway và tìm service
 
-Hệ thống không dùng service registry (đã bỏ Eureka). `gateway-service` là thành phần Spring Cloud duy nhất ở gốc repo, không có database. Chi tiết route và biến môi trường: xem [gateway.md](gateway.md).
+Hệ thống không dùng service registry (đã bỏ Eureka). `gateway-service` là thành phần Spring Cloud duy nhất ở gốc repo, không có database. Chi tiết route và biến môi trường: xem [gateway.md](../operations/gateway.md).
 
 ## Tìm service bằng DNS tĩnh
 

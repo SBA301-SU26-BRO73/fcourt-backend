@@ -22,3 +22,8 @@ Thumbs.db
 # Local demo manifests can contain private banking/venue data
 tools/demo_seed/*.local.json
 __pycache__/
+
+# Final report (DOCX/PDF stay local; the folder is kept)
+docs/report/*
+!docs/report/README.md
+!docs/report/.gitkeep

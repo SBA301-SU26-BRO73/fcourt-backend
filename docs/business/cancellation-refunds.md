@@ -123,4 +123,4 @@ Changed files
 - Payment migration: `payment-service/src/main/resources/db/migration/V9__automatic_cancellation_refunds.sql`.
 - Payment tests, under `payment-service/src/test/java/com/fcourt/payment/`: `AutomaticRefundServiceTest.java`, `BookingRefundConsumerTest.java`, `PublicRefundApiTest.java`, `GuestRefundAuthorityTest.java`, `GuestRefundLifecycleTest.java`, `PaymentDatabaseTest.java`, `AdminRefundProofCleanupTest.java`, `S3ReceiptStorageTest.java`.
 - Gateway: `gateway-service/src/main/resources/application.yml`, `gateway-service/src/test/java/com/fcourt/gateway/GatewaySecurityTests.java`, `RateLimitGatewayTests.java`.
-- Handoff: `docs/cancellation-refunds.md`.
+- Handoff: `docs/business/cancellation-refunds.md`.

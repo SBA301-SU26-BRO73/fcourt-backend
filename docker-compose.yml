@@ -1,4 +1,4 @@
-# FCourt: chay ca he thong local bang Docker Compose. Huong dan day du: docs/docker-compose.md
+# FCourt: chay ca he thong local bang Docker Compose. Huong dan day du: docs/operations/docker-compose.md
 #
 #   docker compose --profile infra up -d     # chi ha tang: postgres, redis, kafka
 #   docker compose --profile core up -d      # infra + gateway + auth, facility, booking, slot-hold, payment
@@ -38,7 +38,7 @@ x-env: &env
   HOLD_GRPC_TARGET: slot-hold-engine:9087
   BOOKING_GRPC_TARGET: booking-service:9088
   STAFF_GRPC_PLAINTEXT: "true"
-  # S3 that tren AWS (bucket local rieng, IAM user fcourt-local-s3), xem docs/storage-s3.md. Khoa lay tu .env (khong commit); thieu khoa thi he thong van chay, chi upload/xem file loi.
+  # S3 that tren AWS (bucket local rieng, IAM user fcourt-local-s3), xem docs/operations/storage-s3.md. Khoa lay tu .env (khong commit); thieu khoa thi he thong van chay, chi upload/xem file loi.
   STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET:-fcourt-local-media-870853685410}
   STORAGE_S3_REGION: ${STORAGE_S3_REGION:-ap-southeast-1}
   STORAGE_PUBLIC_BASE_URL: https://${STORAGE_S3_BUCKET:-fcourt-local-media-870853685410}.s3.${STORAGE_S3_REGION:-ap-southeast-1}.amazonaws.com
@@ -209,7 +209,7 @@ services:
       FACILITY_DB_URL: jdbc:postgresql://postgres:5432/facility_db
       FACILITY_DB_USER: ${POSTGRES_USER:-postgres}
       FACILITY_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      # Khoa/mo khoa san phat su kien slot qua Redis cho STOMP (docs/SCRUM-108.md).
+      # Khoa/mo khoa san phat su kien slot qua Redis cho STOMP (docs/architecture/realtime-schedule-notifications.md).
       FACILITY_REALTIME_ENABLED: "true"
       # Han muc goi dang ky (3 chi nhanh / 15 san mac dinh neu chua co goi) lay tu subscription-service.
       SUBSCRIPTION_BASE_URL: http://subscription-service:8082
