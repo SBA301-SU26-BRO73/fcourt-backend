@@ -44,3 +44,4 @@ aids and do not establish runtime validation results.
 | JwksController | [auth-service/src/main/java/com/fcourt/auth/token/JwksController.java](../auth-service/src/main/java/com/fcourt/auth/token/JwksController.java) |
 | AdminBookingController | [booking-service/src/main/java/com/fcourt/booking/AdminBookingController.java](../booking-service/src/main/java/com/fcourt/booking/AdminBookingController.java) |
 | BookingCancellationController | [booking-service/src/main/java/com/fcourt/booking/BookingCancellationController.java](../booking-service/src/main/java/com/fcourt/booking/BookingCancellationController.java) |
+| BookingController | [booking-service/src/main/java/com/fcourt/booking/BookingController.java](../booking-service/src/main/java/com/fcourt/booking/BookingController.java) |
