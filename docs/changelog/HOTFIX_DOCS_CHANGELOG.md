@@ -191,3 +191,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 180 | 2026-11-12 | Docs update | `docs/operations` | #526 | Tài liệu hoá các chỉ số đo lường hiệu năng (SLI/SLO) của hệ thống slot-hold. |
 | 181 | 2026-11-12 | Hotfix | `payment-service` | #527 | Khắc phục lỗi lưu sai mã tham chiếu ngân hàng (bank_ref) trong bảng payment_transaction. |
 | 182 | 2026-11-12 | Hotfix | `payment-service` | #528 | Sửa lỗi không thể upload chứng từ hoàn tiền có định dạng ảnh WebP lên S3. |
+| 183 | 2026-11-12 | Docs update | `docs/business` | #529 | Tài liệu hoá quy trình kiểm toán tài chính và đối soát dòng tiền đa chi nhánh. |
