@@ -146,3 +146,19 @@ Test sources and fixtures listed here are navigation aids, not a report of passi
 - [SlotWindowsTest.java](../../facility-service/src/test/java/com/fcourt/facility/service/SlotWindowsTest.java)
 
 From the repository root, the standard Maven verification entry point is `mvn -B -f facility-service/pom.xml verify`. Check the descriptor and environment requirements first.
+
+## Database scripts and migrations
+
+Review script contents and application configuration to distinguish initialization scripts from migrations loaded at runtime. Do not infer execution order across these two locations, or execute scripts against a shared database merely because they are listed here.
+
+- [V1__init_schema.sql](../../facility-service/database/V1__init_schema.sql)
+- [V2__seed_sample_data.sql](../../facility-service/database/V2__seed_sample_data.sql)
+- [V1__init_schema.sql](../../facility-service/src/main/resources/db/migration/V1__init_schema.sql)
+- [V2__seed_sample_data.sql](../../facility-service/src/main/resources/db/migration/V2__seed_sample_data.sql)
+- [V30__court_pricing_rules.sql](../../facility-service/src/main/resources/db/migration/V30__court_pricing_rules.sql)
+- [V3__facility_management.sql](../../facility-service/src/main/resources/db/migration/V3__facility_management.sql)
+- [V40__court_locks.sql](../../facility-service/src/main/resources/db/migration/V40__court_locks.sql)
+- [V4__branch_unique_name.sql](../../facility-service/src/main/resources/db/migration/V4__branch_unique_name.sql)
+- [V50__court_reservations.sql](../../facility-service/src/main/resources/db/migration/V50__court_reservations.sql)
+- [V70__branch_images.sql](../../facility-service/src/main/resources/db/migration/V70__branch_images.sql)
+- [V71__backfill_branch_bank_bin.sql](../../facility-service/src/main/resources/db/migration/V71__backfill_branch_bank_bin.sql)
