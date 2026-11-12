@@ -128,3 +128,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `POST`, `DELETE` trên `/api/internal/bookings/{id}/voucher` gắn hoặc gỡ voucher.
 - `POST /api/internal/bookings/{id}/payment-freeze` đóng băng giá để thanh toán.
 - `GET /api/internal/courts/{court}/slot-occupancy` tình trạng chiếm chỗ.
+- `GET /api/internal/branches/{branch}/schedule` lịch của chi nhánh.
+- `POST /api/internal/bookings/walk-in` tạo booking tại quầy.
