@@ -21,3 +21,4 @@ contract. Follow the owning component's README for execution and build commands.
 | staff scrum-30 evidence | [staff-operations-service/VALIDATION_SCRUM_30.md](../staff-operations-service/VALIDATION_SCRUM_30.md) |
 | staff scrum-61 evidence | [staff-operations-service/VALIDATION_SCRUM_61.md](../staff-operations-service/VALIDATION_SCRUM_61.md) |
 | staff scrum-63 evidence | [staff-operations-service/VALIDATION_SCRUM_63.md](../staff-operations-service/VALIDATION_SCRUM_63.md) |
+| staff scrum-65 evidence | [staff-operations-service/VALIDATION_SCRUM_65.md](../staff-operations-service/VALIDATION_SCRUM_65.md) |
