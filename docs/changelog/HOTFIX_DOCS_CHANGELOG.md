@@ -85,3 +85,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 74 | 2026-11-09 | Hotfix | `booking-service` | #220 | Sửa lỗi không trả về danh sách slots khi booking nằm trong trạng thái CANCELLED. |
 | 75 | 2026-11-09 | Hotfix | `slot-hold-engine` | #229 | Cho phép guestPhone tuỳ chọn khi người dùng đã xác thực danh tính qua token. |
 | 76 | 2026-11-09 | Docs update | `docs/operations` | #231 | Tài liệu hoá quy trình kiểm thử tải (load test) hệ thống đặt sân bằng k6. |
+| 77 | 2026-11-09 | Hotfix | `gateway-service` | #232 | Mở tạo booking công khai cho khách vãng lai kèm rate limit bảo vệ DoS. |
