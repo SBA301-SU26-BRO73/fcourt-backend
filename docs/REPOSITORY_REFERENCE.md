@@ -20,3 +20,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 | `auth-service` | `auth_db` | Tài khoản, đăng nhập, JWKS |
 | `subscription-service` | `subscription_db` | Gói dịch vụ SaaS cho chủ sân |
 | `facility-service` | `facility_db` | Chi nhánh, sân, khung giờ, giá |
+| `discovery-service` | `discovery_db` | Tìm kiếm công khai và đánh giá |
+| `slot-hold-engine` | `slot_hold_db` | Giữ chỗ tạm thời cho khung giờ |
