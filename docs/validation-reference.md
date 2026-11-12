@@ -46,3 +46,4 @@ aids and do not establish runtime validation results.
 | BookingCancellationController | [booking-service/src/main/java/com/fcourt/booking/BookingCancellationController.java](../booking-service/src/main/java/com/fcourt/booking/BookingCancellationController.java) |
 | BookingController | [booking-service/src/main/java/com/fcourt/booking/BookingController.java](../booking-service/src/main/java/com/fcourt/booking/BookingController.java) |
 | BookingSecurity | [booking-service/src/main/java/com/fcourt/booking/BookingSecurity.java](../booking-service/src/main/java/com/fcourt/booking/BookingSecurity.java) |
+| BookingVoucherController | [booking-service/src/main/java/com/fcourt/booking/BookingVoucherController.java](../booking-service/src/main/java/com/fcourt/booking/BookingVoucherController.java) |
