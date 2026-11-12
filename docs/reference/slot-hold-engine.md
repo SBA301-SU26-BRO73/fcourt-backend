@@ -7,3 +7,13 @@ This reference maps tracked files to their purpose for repository navigation. It
 ## Service directory
 
 The service lives in [`slot-hold-engine/`](../../slot-hold-engine/). Its build descriptor is [`pom.xml`](../../slot-hold-engine/pom.xml). Paths below are relative to the repository root. Generated output and untracked local configuration are excluded.
+
+## Build and container entry points
+
+Inspect the Maven descriptor for dependencies and plugins, and the Dockerfile or Compose descriptor when present for container behavior. These links identify definitions; they do not execute them.
+
+- [Dockerfile](../../slot-hold-engine/Dockerfile)
+- [compose.yml](../../slot-hold-engine/compose.yml)
+- [mvnw](../../slot-hold-engine/mvnw)
+- [mvnw.cmd](../../slot-hold-engine/mvnw.cmd)
+- [pom.xml](../../slot-hold-engine/pom.xml)
