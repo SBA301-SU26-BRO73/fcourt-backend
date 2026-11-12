@@ -213,3 +213,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `docker-compose.yml` chạy hạ tầng, core hoặc toàn hệ thống theo profile.
 - `docker/postgres/init-databases.sh` tạo database cho từng service.
 - Lưu trữ tệp dùng bucket S3 thật, xem `docs/storage-s3.md`.
+- Xem thêm `docs/gateway.md`, `docs/spring-cloud.md`, `docs/docker-compose.md`.
