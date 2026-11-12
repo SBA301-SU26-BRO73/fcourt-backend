@@ -68,3 +68,13 @@ Java files are grouped by their tracked source directory. Package location alone
 For REST behavior, begin with controller classes in the source map and the existing service documentation; this inventory does not infer endpoints from class names.
 
 No `.proto` files are tracked in this service directory. This does not imply that the service makes no calls to other services.
+
+## Test inventory
+
+Test sources and fixtures listed here are navigation aids, not a report of passing tests. Review the test setup for Docker, Testcontainers, external services, and profile requirements before execution.
+
+- [OpenApiDocsTest.java](../../pos-retail-service/src/test/java/com/fcourt/pos/OpenApiDocsTest.java)
+- [PosIntegrationTest.java](../../pos-retail-service/src/test/java/com/fcourt/pos/PosIntegrationTest.java)
+- [PosSecurityRolesTest.java](../../pos-retail-service/src/test/java/com/fcourt/pos/config/PosSecurityRolesTest.java)
+
+From the repository root, the standard Maven verification entry point is `mvn -B -f pos-retail-service/pom.xml verify`. Check the descriptor and environment requirements first.
