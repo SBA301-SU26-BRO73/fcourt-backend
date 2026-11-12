@@ -87,3 +87,13 @@ Review script contents and application configuration to distinguish initializati
 - [V2__seed_sample_data.sql](../../pos-retail-service/database/V2__seed_sample_data.sql)
 - [V1__pos_schema.sql](../../pos-retail-service/src/main/resources/db/migration/V1__pos_schema.sql)
 - [V2__pos_inventory_billing.sql](../../pos-retail-service/src/main/resources/db/migration/V2__pos_inventory_billing.sql)
+
+## Related documentation
+
+Read the existing service documentation for behavior, setup instructions, and recorded validation details. Historical validation notes describe the run they record and are not fresh verification results.
+
+- [CONTRACTS.md](../../pos-retail-service/CONTRACTS.md)
+- [README.md](../../pos-retail-service/README.md)
+- [VALIDATION.md](../../pos-retail-service/VALIDATION.md)
+
+For shared runtime setup, see [Docker Compose operations](../operations/docker-compose.md). For request routing, see [gateway operations](../operations/gateway.md).
