@@ -159,3 +159,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | payment-service | [ReceiptCleanupTest.java](../payment-service/src/test/java/com/fcourt/payment/ReceiptCleanupTest.java) |
 | payment-service | [S3ReceiptStorageContainerTest.java](../payment-service/src/test/java/com/fcourt/payment/S3ReceiptStorageContainerTest.java) |
 | payment-service | [S3ReceiptStorageTest.java](../payment-service/src/test/java/com/fcourt/payment/S3ReceiptStorageTest.java) |
+| pos-retail-service | [OpenApiDocsTest.java](../pos-retail-service/src/test/java/com/fcourt/pos/OpenApiDocsTest.java) |
