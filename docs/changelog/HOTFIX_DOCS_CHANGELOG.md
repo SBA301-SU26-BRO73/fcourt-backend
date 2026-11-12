@@ -169,3 +169,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 158 | 2026-11-12 | Hotfix | `staff-operations-service` | #504 | Bổ sung quyền ghi chú check-in cho nhân viên quản lý quầy khi khách đến trễ. |
 | 159 | 2026-11-12 | Docs update | `docs/business` | #505 | Tài liệu hoá quy chuẩn phục vụ và hướng dẫn thao tác quầy dành cho nhân viên tiếp tân. |
 | 160 | 2026-11-12 | Hotfix | `subscription-service` | #506 | Sửa lỗi cho phép chủ sân tạo thêm sân mới khi đã vượt quá hạn mức gói Standard. |
+| 161 | 2026-11-12 | Hotfix | `subscription-service` | #507 | Khắc phục lỗi tính sai ngày kết thúc chu kỳ thanh toán cho gói đăng ký 12 tháng. |
