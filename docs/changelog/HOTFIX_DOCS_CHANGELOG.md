@@ -176,3 +176,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 165 | 2026-11-12 | Docs update | `docs/operations` | #511 | Cập nhật tài liệu cấu hình TLS/SSL và chứng chỉ bảo mật cho domain hệ thống. |
 | 166 | 2026-11-12 | Hotfix | `auth-service` | #512 | Sửa lỗi gửi mã OTP xác nhận quên mật khẩu bị chậm do thread pool đồng bộ. |
 | 167 | 2026-11-12 | Hotfix | `auth-service` | #513 | Giới hạn tối đa 5 lần nhập sai OTP liên tiếp trước khi tạm khoá tài khoản 15 phút. |
+| 168 | 2026-11-12 | Docs update | `docs/reference` | #514 | Tài liệu hoá quy trình khôi phục mật khẩu và xác thực 2 bước (2FA) qua email. |
