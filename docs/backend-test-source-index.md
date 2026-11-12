@@ -211,3 +211,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | subscription-service | [PlanControllerTest.java](../subscription-service/src/test/java/com/fcourt/subscription/plan/PlanControllerTest.java) |
 | subscription-service | [PlanServiceTest.java](../subscription-service/src/test/java/com/fcourt/subscription/plan/PlanServiceTest.java) |
 | subscription-service | [SaasRevenueControllerTest.java](../subscription-service/src/test/java/com/fcourt/subscription/stats/SaasRevenueControllerTest.java) |
+| subscription-service | [SaasRevenueStatsIntegrationTest.java](../subscription-service/src/test/java/com/fcourt/subscription/stats/SaasRevenueStatsIntegrationTest.java) |
