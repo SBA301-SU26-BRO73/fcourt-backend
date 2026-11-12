@@ -87,3 +87,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 76 | 2026-11-09 | Docs update | `docs/operations` | #231 | Tài liệu hoá quy trình kiểm thử tải (load test) hệ thống đặt sân bằng k6. |
 | 77 | 2026-11-09 | Hotfix | `gateway-service` | #232 | Mở tạo booking công khai cho khách vãng lai kèm rate limit bảo vệ DoS. |
 | 78 | 2026-11-09 | Hotfix | `facility-service` | #233 | Công khai số điện thoại, giờ mở cửa, ảnh sân và bổ sung trường card cho discovery. |
+| 79 | 2026-11-09 | Docs update | `docs/business` | #234 | Tài liệu hoá quy trình vận hành và đối soát giao dịch tiền mặt của chi nhánh. |
