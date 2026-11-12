@@ -126,3 +126,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 115 | 2026-11-12 | Docs update | `docs/architecture` | #390 | Tài liệu hoá giải pháp bảo vệ dữ liệu nhạy cảm PII và tuân thủ mã hoá trong CSDL. |
 | 116 | 2026-11-12 | Hotfix | `notification-service` | #395 | Bổ sung REST API và WebSocket cho chuông thông báo in-app trên giao diện web. |
 | 117 | 2026-11-12 | Hotfix | `payment-service` | #452 | Tự động tạo yêu cầu hoàn tiền khi khách vãng lai hoặc chủ sân huỷ booking hợp lệ. |
+| 118 | 2026-11-12 | Hotfix | `payment-service` | #453 | Bỏ qua các sự kiện hoàn tiền quá hạn thay vì retry vô hạn làm nghẽn hàng đợi. |
