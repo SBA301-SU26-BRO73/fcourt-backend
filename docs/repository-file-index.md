@@ -207,3 +207,4 @@
 - [facility-service/src/test/java/com/fcourt/facility/service/ReservationServiceTest.java](../facility-service/src/test/java/com/fcourt/facility/service/ReservationServiceTest.java) — Java test source; inspect fixtures and assertions before running.
 - [facility-service/src/test/java/com/fcourt/facility/service/SlotTemplateEngineTest.java](../facility-service/src/test/java/com/fcourt/facility/service/SlotTemplateEngineTest.java) — Java test source; inspect fixtures and assertions before running.
 - [facility-service/src/test/java/com/fcourt/facility/service/SlotWindowsTest.java](../facility-service/src/test/java/com/fcourt/facility/service/SlotWindowsTest.java) — Java test source; inspect fixtures and assertions before running.
+- [gateway-service/src/test/java/com/fcourt/gateway/GatewaySecurityTests.java](../gateway-service/src/test/java/com/fcourt/gateway/GatewaySecurityTests.java) — Java test source; inspect fixtures and assertions before running.
