@@ -70,3 +70,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | discovery-service | [ReviewIntegrationTest.java](../discovery-service/src/test/java/com/fcourt/discovery/ReviewIntegrationTest.java) |
 | discovery-service | [BranchEventListenerTest.java](../discovery-service/src/test/java/com/fcourt/discovery/component/BranchEventListenerTest.java) |
 | discovery-service | [ReviewImageCleanupTest.java](../discovery-service/src/test/java/com/fcourt/discovery/component/ReviewImageCleanupTest.java) |
+| discovery-service | [ReviewImagePolicyTest.java](../discovery-service/src/test/java/com/fcourt/discovery/component/ReviewImagePolicyTest.java) |
