@@ -9,13 +9,15 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+import com.fcourt.staff.integration.CheckInRejectedException;
 
 @RestControllerAdvice
 class StaffErrors {
     @ExceptionHandler(ResponseStatusException.class)
     ResponseEntity<ProblemDetail> applicationError(ResponseStatusException error) {
-        return ResponseEntity.status(error.getStatusCode())
-                .body(ProblemDetail.forStatusAndDetail(error.getStatusCode(), error.getReason()));
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(error.getStatusCode(), error.getReason());
+        if (error instanceof CheckInRejectedException rejected) problem.setProperty("reason", rejected.reason());
+        return ResponseEntity.status(error.getStatusCode()).body(problem);
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class})

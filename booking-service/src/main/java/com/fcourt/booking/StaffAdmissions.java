@@ -9,6 +9,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import com.fcourt.booking.exception.CheckInRejectedException;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -160,12 +161,19 @@ SELECT b.*,s.first_start,s.last_end FROM bookings b JOIN spans s ON s.booking_id
                                 + match
                                 + " FOR UPDATE",
                         args.toArray());
+        if (rows.isEmpty()) {
+            var otherBranch = jdbc.queryForList("SELECT id FROM bookings WHERE branch_id<>? AND (" + match + ")",
+                    args.toArray());
+            if (!otherBranch.isEmpty()) throw checkInRejected("WRONG_BRANCH");
+            throw missing();
+        }
         if (rows.size() != 1) throw missing();
         var row = rows.getFirst();
         long id = ((Number) row.get("id")).longValue();
-        if (!"CONFIRMED".equals(row.get("status"))
-                || !command.date().equals(((java.sql.Date) row.get("date")).toLocalDate()))
-            throw conflict();
+        if ("CHECKED_IN".equals(row.get("status"))) throw checkInRejected("ALREADY_CHECKED_IN");
+        if (!command.date().equals(((java.sql.Date) row.get("date")).toLocalDate()))
+            throw checkInRejected("WRONG_DATE");
+        if (!"CONFIRMED".equals(row.get("status"))) throw conflict();
         var ticket =
                 tickets(command.branchId(), command.date(), normalized).stream()
                         .filter(t -> t.bookingId() == id)
@@ -179,8 +187,8 @@ SELECT b.*,s.first_start,s.last_end FROM bookings b JOIN spans s ON s.booking_id
                         .atTime(ticket.slotEnd())
                         .atZone(ZONE)
                         .toInstant();
-        if (command.checkedInAt().isBefore(from) || !command.checkedInAt().isBefore(until))
-            throw conflict();
+        if (command.checkedInAt().isBefore(from)) throw checkInRejected("CHECKIN_TOO_EARLY");
+        if (!command.checkedInAt().isBefore(until)) throw conflict();
         jdbc.update(
                 "UPDATE bookings SET status='CHECKED_IN',checked_in_at=?,updated_at=now() WHERE"
                     + " id=?",
@@ -317,6 +325,10 @@ SELECT b.*,s.first_start,s.last_end FROM bookings b JOIN spans s ON s.booking_id
 
     private static ResponseStatusException conflict() {
         return new ResponseStatusException(HttpStatus.CONFLICT, "Ticket date or state conflict");
+    }
+
+    private static CheckInRejectedException checkInRejected(String reason) {
+        return new CheckInRejectedException(reason);
     }
 
     private static ResponseStatusException missing() {

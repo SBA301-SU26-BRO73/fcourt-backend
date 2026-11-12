@@ -33,6 +33,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    @ExceptionHandler(CheckInRejectedException.class)
+    ResponseEntity<Object> checkInRejected(CheckInRejectedException error,
+            WebRequest request) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(error.getStatusCode(), error.getReason());
+        problem.setProperty("reason", error.reason());
+        return handleExceptionInternal(error, problem, new HttpHeaders(), error.getStatusCode(), request);
+    }
+
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException error,
             HttpHeaders headers, HttpStatusCode status, WebRequest request) {
