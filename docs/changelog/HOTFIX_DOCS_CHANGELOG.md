@@ -186,3 +186,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 175 | 2026-11-12 | Hotfix | `booking-service` | #521 | Sửa lỗi trùng lặp mã vé ticket_code khi nhiều khách cùng thanh toán trong cùng 1 giây. |
 | 176 | 2026-11-12 | Hotfix | `booking-service` | #522 | Cập nhật tự động chuyển trạng thái booking sang EXPIRED sau 15 phút chưa hoàn tất thanh toán. |
 | 177 | 2026-11-12 | Docs update | `docs/reference` | #523 | Tài liệu hoá chi tiết cấu trúc Webhook gửi từ booking-service sang các hệ thống tích hợp. |
+| 178 | 2026-11-12 | Hotfix | `slot-hold-engine` | #524 | Sửa lỗi không nhận diện được IP client khi chạy qua nhiều lớp reverse proxy. |
