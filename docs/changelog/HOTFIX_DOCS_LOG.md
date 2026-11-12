@@ -40,3 +40,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 30 | 2026-11-09 | Docs update | `docs/operations` | #210 | Mô tả thiết kế lưu trữ S3, LocalStack và seed data không phụ thuộc Cloudinary. |
 | 31 | 2026-11-09 | Feature | `auth-service` | #208 | Chuyển lưu trữ file của auth-service từ Cloudinary sang AWS S3. |
 | 32 | 2026-11-09 | Feature | `facility-service` | #209 | Chuyển lưu trữ ảnh chi nhánh/sân từ Cloudinary sang AWS S3. |
+| 33 | 2026-11-09 | Feature | `payment-service` | #211 | Biên lai thanh toán và chứng từ hoàn tiền lưu trên S3, truy cập qua presigned URL. |
