@@ -133,3 +133,4 @@
 - [auth-service/src/test/java/com/fcourt/auth/token/SigningKeyConfigurationTest.java](../auth-service/src/test/java/com/fcourt/auth/token/SigningKeyConfigurationTest.java) — Java test source; inspect fixtures and assertions before running.
 - [booking-service/src/test/java/com/fcourt/booking/AdminBookingApiTest.java](../booking-service/src/test/java/com/fcourt/booking/AdminBookingApiTest.java) — Java test source; inspect fixtures and assertions before running.
 - [booking-service/src/test/java/com/fcourt/booking/AdminBookingCancelApiTest.java](../booking-service/src/test/java/com/fcourt/booking/AdminBookingCancelApiTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/AdminBranchAuthorityTest.java](../booking-service/src/test/java/com/fcourt/booking/AdminBranchAuthorityTest.java) — Java test source; inspect fixtures and assertions before running.
