@@ -95,3 +95,4 @@
 - [auth-service/Dockerfile](../auth-service/Dockerfile) — Container image build definition.
 - [booking-service/Dockerfile](../booking-service/Dockerfile) — Container image build definition.
 - [discovery-service/Dockerfile](../discovery-service/Dockerfile) — Container image build definition.
+- [facility-service/Dockerfile](../facility-service/Dockerfile) — Container image build definition.
