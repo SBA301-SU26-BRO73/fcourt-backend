@@ -38,3 +38,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 27 | 2026-11-01 | Hotfix | `staff-operations-service` | #46 | Sửa lỗi không hiển thị tên sân trong danh sách check-in của nhân viên quầy. |
 | 28 | 2026-11-02 | Docs update | `docs/operations` | #47 | Cập nhật tài liệu hướng dẫn chạy smoke test cho hệ thống microservice tại local. |
 | 29 | 2026-11-02 | Hotfix | `gateway-service` | #48 | Sửa lỗi route gateway bị nghẽn do cấu hình max idle connection của Netty quá thấp. |
+| 30 | 2026-11-02 | Hotfix | `slot-hold-engine` | #49 | Đảm bảo giải phóng key hold slot khi Redis nhận lệnh DEL từ background cleanup job. |
