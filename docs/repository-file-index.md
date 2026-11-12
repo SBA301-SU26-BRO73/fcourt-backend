@@ -73,3 +73,4 @@
 - [staff-operations-service/src/main/proto/slot_safety.proto](../staff-operations-service/src/main/proto/slot_safety.proto) — Protocol Buffer contract; inspect service and message definitions here.
 - [voucher-service/src/main/proto/voucher_validation.proto](../voucher-service/src/main/proto/voucher_validation.proto) — Protocol Buffer contract; inspect service and message definitions here.
 - [auth-service/pom.xml](../auth-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
+- [booking-service/pom.xml](../booking-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
