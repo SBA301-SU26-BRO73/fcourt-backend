@@ -93,3 +93,4 @@
 - [staff-operations-service/compose.yml](../staff-operations-service/compose.yml) — Docker Compose service and dependency configuration.
 - [voucher-service/compose.yml](../voucher-service/compose.yml) — Docker Compose service and dependency configuration.
 - [auth-service/Dockerfile](../auth-service/Dockerfile) — Container image build definition.
+- [booking-service/Dockerfile](../booking-service/Dockerfile) — Container image build definition.
