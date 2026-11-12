@@ -8,6 +8,10 @@ validation records do not replace a fresh test run after implementation changes.
 Python links point to test sources. The protobuf link defines a communication
 contract. Follow the owning component's README for execution and build commands.
 
+Java links below locate API, security, and configuration implementations
+for tracing requests during review. These source references are navigation
+aids and do not establish runtime validation results.
+
 | Reference | Source |
 | --- | --- |
 | discovery review notes | [discovery-service/REQUEST_REVIEW.md](../discovery-service/REQUEST_REVIEW.md) |
@@ -30,3 +34,4 @@ contract. Follow the owning component's README for execution and build commands.
 | system reassessment notes | [tools/system_tests/REASSESSMENT.md](../tools/system_tests/REASSESSMENT.md) |
 | system flow tests | [tools/system_tests/test_flow.py](../tools/system_tests/test_flow.py) |
 | booking slot safety contract | [booking-service/src/main/proto/slot_safety.proto](../booking-service/src/main/proto/slot_safety.proto) |
+| AuthController | [auth-service/src/main/java/com/fcourt/auth/account/AuthController.java](../auth-service/src/main/java/com/fcourt/auth/account/AuthController.java) |
