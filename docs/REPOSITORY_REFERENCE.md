@@ -108,3 +108,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/public/courts/{courtId}/slots` xem khung giờ còn trống của sân.
 - `GET /api/internal/courts/{courtId}/slot-conflicts` kiểm tra xung đột khung giờ.
 - `POST /api/reviews` khách gửi đánh giá.
+- `POST /api/reviews/images` tải ảnh kèm đánh giá.
+- `GET /api/public/branches/{id}/reviews` xem đánh giá của chi nhánh.
