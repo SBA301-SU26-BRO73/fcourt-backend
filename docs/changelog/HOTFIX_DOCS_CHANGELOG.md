@@ -82,3 +82,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 71 | 2026-11-09 | Hotfix | `gateway-service` | #213 | Sửa lỗi Redis RateLimiter không đếm đúng số request theo client IP thực tế. |
 | 72 | 2026-11-09 | Hotfix | `auth-service` | #214 | Khắc phục lỗi Google OAuth2 redirect URI không tương thích khi chạy qua Gateway. |
 | 73 | 2026-11-09 | Docs update | `docs/reference` | #219 | Cập nhật tài liệu API reference cho reporting-service và thông số xuất báo cáo. |
+| 74 | 2026-11-09 | Hotfix | `booking-service` | #220 | Sửa lỗi không trả về danh sách slots khi booking nằm trong trạng thái CANCELLED. |
