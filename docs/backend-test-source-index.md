@@ -100,3 +100,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | facility-service | [PricingRequestValidationTest.java](../facility-service/src/test/java/com/fcourt/facility/api/PricingRequestValidationTest.java) |
 | facility-service | [ReservationControllerTest.java](../facility-service/src/test/java/com/fcourt/facility/api/ReservationControllerTest.java) |
 | facility-service | [TemplateRequestValidationTest.java](../facility-service/src/test/java/com/fcourt/facility/api/TemplateRequestValidationTest.java) |
+| facility-service | [RedisLockScheduleEventsTest.java](../facility-service/src/test/java/com/fcourt/facility/events/RedisLockScheduleEventsTest.java) |
