@@ -62,3 +62,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/court-types` và `GET /api/court-types/{id}` xem loại sân.
 - `POST`, `PUT`, `DELETE` trên `/api/court-types` để quản lý loại sân.
 - `GET /api/subscriptions/my-subscription` gói hiện tại của chủ sân.
+- `POST /api/subscriptions/checkout` tạo đơn mua gói.
+- `GET /api/subscriptions/payments/{orderCode}` tra trạng thái đơn.
