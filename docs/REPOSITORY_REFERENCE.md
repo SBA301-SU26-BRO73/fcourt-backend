@@ -196,3 +196,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 
 ## 14. reporting-service
 - Reporting dùng read model `booking_facts`, `branch_snapshots`, `processed_events`.
+- `GET /api/admin/dashboard/stats` số liệu tổng quan của chủ sân.
