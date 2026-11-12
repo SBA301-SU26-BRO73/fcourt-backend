@@ -206,3 +206,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 
 ## 15. notification-service
 - `PUT /devices` đăng ký hoặc cập nhật thiết bị nhận thông báo.
+- `DELETE /devices/{deviceId}` hủy đăng ký thiết bị.
