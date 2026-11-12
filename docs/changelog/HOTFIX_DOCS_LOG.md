@@ -30,3 +30,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 20 | 2026-11-09 | Docs update | `docs/architecture` | #174 | Chuẩn hoá và tài liệu hoá cấu trúc package cho các service backend. |
 | 21 | 2026-11-09 | CI/CD | `.github` | #175 | Chỉ build và push image của service có thay đổi lên Amazon ECR. |
 | 22 | 2026-11-09 | Feature | `eureka-server` | #176 | Eureka registry độc lập trên Spring Boot 4 (về sau được gỡ ở #249). |
+| 23 | 2026-11-09 | CI/CD | `eureka-server` | #177 | Build image eureka-server khi push; gateway-service đã khớp pattern `*-service`. |
