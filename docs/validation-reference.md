@@ -16,3 +16,4 @@ contract. Follow the owning component's README for execution and build commands.
 | pos validation notes | [pos-retail-service/VALIDATION.md](../pos-retail-service/VALIDATION.md) |
 | staff integration contracts | [staff-operations-service/CONTRACTS.md](../staff-operations-service/CONTRACTS.md) |
 | staff review notes | [staff-operations-service/REQUEST_REVIEW.md](../staff-operations-service/REQUEST_REVIEW.md) |
+| staff validation notes | [staff-operations-service/VALIDATION.md](../staff-operations-service/VALIDATION.md) |
