@@ -44,3 +44,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 33 | 2026-11-03 | Docs update | `docs/reference` | #67 | Tài liệu hoá cấu trúc response chuẩn API ResponseWrapper cho toàn bộ microservices. |
 | 34 | 2026-11-03 | Hotfix | `auth-service` | #68 | Sửa lỗi trả về HTTP 500 thay vì 401 khi access token hết hạn nhưng không có header auth. |
 | 35 | 2026-11-03 | Hotfix | `discovery-service` | #69 | Tối ưu câu truy vấn tìm kiếm slot khả dụng, loại bỏ N+1 query trên PostgreSQL. |
+| 36 | 2026-11-04 | Docs update | `docs/operations` | #70 | Cập nhật sơ đồ phân vùng mạng (network partition) và cấu hình port các service. |
