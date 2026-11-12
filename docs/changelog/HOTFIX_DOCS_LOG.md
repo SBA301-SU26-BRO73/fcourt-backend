@@ -75,3 +75,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 65 | 2026-11-09 | Feature | `booking-service` | #228 | Cho khách vãng lai tạo booking online bằng hold token. |
 | 66 | 2026-11-09 | Feature | `slot-hold-engine` | #229 | `guestPhone` không bắt buộc khi khách hàng đã đăng nhập. |
 | 67 | 2026-11-09 | Feature | `gateway-service` | #230 | Mở tạo booking công khai cho khách, giới hạn tần suất theo từng client. |
+| 68 | 2026-11-09 | Feature | `facility-service` | #233 | Công khai số điện thoại, giờ mở cửa, ảnh sân và bổ sung trường card cho discovery. |
