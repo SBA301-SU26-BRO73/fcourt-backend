@@ -98,3 +98,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 88 | 2026-11-11 | Hotfix | `tools` | #338 | Thay ảnh ngoại cảnh chi nhánh bằng ảnh sân đúng môn thể thao. |
 | 89 | 2026-11-12 | Feature | `subscription-service` | #387 | Endpoint nội bộ trả giới hạn gói; trả lý do từ chối khi đăng nhập. |
 | 90 | 2026-11-12 | Feature | `notification-service` | #375 | Thông báo in-app và REST API cho chuông thông báo trên web. |
+| 91 | 2026-11-12 | Chore | `tools` | #429 | Thay ảnh card chất lượng thấp của chi nhánh 3 và 10 trong seed. |
