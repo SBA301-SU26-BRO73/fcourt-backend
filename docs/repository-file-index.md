@@ -210,3 +210,4 @@
 - [gateway-service/src/test/java/com/fcourt/gateway/GatewaySecurityTests.java](../gateway-service/src/test/java/com/fcourt/gateway/GatewaySecurityTests.java) — Java test source; inspect fixtures and assertions before running.
 - [gateway-service/src/test/java/com/fcourt/gateway/RateLimitGatewayTests.java](../gateway-service/src/test/java/com/fcourt/gateway/RateLimitGatewayTests.java) — Java test source; inspect fixtures and assertions before running.
 - [gateway-service/src/test/java/com/fcourt/gateway/RateLimitRedisDownTests.java](../gateway-service/src/test/java/com/fcourt/gateway/RateLimitRedisDownTests.java) — Java test source; inspect fixtures and assertions before running.
+- [gateway-service/src/test/java/com/fcourt/gateway/RouteTableTests.java](../gateway-service/src/test/java/com/fcourt/gateway/RouteTableTests.java) — Java test source; inspect fixtures and assertions before running.
