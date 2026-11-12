@@ -64,3 +64,14 @@ Tracked Protocol Buffer definitions:
 - [slot_safety.proto](../../slot-hold-engine/src/main/proto/slot_safety.proto)
 
 Consult the Maven descriptor for generation plugins before regenerating clients.
+
+## Test inventory
+
+Test sources and fixtures listed here are navigation aids, not a report of passing tests. Review the test setup for Docker, Testcontainers, external services, and profile requirements before execution.
+
+- [CounterHoldsTest.java](../../slot-hold-engine/src/test/java/com/fcourt/hold/CounterHoldsTest.java)
+- [HoldIntegrationTest.java](../../slot-hold-engine/src/test/java/com/fcourt/hold/HoldIntegrationTest.java)
+- [OpenApiDocsTest.java](../../slot-hold-engine/src/test/java/com/fcourt/hold/OpenApiDocsTest.java)
+- [GlobalExceptionHandlerTest.java](../../slot-hold-engine/src/test/java/com/fcourt/hold/exception/GlobalExceptionHandlerTest.java)
+
+From the repository root, the standard Maven verification entry point is `mvn -B -f slot-hold-engine/pom.xml verify`. Check the descriptor and environment requirements first.
