@@ -23,3 +23,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | auth-service | [AvatarControllerTest.java](../auth-service/src/test/java/com/fcourt/auth/account/AvatarControllerTest.java) |
 | auth-service | [AvatarServiceTest.java](../auth-service/src/test/java/com/fcourt/auth/account/AvatarServiceTest.java) |
 | auth-service | [FailedAttemptThrottleTest.java](../auth-service/src/test/java/com/fcourt/auth/account/FailedAttemptThrottleTest.java) |
+| auth-service | [GoogleLoginServiceTest.java](../auth-service/src/test/java/com/fcourt/auth/account/GoogleLoginServiceTest.java) |
