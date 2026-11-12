@@ -86,3 +86,4 @@
 - [subscription-service/pom.xml](../subscription-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
 - [voucher-service/pom.xml](../voucher-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
 - [discovery-service/compose.yml](../discovery-service/compose.yml) — Docker Compose service and dependency configuration.
+- [docker-compose.yml](../docker-compose.yml) — Docker Compose service and dependency configuration.
