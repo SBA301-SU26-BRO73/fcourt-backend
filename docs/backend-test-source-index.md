@@ -175,3 +175,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | reporting-service | [RevenueReportTest.java](../reporting-service/src/test/java/com/fcourt/reporting/service/RevenueReportTest.java) |
 | reporting-service | [SuperAdminDetailsServiceTest.java](../reporting-service/src/test/java/com/fcourt/reporting/service/SuperAdminDetailsServiceTest.java) |
 | reporting-service | [SuperAdminOverviewServiceTest.java](../reporting-service/src/test/java/com/fcourt/reporting/service/SuperAdminOverviewServiceTest.java) |
+| slot-hold-engine | [CounterHoldsTest.java](../slot-hold-engine/src/test/java/com/fcourt/hold/CounterHoldsTest.java) |
