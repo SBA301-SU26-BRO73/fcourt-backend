@@ -176,3 +176,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/staff/schedule/today` lịch hôm nay.
 - `GET /api/staff/schedule` lịch theo tuần.
 - `POST /api/staff/check-in/verify` xác thực mã check-in.
+- `POST /api/staff/check-in/preview` xem trước check-in.
