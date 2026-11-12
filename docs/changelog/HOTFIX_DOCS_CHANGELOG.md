@@ -103,3 +103,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 92 | 2026-11-10 | Hotfix | `gateway-service` | #252 | Cập nhật định tuyến tĩnh qua docker internal network sau khi gỡ Eureka client. |
 | 93 | 2026-11-10 | Hotfix | `facility-service` | #253 | Sửa lỗi không hiển thị danh sách tiện ích đi kèm của sân (wifi, phòng tắm, gửi xe). |
 | 94 | 2026-11-10 | Docs update | `docs/reference` | #254 | Tài liệu hoá API quản lý nhân viên và phân quyền chi nhánh trong staff-operations. |
+| 95 | 2026-11-10 | Hotfix | `staff-operations-service` | #255 | Sửa lỗi nhân viên chi nhánh A có thể xem nhầm lịch check-in của chi nhánh B. |
