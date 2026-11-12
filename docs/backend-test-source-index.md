@@ -129,3 +129,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | notification-service | [HttpBranchDirectoryTest.java](../notification-service/src/test/java/com/fcourt/notification/inapp/HttpBranchDirectoryTest.java) |
 | notification-service | [InAppEventHandlerTest.java](../notification-service/src/test/java/com/fcourt/notification/inapp/InAppEventHandlerTest.java) |
 | notification-service | [InAppNotificationIntegrationTest.java](../notification-service/src/test/java/com/fcourt/notification/inapp/InAppNotificationIntegrationTest.java) |
+| notification-service | [InAppPlannerTest.java](../notification-service/src/test/java/com/fcourt/notification/inapp/InAppPlannerTest.java) |
