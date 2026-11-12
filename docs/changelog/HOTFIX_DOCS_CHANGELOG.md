@@ -100,3 +100,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 89 | 2026-11-09 | Hotfix | `docker-compose` | #247 | Cấp quyền đọc ẩn danh ảnh công khai trên MinIO và fix presign host truy cập web. |
 | 90 | 2026-11-09 | Hotfix | `booking-service` | #248 | Cho phép huỷ booking chưa thanh toán vào bất kỳ lúc nào mà không bị phạt phí. |
 | 91 | 2026-11-10 | Docs update | `docs/architecture` | #251 | Tài liệu hoá quy trình loại bỏ Eureka Server và chuyển sang Docker DNS resolution. |
+| 92 | 2026-11-10 | Hotfix | `gateway-service` | #252 | Cập nhật định tuyến tĩnh qua docker internal network sau khi gỡ Eureka client. |
