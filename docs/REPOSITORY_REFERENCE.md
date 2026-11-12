@@ -48,3 +48,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/super-admin/users` danh sách người dùng.
 - `GET /api/super-admin/court-admins/pending` danh sách chủ sân chờ duyệt.
 - `GET /api/super-admin/court-admins/{id}` chi tiết hồ sơ chủ sân.
+- `PUT /api/super-admin/court-admins/{id}/approve` duyệt chủ sân.
+- `PUT /api/super-admin/court-admins/{id}/reject` từ chối chủ sân.
