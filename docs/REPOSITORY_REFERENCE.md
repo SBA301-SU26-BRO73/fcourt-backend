@@ -126,3 +126,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/admin/bookings` danh sách booking của các chi nhánh.
 - `GET /api/internal/bookings/{id}/voucher-snapshot` ảnh chụp voucher đã áp dụng.
 - `POST`, `DELETE` trên `/api/internal/bookings/{id}/voucher` gắn hoặc gỡ voucher.
+- `POST /api/internal/bookings/{id}/payment-freeze` đóng băng giá để thanh toán.
+- `GET /api/internal/courts/{court}/slot-occupancy` tình trạng chiếm chỗ.
