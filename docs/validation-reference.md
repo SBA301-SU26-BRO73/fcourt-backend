@@ -54,3 +54,4 @@ aids and do not establish runtime validation results.
 | DiscoverySecurity | [discovery-service/src/main/java/com/fcourt/discovery/config/DiscoverySecurity.java](../discovery-service/src/main/java/com/fcourt/discovery/config/DiscoverySecurity.java) |
 | BranchController | [discovery-service/src/main/java/com/fcourt/discovery/controller/BranchController.java](../discovery-service/src/main/java/com/fcourt/discovery/controller/BranchController.java) |
 | CourtSlotController | [discovery-service/src/main/java/com/fcourt/discovery/controller/CourtSlotController.java](../discovery-service/src/main/java/com/fcourt/discovery/controller/CourtSlotController.java) |
+| CourtSlotInternalController | [discovery-service/src/main/java/com/fcourt/discovery/controller/CourtSlotInternalController.java](../discovery-service/src/main/java/com/fcourt/discovery/controller/CourtSlotInternalController.java) |
