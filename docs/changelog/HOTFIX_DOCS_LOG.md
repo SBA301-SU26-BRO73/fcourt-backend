@@ -25,3 +25,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 15 | 2026-11-09 | Test | `system-tests` | #132 | E2E trên cluster thật cho luồng đặt nguyên sân (SCRUM-114). |
 | 16 | 2026-11-09 | Feature | `facility-service` | #133 | Chuyển tiếp thay đổi khoá đặt sân sang sự kiện lịch realtime (SCRUM-241, SCRUM-108). |
 | 17 | 2026-11-09 | Docs update | `docs/business` | #134 | Phân tích khoảng trống nghiệp vụ so với monolith cũ và các phương án kiến trúc AWS. |
+| 18 | 2026-11-09 | Feature | `facility-service` | #172 | API công khai danh sách sân đang hoạt động của một chi nhánh (SCRUM-248). |
