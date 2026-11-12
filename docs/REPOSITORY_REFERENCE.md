@@ -44,3 +44,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `PATCH /api/auth/password` đổi mật khẩu khi đã đăng nhập.
 - `GET /.well-known/jwks.json` công bố khóa để các service kiểm tra JWT.
 - `GET /api/auth/me` thông tin tài khoản hiện tại.
+- `/api/internal/staff-accounts` tạo, sửa, xóa, kích hoạt lại tài khoản nhân viên.
+- `GET /api/super-admin/users` danh sách người dùng.
