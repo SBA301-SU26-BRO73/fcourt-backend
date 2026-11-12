@@ -99,3 +99,14 @@ Test sources and fixtures listed here are navigation aids, not a report of passi
 - [GlobalExceptionHandlerTest.java](../../voucher-service/src/test/java/com/fcourt/voucher/exception/GlobalExceptionHandlerTest.java)
 
 From the repository root, the standard Maven verification entry point is `mvn -B -f voucher-service/pom.xml verify`. Check the descriptor and environment requirements first.
+
+## Database scripts and migrations
+
+Review script contents and application configuration to distinguish initialization scripts from migrations loaded at runtime. Do not infer execution order across these two locations, or execute scripts against a shared database merely because they are listed here.
+
+- [V1__init_schema.sql](../../voucher-service/database/V1__init_schema.sql)
+- [V2__seed_sample_data.sql](../../voucher-service/database/V2__seed_sample_data.sql)
+- [V1__vouchers.sql](../../voucher-service/src/main/resources/db/migration/V1__vouchers.sql)
+- [V2__voucher_redemptions.sql](../../voucher-service/src/main/resources/db/migration/V2__voucher_redemptions.sql)
+- [V3__voucher_usage_history.sql](../../voucher-service/src/main/resources/db/migration/V3__voucher_usage_history.sql)
+- [V4__voucher_usage_customer_snapshot.sql](../../voucher-service/src/main/resources/db/migration/V4__voucher_usage_customer_snapshot.sql)
