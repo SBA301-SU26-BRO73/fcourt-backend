@@ -84,3 +84,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 74 | 2026-11-09 | Feature | `facility-service` | #239 | Tải lên, thay thế và xoá ảnh sân. |
 | 75 | 2026-11-09 | Feature | `docker-compose` | #240 | Chạy toàn bộ hệ thống bằng Docker Compose profiles. |
 | 76 | 2026-11-09 | Hotfix | `facility-service` | #241 | Backfill `bank_bin` cho các chi nhánh seed sẵn để tạo được mã VietQR. |
+| 77 | 2026-11-09 | Hotfix | `payment-service` | #242 | Trả 422 thay vì 503 khi thông tin ngân hàng của chi nhánh chưa đầy đủ. |
