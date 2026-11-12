@@ -32,3 +32,4 @@
 - [docs/reference/gateway-service.md](../docs/reference/gateway-service.md) — gateway-service: repository reference
 - [docs/reference/notification-service.md](../docs/reference/notification-service.md) — notification-service: repository reference
 - [docs/reference/payment-service.md](../docs/reference/payment-service.md) — payment-service: repository reference
+- [docs/reference/pos-retail-service.md](../docs/reference/pos-retail-service.md) — pos-retail-service: repository reference
