@@ -151,3 +151,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | payment-service | [GuestRefundLifecycleTest.java](../payment-service/src/test/java/com/fcourt/payment/GuestRefundLifecycleTest.java) |
 | payment-service | [JwtVerificationTest.java](../payment-service/src/test/java/com/fcourt/payment/JwtVerificationTest.java) |
 | payment-service | [OpenApiDocsTest.java](../payment-service/src/test/java/com/fcourt/payment/OpenApiDocsTest.java) |
+| payment-service | [PaymentDatabaseTest.java](../payment-service/src/test/java/com/fcourt/payment/PaymentDatabaseTest.java) |
