@@ -102,3 +102,4 @@ aids and do not establish runtime validation results.
 | BillingController | [subscription-service/src/main/java/com/fcourt/subscription/billing/BillingController.java](../subscription-service/src/main/java/com/fcourt/subscription/billing/BillingController.java) |
 | InternalLimitsController | [subscription-service/src/main/java/com/fcourt/subscription/billing/InternalLimitsController.java](../subscription-service/src/main/java/com/fcourt/subscription/billing/InternalLimitsController.java) |
 | CourtTypeController | [subscription-service/src/main/java/com/fcourt/subscription/courttype/CourtTypeController.java](../subscription-service/src/main/java/com/fcourt/subscription/courttype/CourtTypeController.java) |
+| PlanController | [subscription-service/src/main/java/com/fcourt/subscription/plan/PlanController.java](../subscription-service/src/main/java/com/fcourt/subscription/plan/PlanController.java) |
