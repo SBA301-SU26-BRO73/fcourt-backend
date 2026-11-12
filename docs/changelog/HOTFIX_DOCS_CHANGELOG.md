@@ -51,3 +51,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 40 | 2026-11-05 | Hotfix | `booking-service` | #74 | Khắc phục lỗi mất thông tin ghi chú khách hàng khi chuyển trạng thái booking. |
 | 41 | 2026-11-05 | Hotfix | `reporting-service` | #75 | Sửa công thức tính doanh thu ngày trong reporting-service để loại trừ đơn đã hoàn tiền. |
 | 42 | 2026-11-05 | Docs update | `docs/architecture` | #76 | Viết tài liệu tích hợp cơ chế bảo đảm tính nhất quán sau cùng (Eventual Consistency). |
+| 43 | 2026-11-06 | Hotfix | `pos-retail-service` | #77 | Sửa lỗi trừ âm tồn kho sản phẩm khi 2 quầy thu ngân cùng bán mặt hàng cuối cùng. |
