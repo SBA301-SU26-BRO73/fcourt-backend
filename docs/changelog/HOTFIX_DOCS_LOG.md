@@ -69,3 +69,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 59 | 2026-11-09 | Feature | `gateway-service` | #226 | Định tuyến danh sách sản phẩm POS của super admin tới pos-retail-service. |
 | 60 | 2026-11-09 | Feature | `pos-retail-service` | #225 | Danh sách sản phẩm POS của tất cả chi nhánh cho super admin. |
 | 61 | 2026-11-09 | Feature | `subscription-service` | #232 | Endpoint thống kê danh sách gói đăng ký cho super admin. |
+| 62 | 2026-11-09 | Feature | `reporting-service` | #231 | Các endpoint chi tiết cho dashboard super admin. |
