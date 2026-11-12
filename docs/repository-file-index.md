@@ -143,3 +143,4 @@
 - [booking-service/src/test/java/com/fcourt/booking/FullCourtQuoteTest.java](../booking-service/src/test/java/com/fcourt/booking/FullCourtQuoteTest.java) — Java test source; inspect fixtures and assertions before running.
 - [booking-service/src/test/java/com/fcourt/booking/FullCourtReservationTest.java](../booking-service/src/test/java/com/fcourt/booking/FullCourtReservationTest.java) — Java test source; inspect fixtures and assertions before running.
 - [booking-service/src/test/java/com/fcourt/booking/GuestBookingCancelApiTest.java](../booking-service/src/test/java/com/fcourt/booking/GuestBookingCancelApiTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/GuestBookingLookupApiTest.java](../booking-service/src/test/java/com/fcourt/booking/GuestBookingLookupApiTest.java) — Java test source; inspect fixtures and assertions before running.
