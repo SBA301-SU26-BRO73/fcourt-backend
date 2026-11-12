@@ -74,3 +74,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 63 | 2026-11-08 | Hotfix | `tools` | #131 | Sửa demo seed script cho khớp schema mới của voucher-service và discount percent. |
 | 64 | 2026-11-09 | Docs update | `docs/business` | #134 | Phân tích khoảng trống nghiệp vụ so với monolith cũ và phương án kiến trúc AWS. |
 | 65 | 2026-11-09 | Hotfix | `booking-service` | #135 | Sửa lỗi deadlock khi đặt đồng thời nhiều slot trên cùng một sân đấu. |
+| 66 | 2026-11-09 | Hotfix | `booking-service` | #136 | Đảm bảo hoàn tiền tự động khi saga đặt sân thất bại tại bước trừ voucher. |
