@@ -1,7 +1,7 @@
 name: Build and push images
 # Builds only the services whose folder changed (or the ones named in a manual run) and pushes them to ECR.
 # Runs on push to dev and on manual dispatch only; never on pull requests, so a missing AWS role cannot fail a PR.
-# Setup (repository variables and secrets) is described in docs/ci-image-build.md.
+# Setup (repository variables and secrets) is described in docs/operations/ci-image-build.md.
 on:
   push:
     branches: [dev]

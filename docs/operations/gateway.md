@@ -1,6 +1,6 @@
 # Gateway (Spring Cloud Gateway)
 
-`gateway-service` (cổng 8080) là điểm vào duy nhất của hệ thống. Web (nginx) và app Flutter chỉ gọi gateway; gateway tìm service qua danh sách DNS tĩnh (`lb://<tên-service>`, xem [spring-cloud.md](spring-cloud.md)), kiểm tra JWT rồi chuyển tiếp, giữ nguyên header `Authorization`. Các service vẫn tự kiểm tra JWT (phòng thủ nhiều lớp).
+`gateway-service` (cổng 8080) là điểm vào duy nhất của hệ thống. Web (nginx) và app Flutter chỉ gọi gateway; gateway tìm service qua danh sách DNS tĩnh (`lb://<tên-service>`, xem [spring-cloud.md](../architecture/spring-cloud.md)), kiểm tra JWT rồi chuyển tiếp, giữ nguyên header `Authorization`. Các service vẫn tự kiểm tra JWT (phòng thủ nhiều lớp).
 
 - Spring Boot 4.0.9, Spring Cloud 2025.1.4, WebFlux (reactive), springdoc 3.0.3.
 - Health: `GET /actuator/health` (gateway tự trả lời, không chuyển tiếp). Mọi `/actuator/**` khác bị chặn.
