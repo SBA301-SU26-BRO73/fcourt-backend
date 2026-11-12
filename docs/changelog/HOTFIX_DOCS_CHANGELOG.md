@@ -183,3 +183,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 172 | 2026-11-12 | Hotfix | `discovery-service` | #518 | Khắc phục lỗi cache Redis không được xoá khi chủ sân cập nhật thông tin chi nhánh. |
 | 173 | 2026-11-12 | Hotfix | `discovery-service` | #519 | Tối ưu thuật toán sắp xếp chi nhánh theo khoảng cách địa lý người dùng (Haversine Formula). |
 | 174 | 2026-11-12 | Docs update | `docs/architecture` | #520 | Tài liệu hoá kiến trúc Multi-Region Cache và chiến lược Cache Invalidation. |
+| 175 | 2026-11-12 | Hotfix | `booking-service` | #521 | Sửa lỗi trùng lặp mã vé ticket_code khi nhiều khách cùng thanh toán trong cùng 1 giây. |
