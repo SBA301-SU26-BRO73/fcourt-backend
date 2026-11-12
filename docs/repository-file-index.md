@@ -54,3 +54,4 @@
 - [staff-operations-service/REASSESSMENT_SCRUM_65.md](../staff-operations-service/REASSESSMENT_SCRUM_65.md) — SCRUM-65 — opaque ticket contract, 2026-11-05
 - [staff-operations-service/REQUEST_REVIEW.md](../staff-operations-service/REQUEST_REVIEW.md) — SCRUM-26 — Staff management review preparation
 - [staff-operations-service/VALIDATION.md](../staff-operations-service/VALIDATION.md) — SCRUM-26 validation
+- [staff-operations-service/VALIDATION_SCRUM_28.md](../staff-operations-service/VALIDATION_SCRUM_28.md) — SCRUM-28 validation
