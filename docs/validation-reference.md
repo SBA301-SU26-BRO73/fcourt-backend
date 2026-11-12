@@ -93,3 +93,4 @@ aids and do not establish runtime validation results.
 | ReportingSecurity | [reporting-service/src/main/java/com/fcourt/reporting/config/ReportingSecurity.java](../reporting-service/src/main/java/com/fcourt/reporting/config/ReportingSecurity.java) |
 | HoldController | [slot-hold-engine/src/main/java/com/fcourt/hold/HoldController.java](../slot-hold-engine/src/main/java/com/fcourt/hold/HoldController.java) |
 | CheckInController | [staff-operations-service/src/main/java/com/fcourt/staff/api/CheckInController.java](../staff-operations-service/src/main/java/com/fcourt/staff/api/CheckInController.java) |
+| OfflineCheckInController | [staff-operations-service/src/main/java/com/fcourt/staff/api/OfflineCheckInController.java](../staff-operations-service/src/main/java/com/fcourt/staff/api/OfflineCheckInController.java) |
