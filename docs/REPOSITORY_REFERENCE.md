@@ -136,3 +136,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `POST /api/internal/bookings/check-in/preview` xem trước check-in.
 - `POST /api/internal/bookings/check-in` check-in.
 - `POST /api/internal/bookings/offline-check-in` check-in offline.
+- `GET /api/internal/branches/{branch}/offline-tickets` vé phục vụ chế độ offline.
+
