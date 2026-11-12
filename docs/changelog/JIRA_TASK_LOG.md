@@ -44,3 +44,4 @@ vào `dev` với task triển khai, và ghi task gốc với ticket review.
 | 33 | [SCRUM-120](https://bro73.atlassian.net/browse/SCRUM-120) | Review approach | Review | To Do | [SCRUM-24](https://bro73.atlassian.net/browse/SCRUM-24) | BE slot-hold-engine — SCRUM-24 Redis hold 5 phút |
 | 34 | [SCRUM-121](https://bro73.atlassian.net/browse/SCRUM-121) | Code review | Review | To Do | [SCRUM-24](https://bro73.atlassian.net/browse/SCRUM-24) | BE slot-hold-engine — SCRUM-24 |
 | 35 | [SCRUM-122](https://bro73.atlassian.net/browse/SCRUM-122) | Review approach | Review | To Do | [SCRUM-25](https://bro73.atlassian.net/browse/SCRUM-25) | Flutter Booking — SCRUM-25 summary & guest contact |
+| 36 | [SCRUM-123](https://bro73.atlassian.net/browse/SCRUM-123) | Code review | Review | To Do | [SCRUM-25](https://bro73.atlassian.net/browse/SCRUM-25) | Flutter Booking — SCRUM-25 |
