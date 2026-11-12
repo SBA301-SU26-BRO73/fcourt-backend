@@ -204,3 +204,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 193 | 2026-11-12 | Hotfix | `voucher-service` | #539 | Sửa lỗi tính sai số tiền giảm khi kết hợp voucher phần trăm với đơn đặt nhiều sân. |
 | 194 | 2026-11-12 | Hotfix | `staff-operations-service` | #540 | Sửa lỗi nhân viên không thể tải lại danh sách slot sau khi mất kết nối mạng tạm thời. |
 | 195 | 2026-11-12 | Docs update | `docs/reference` | #541 | Tài liệu hoá cấu trúc log kiểm toán (Audit Logs) của mọi thao tác check-in và huỷ đặt. |
+| 196 | 2026-11-12 | Hotfix | `subscription-service` | #542 | Khắc phục lỗi không gửi email cảnh báo khi gói dịch vụ của chi nhánh sắp hết hạn. |
