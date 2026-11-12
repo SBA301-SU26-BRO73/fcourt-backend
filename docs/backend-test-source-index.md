@@ -165,3 +165,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | reporting-service | [ReportingIntegrationTest.java](../reporting-service/src/test/java/com/fcourt/reporting/ReportingIntegrationTest.java) |
 | reporting-service | [OpenApiDocsTest.java](../reporting-service/src/test/java/com/fcourt/reporting/api/OpenApiDocsTest.java) |
 | reporting-service | [ReportingAuthorizationTest.java](../reporting-service/src/test/java/com/fcourt/reporting/api/ReportingAuthorizationTest.java) |
+| reporting-service | [FacilityCircuitBreakerTest.java](../reporting-service/src/test/java/com/fcourt/reporting/client/FacilityCircuitBreakerTest.java) |
