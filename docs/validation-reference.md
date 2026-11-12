@@ -80,3 +80,4 @@ aids and do not establish runtime validation results.
 | PaymentApprovalController | [payment-service/src/main/java/com/fcourt/payment/PaymentApprovalController.java](../payment-service/src/main/java/com/fcourt/payment/PaymentApprovalController.java) |
 | PaymentSecurity | [payment-service/src/main/java/com/fcourt/payment/PaymentSecurity.java](../payment-service/src/main/java/com/fcourt/payment/PaymentSecurity.java) |
 | PublicRefundController | [payment-service/src/main/java/com/fcourt/payment/PublicRefundController.java](../payment-service/src/main/java/com/fcourt/payment/PublicRefundController.java) |
+| ReceiptController | [payment-service/src/main/java/com/fcourt/payment/ReceiptController.java](../payment-service/src/main/java/com/fcourt/payment/ReceiptController.java) |
