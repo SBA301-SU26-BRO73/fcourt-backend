@@ -112,3 +112,4 @@ aids and do not establish runtime validation results.
 | ClockConfiguration | [auth-service/src/main/java/com/fcourt/auth/config/ClockConfiguration.java](../auth-service/src/main/java/com/fcourt/auth/config/ClockConfiguration.java) |
 | OpenApiConfig | [auth-service/src/main/java/com/fcourt/auth/config/OpenApiConfig.java](../auth-service/src/main/java/com/fcourt/auth/config/OpenApiConfig.java) |
 | PasswordConfiguration | [auth-service/src/main/java/com/fcourt/auth/config/PasswordConfiguration.java](../auth-service/src/main/java/com/fcourt/auth/config/PasswordConfiguration.java) |
+| SecurityConfiguration | [auth-service/src/main/java/com/fcourt/auth/config/SecurityConfiguration.java](../auth-service/src/main/java/com/fcourt/auth/config/SecurityConfiguration.java) |
