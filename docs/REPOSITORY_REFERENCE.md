@@ -152,3 +152,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/admin/payments/transactions` sổ giao dịch của chi nhánh.
 - Thêm `transactionType` để xem sổ cái hợp nhất.
 - `POST /api/refunds/request` khách yêu cầu hoàn tiền.
+- `GET /api/refunds/booking/{bookingId}` xem hoàn tiền của booking.
