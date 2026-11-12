@@ -94,3 +94,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | facility-service | [OpenApiDocsTest.java](../facility-service/src/test/java/com/fcourt/facility/OpenApiDocsTest.java) |
 | facility-service | [PricingRulesIntegrationTest.java](../facility-service/src/test/java/com/fcourt/facility/PricingRulesIntegrationTest.java) |
 | facility-service | [BranchOwnerControllerTest.java](../facility-service/src/test/java/com/fcourt/facility/api/BranchOwnerControllerTest.java) |
+| facility-service | [BranchRequestValidationTest.java](../facility-service/src/test/java/com/fcourt/facility/api/BranchRequestValidationTest.java) |
