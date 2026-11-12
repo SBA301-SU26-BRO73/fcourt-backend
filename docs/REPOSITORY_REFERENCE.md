@@ -162,3 +162,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 ## 11. voucher-service
 - `GET`, `POST` trên `/api/admin/vouchers` danh sách và tạo voucher.
 - `GET`, `PUT`, `DELETE` trên `/api/admin/vouchers/{id}`.
+- `GET /api/admin/vouchers/{id}/usages` lịch sử sử dụng voucher.
