@@ -64,3 +64,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/subscriptions/my-subscription` gói hiện tại của chủ sân.
 - `POST /api/subscriptions/checkout` tạo đơn mua gói.
 - `GET /api/subscriptions/payments/{orderCode}` tra trạng thái đơn.
+- `POST /api/subscriptions/payment-webhook` nhận webhook từ cổng thanh toán.
+- `GET /api/super-admin/stats/saas-revenue` doanh thu SaaS.
