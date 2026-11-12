@@ -160,3 +160,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `POST /api/internal/payments/booking-expiry` xử lý booking hết hạn thanh toán.
 
 ## 11. voucher-service
+- `GET`, `POST` trên `/api/admin/vouchers` danh sách và tạo voucher.
