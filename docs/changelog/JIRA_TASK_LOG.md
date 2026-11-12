@@ -10,3 +10,4 @@ vào `dev` với task triển khai, và ghi task gốc với ticket review.
 | # | Jira | Loại | Phạm vi | Trạng thái (07/11) | PR / Task cha | Nội dung |
 |---:|---|---|---|---|---|---|
 | 1 | [SCRUM-24](https://bro73.atlassian.net/browse/SCRUM-24) | Task | BE: slot-hold-engine | Done | [backend#2](https://github.com/SBA301-SU26-BRO73/fcourt-backend/pull/2) | Booking — Redis Distributed Lock giữ chỗ 5 phút (Port 8087) |
+| 2 | [SCRUM-25](https://bro73.atlassian.net/browse/SCRUM-25) | Task | Flutter: Customer | Done | [flutter#1](https://github.com/SBA301-SU26-BRO73/fcourt-flutter/pull/1) | Booking — Chọn slot, nhập SĐT guest, tóm tắt đơn đặt sân |
