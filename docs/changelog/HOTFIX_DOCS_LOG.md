@@ -11,3 +11,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 1 | 2026-11-01 | Hotfix | `staff-operations-service` | #45 | Từ chối check-in cho ngày đã qua; lịch trong ngày chấp nhận slot qua nửa đêm và slot đã huỷ. |
 | 2 | 2026-11-02 | Test | `gateway-service` | #17 | Bổ sung workflow e2e đi qua gateway và kiểm thử saga đặt sân. |
 | 3 | 2026-11-02 | Chore | `tools` | #16 | Thêm bộ dữ liệu demo có thể chạy lại (resumable) cho môi trường phát triển. |
+| 4 | 2026-11-02 | Test | `tools` | #18 | Thêm production readiness probes cho bộ smoke test. |
