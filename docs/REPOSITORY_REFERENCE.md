@@ -74,3 +74,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET`, `PUT`, `DELETE` trên `/api/admin/branches/{id}`.
 - `GET /api/public/branches/{id}` chi tiết công khai.
 - `GET /api/staff/branches/{id}` chi tiết cho nhân viên.
+- Ảnh chi nhánh: `GET`, `POST` trên `/api/admin/branches/{id}/images`.
+- Xóa ảnh: `DELETE /api/admin/branches/images/{imageId}`.
