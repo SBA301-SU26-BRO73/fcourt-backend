@@ -1,40 +1,41 @@
-# FCourt backend documentation
+# Tài liệu backend FCourt
 
-Back to the [repository README](../README.md). Most existing documents are written in Vietnamese.
+Quay lại [README của repository](../README.md). Phần lớn tài liệu hiện có được viết bằng tiếng Việt.
 
-## Architecture
+## Kiến trúc
 
-| Document | Content |
+| Tài liệu | Nội dung |
 |---|---|
-| [aws-architecture.md](architecture/aws-architecture.md) | AWS/EKS design and deployment options (SCRUM-100 design document) |
-| [code-structure.md](architecture/code-structure.md) | Standard package layout for Spring Boot services |
-| [spring-cloud.md](architecture/spring-cloud.md) | Gateway and static service discovery (no Eureka) |
-| [realtime-schedule-notifications.md](architecture/realtime-schedule-notifications.md) | Public schedule updates over STOMP `/ws-fcourt` (SCRUM-108) |
+| [aws-architecture.md](architecture/aws-architecture.md) | Thiết kế AWS/EKS và các phương án triển khai (tài liệu thiết kế SCRUM-100) |
+| [code-structure.md](architecture/code-structure.md) | Cấu trúc package chuẩn cho các service Spring Boot |
+| [spring-cloud.md](architecture/spring-cloud.md) | Gateway và service discovery tĩnh (không dùng Eureka) |
+| [realtime-schedule-notifications.md](architecture/realtime-schedule-notifications.md) | Cập nhật lịch công khai qua STOMP `/ws-fcourt` (SCRUM-108) |
+| [images/arch-3-1-microservices.png](architecture/images/arch-3-1-microservices.png) | Sơ đồ kiến trúc microservices (nguồn draw.io: [arch-3-1-microservices.drawio](architecture/images/arch-3-1-microservices.drawio)) |
 
-## Operations
+## Vận hành
 
-| Document | Content |
+| Tài liệu | Nội dung |
 |---|---|
-| [docker-compose.md](operations/docker-compose.md) | Run the whole system locally: profiles, ports, memory, troubleshooting |
-| [smoke-test-local.md](operations/smoke-test-local.md) | Recorded local smoke test (Compose + web) |
-| [gateway.md](operations/gateway.md) | Gateway routes, public paths, environment variables, rate limiting |
-| [storage-s3.md](operations/storage-s3.md) | File storage on S3: key layout, presigned URLs, IAM |
-| [ci-image-build.md](operations/ci-image-build.md) | CI image build to ECR and GitOps tag bump |
+| [docker-compose.md](operations/docker-compose.md) | Chạy toàn bộ hệ thống trên máy local: profile, port, bộ nhớ, xử lý sự cố |
+| [smoke-test-local.md](operations/smoke-test-local.md) | Kết quả smoke test local đã ghi lại (Compose + web) |
+| [gateway.md](operations/gateway.md) | Route của gateway, đường dẫn công khai, biến môi trường, giới hạn tốc độ |
+| [storage-s3.md](operations/storage-s3.md) | Lưu file trên S3: cấu trúc key, presigned URL, IAM |
+| [ci-image-build.md](operations/ci-image-build.md) | CI build image lên ECR và cập nhật tag GitOps |
 
-## Business
+## Nghiệp vụ
 
-| Document | Content |
+| Tài liệu | Nội dung |
 |---|---|
-| [business-gap-a.md](business/business-gap-a.md) | Monolith vs microservices gap analysis, part A (booking, payment, refund) |
-| [business-gap-b.md](business/business-gap-b.md) | Gap analysis, part B (PayOS config, dashboard revenue, vouchers) |
-| [cancellation-refunds.md](business/cancellation-refunds.md) | Paid cancellation refund flow (A6 / A12) |
+| [business-gap-a.md](business/business-gap-a.md) | Phân tích chênh lệch monolith và microservices, phần A (đặt sân, thanh toán, hoàn tiền) |
+| [business-gap-b.md](business/business-gap-b.md) | Phân tích chênh lệch, phần B (cấu hình PayOS, doanh thu dashboard, voucher) |
+| [cancellation-refunds.md](business/cancellation-refunds.md) | Luồng hoàn tiền khi hủy đơn đã thanh toán (A6 / A12) |
 
-## Report
+## Báo cáo
 
-[report/](report/README.md) is where the final project report (DOCX/PDF) is kept locally; the files themselves are git-ignored.
+[report/](report/README.md) là nơi lưu cục bộ báo cáo cuối kỳ của dự án (DOCX/PDF); bản thân các file này không được đưa vào git.
 
-## Other documentation
+## Tài liệu khác
 
-- Service READMEs: `<service>/README.md` (auth, booking, discovery, facility, notification, payment, pos-retail, reporting, slot-hold-engine, staff-operations, subscription).
-- Tool READMEs: [tools/demo_seed](../tools/demo_seed/README.md), [tools/production_smoke](../tools/production_smoke/README.md), [tools/system_tests](../tools/system_tests/README.md).
-- Database scripts: `<service>/database/`; database list in `docker/postgres/services.txt`.
+- README của từng service: `<service>/README.md` (auth, booking, discovery, facility, notification, payment, pos-retail, reporting, slot-hold-engine, staff-operations, subscription).
+- README của công cụ: [tools/demo_seed](../tools/demo_seed/README.md), [tools/production_smoke](../tools/production_smoke/README.md), [tools/system_tests](../tools/system_tests/README.md).
+- Script cơ sở dữ liệu: `<service>/database/`; danh sách database ở `docker/postgres/services.txt`.

@@ -1,12 +1,12 @@
-# Final report
+# Báo cáo cuối kỳ
 
-This folder holds the final project report. The DOCX/PDF files are large binary documents, so they are kept out of git (see the `docs/report/*` rule in the root `.gitignore`); only this README and `.gitkeep` are tracked. Upload the file to the team's shared drive as well, since git will not back it up.
+Thư mục này chứa báo cáo cuối kỳ của dự án. Các file DOCX/PDF là tài liệu nhị phân dung lượng lớn nên không đưa vào git (xem quy tắc `docs/report/*` trong `.gitignore` ở thư mục gốc); chỉ README này và `.gitkeep` được theo dõi. Hãy tải file lên ổ đĩa chung của nhóm vì git không sao lưu chúng.
 
-## File name convention
+## Quy ước đặt tên file
 
 ```
 FCourt-Report-<version>-<yyyymmdd>.docx
 FCourt-Report-<version>-<yyyymmdd>.pdf
 ```
 
-Example: `FCourt-Report-v1.0-20261120.docx`. Use the same base name for the PDF export. Do not put secrets, credentials or personal data in the report.
+Ví dụ: `FCourt-Report-v1.0-20261120.docx`. Bản PDF xuất ra dùng cùng tên gốc. Không đưa secret, thông tin xác thực hoặc dữ liệu cá nhân vào báo cáo.
