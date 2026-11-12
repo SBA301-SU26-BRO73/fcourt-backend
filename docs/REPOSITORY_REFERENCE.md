@@ -112,3 +112,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/public/branches/{id}/reviews` xem đánh giá của chi nhánh.
 - `POST /api/admin/reviews/{id}/reply` chủ sân phản hồi đánh giá.
 
+## 8. slot-hold-engine
+- `POST /api/bookings/hold-slots` giữ chỗ tạm thời và trả về `holdToken`.
