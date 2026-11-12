@@ -121,3 +121,14 @@ Test sources and fixtures listed here are navigation aids, not a report of passi
 - [application.properties](../../subscription-service/src/test/resources/application.properties)
 
 From the repository root, the standard Maven verification entry point is `mvn -B -f subscription-service/pom.xml verify`. Check the descriptor and environment requirements first.
+
+## Database scripts and migrations
+
+Review script contents and application configuration to distinguish initialization scripts from migrations loaded at runtime. Do not infer execution order across these two locations, or execute scripts against a shared database merely because they are listed here.
+
+- [V1__init_schema.sql](../../subscription-service/database/V1__init_schema.sql)
+- [V2__seed_sample_data.sql](../../subscription-service/database/V2__seed_sample_data.sql)
+- [V1__init_schema.sql](../../subscription-service/src/main/resources/db/migration/V1__init_schema.sql)
+- [V2__seed_sample_data.sql](../../subscription-service/src/main/resources/db/migration/V2__seed_sample_data.sql)
+- [V3__case_insensitive_names_and_positive_prices.sql](../../subscription-service/src/main/resources/db/migration/V3__case_insensitive_names_and_positive_prices.sql)
+- [V4__subscription_starter_flag_and_dates.sql](../../subscription-service/src/main/resources/db/migration/V4__subscription_starter_flag_and_dates.sql)
