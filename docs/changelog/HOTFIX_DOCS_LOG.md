@@ -74,3 +74,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 64 | 2026-11-09 | Feature | `voucher-service` | #227 | Endpoint kiểm tra voucher và gỡ voucher đã áp dụng. |
 | 65 | 2026-11-09 | Feature | `booking-service` | #228 | Cho khách vãng lai tạo booking online bằng hold token. |
 | 66 | 2026-11-09 | Feature | `slot-hold-engine` | #229 | `guestPhone` không bắt buộc khi khách hàng đã đăng nhập. |
+| 67 | 2026-11-09 | Feature | `gateway-service` | #230 | Mở tạo booking công khai cho khách, giới hạn tần suất theo từng client. |
