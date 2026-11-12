@@ -175,3 +175,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 164 | 2026-11-12 | Hotfix | `gateway-service` | #510 | Tối ưu bộ đệm Netty buffer pool giảm tiêu hao RAM khi chịu tải đồng thời cao. |
 | 165 | 2026-11-12 | Docs update | `docs/operations` | #511 | Cập nhật tài liệu cấu hình TLS/SSL và chứng chỉ bảo mật cho domain hệ thống. |
 | 166 | 2026-11-12 | Hotfix | `auth-service` | #512 | Sửa lỗi gửi mã OTP xác nhận quên mật khẩu bị chậm do thread pool đồng bộ. |
+| 167 | 2026-11-12 | Hotfix | `auth-service` | #513 | Giới hạn tối đa 5 lần nhập sai OTP liên tiếp trước khi tạm khoá tài khoản 15 phút. |
