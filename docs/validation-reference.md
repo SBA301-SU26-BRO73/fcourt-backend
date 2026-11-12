@@ -37,3 +37,4 @@ aids and do not establish runtime validation results.
 | AuthController | [auth-service/src/main/java/com/fcourt/auth/account/AuthController.java](../auth-service/src/main/java/com/fcourt/auth/account/AuthController.java) |
 | AvatarController | [auth-service/src/main/java/com/fcourt/auth/account/AvatarController.java](../auth-service/src/main/java/com/fcourt/auth/account/AvatarController.java) |
 | GoogleLoginController | [auth-service/src/main/java/com/fcourt/auth/account/GoogleLoginController.java](../auth-service/src/main/java/com/fcourt/auth/account/GoogleLoginController.java) |
+| PasswordController | [auth-service/src/main/java/com/fcourt/auth/account/PasswordController.java](../auth-service/src/main/java/com/fcourt/auth/account/PasswordController.java) |
