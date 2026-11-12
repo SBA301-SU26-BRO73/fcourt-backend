@@ -197,3 +197,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 186 | 2026-11-12 | Docs update | `docs/reference` | #532 | Tài liệu hoá API danh sách thông báo và đánh dấu đã đọc (Mark as Read) của người dùng. |
 | 187 | 2026-11-12 | Hotfix | `pos-retail-service` | #533 | Sửa lỗi hiển thị sai đơn vị tính sản phẩm (hộp bóng, ống cầu, cuộn cán vợt) trên hoá đơn. |
 | 188 | 2026-11-12 | Hotfix | `pos-retail-service` | #534 | Bổ sung validate giá bán lẻ không được nhỏ hơn giá nhập kho của sản phẩm. |
+| 189 | 2026-11-12 | Docs update | `docs/operations` | #535 | Tài liệu hoá quy trình kiểm kê và cân chỉnh kho định kỳ cho quản lý sân. |
