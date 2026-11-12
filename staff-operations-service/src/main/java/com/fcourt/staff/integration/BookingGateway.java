@@ -13,6 +13,8 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Component
 public class BookingGateway {
@@ -94,11 +96,25 @@ public class BookingGateway {
             if (value == null) throw unavailable();
             return value;
         } catch (HttpClientErrorException error) {
+            String reason = checkInReason(error);
+            if (reason != null) throw new CheckInRejectedException(error.getStatusCode(), reason);
             if (List.of(400, 401, 403, 404, 409).contains(error.getStatusCode().value())) {
                 throw new ResponseStatusException(error.getStatusCode(), "Booking command rejected");
             }
             throw unavailable();
         } catch (RestClientException error) { throw unavailable(); }
+    }
+
+    private String checkInReason(HttpClientErrorException error) {
+        if (error.getStatusCode().value() != 409) return null;
+        try {
+            JsonNode root = new ObjectMapper().readTree(error.getResponseBodyAsByteArray());
+            String reason = root.path("reason").asText();
+            return List.of("CHECKIN_TOO_EARLY", "WRONG_DATE", "WRONG_BRANCH", "ALREADY_CHECKED_IN")
+                    .contains(reason) ? reason : null;
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     public static ResponseStatusException unavailable() {

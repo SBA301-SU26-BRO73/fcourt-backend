@@ -103,6 +103,59 @@ class StaffAdmissionsTest {
                 .isEqualTo("CONFIRMED");
     }
 
+    @Test
+    void checkInRejectionsExposeStableReasonCodes() throws Exception {
+        assertCheckInReason("WRONG_BRANCH", 8, "CONFIRMED");
+
+        jdbc.update("UPDATE bookings SET date=? WHERE id=42", date.minusDays(1));
+        jdbc.update("UPDATE booking_slots SET booking_date=? WHERE booking_id=42", date.minusDays(1));
+        assertCheckInReason("WRONG_DATE", 7, "CONFIRMED");
+        jdbc.update("UPDATE bookings SET date=? WHERE id=42", date);
+        jdbc.update("UPDATE booking_slots SET booking_date=? WHERE booking_id=42", date);
+
+        jdbc.update("UPDATE booking_slots SET slot_start='10:00',slot_end='10:30' WHERE booking_id=42");
+        assertCheckInReason("CHECKIN_TOO_EARLY", 7, "CONFIRMED");
+        jdbc.update("UPDATE booking_slots SET slot_start='08:00',slot_end='09:00' WHERE booking_id=42");
+        assertCheckInConflictWithoutReason();
+        jdbc.update("UPDATE booking_slots SET slot_start='09:00',slot_end='09:30' WHERE booking_id=42");
+        assertCheckInReason("ALREADY_CHECKED_IN", 7, "CHECKED_IN");
+    }
+
+    private void assertCheckInConflictWithoutReason() throws Exception {
+        var request = new HashMap<String, Object>();
+        request.put("branchId", 7);
+        request.put("actorId", 100);
+        request.put("date", date.toString());
+        request.put("checkedInAt", "2026-11-01T02:15:00Z");
+        request.put("checkInCode", "ticket");
+        request.put("channel", "MANUAL");
+        mvc.perform(post("/api/internal/bookings/check-in")
+                        .with(jwt().jwt(j -> j.subject("100")))
+                        .header("Idempotency-Key", "staff:check-in:100:" + UUID.randomUUID())
+                        .contentType("application/json")
+                        .content(json.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.reason").doesNotExist());
+    }
+
+    private void assertCheckInReason(String expected, long branch, String status) throws Exception {
+        jdbc.update("UPDATE bookings SET status=? WHERE id=42", status);
+        var request = new HashMap<String, Object>();
+        request.put("branchId", branch);
+        request.put("actorId", 100);
+        request.put("date", date.toString());
+        request.put("checkedInAt", "2026-11-01T02:15:00Z");
+        request.put("checkInCode", "ticket");
+        request.put("channel", "MANUAL");
+        mvc.perform(post("/api/internal/bookings/check-in")
+                        .with(jwt().jwt(j -> j.subject("100")))
+                        .header("Idempotency-Key", "staff:check-in:100:" + UUID.randomUUID())
+                        .contentType("application/json")
+                        .content(json.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.reason").value(expected));
+    }
+
     Map<String, Object> command() {
         return Map.of(
                 "actorId",
