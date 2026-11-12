@@ -1,8 +1,19 @@
 # FCourt Backend
 
-FCourt is a court (sports field) booking platform. Customers search branches and courts, hold a slot, pay and check in; court owners and staff manage branches, schedules, vouchers, retail sales and reports; a super admin manages owners and subscription plans. This repository holds the backend: 13 Spring Boot services, each in its own folder with its own database, behind a single API gateway. Docker Compose is used for local development only; production runs on AWS EKS (ap-southeast-1) and is deployed with Argo CD (GitOps).
+FCourt is a court (sports field) booking platform built as 13 Spring Boot microservices behind one API gateway, each service with its own database. This repository holds the backend; the clients and the deployment live in sibling repositories.
+
+**What it does**
+
+- **Customers:** search branches and courts, hold a slot (300 s), pay by bank transfer with a receipt, get a QR ticket, cancel and request a refund.
+- **Court owners and staff:** manage branches, courts, pricing, slot templates, bookings, receipts, refunds, vouchers, shifts, check-in and retail (POS) sales; read dashboards and reports.
+- **Super admin:** approve or reject owner accounts, lock users, manage SaaS subscription plans.
+- **Platform:** JWT auth with refresh tokens, Kafka events between services, realtime schedule updates over WebSocket, in-app, email and push notifications.
 
 Live web: <https://fcourt.donan.site> (CloudFront + S3, the API is served under `/api`). Related repos: `fcourt-web` (React), `fcourt-flutter` (Android app), `fcourt-gitops` (Argo CD manifests), `fcourt-infra` (Terraform).
+
+## Contents
+
+[Architecture](#architecture) · [Services](#services) · [Tech stack](#tech-stack) · [Quick start](#quick-start-local) · [Build and test](#build-and-test-one-service) · [Configuration](#configuration) · [Production](#production) · [CI/CD](#cicd-and-deployment) · [API](#api-entry-points) · [Docs](#documentation) · [Contributing](#contributing)
 
 ## Architecture
 
@@ -117,13 +128,23 @@ Settings are environment variables with local defaults in each `application.yml`
 
 Database scripts live in `<service>/database/`; the database list is `docker/postgres/services.txt`. Cross-service foreign keys are intentionally absent.
 
+## Production
+
+| Item | Value |
+|---|---|
+| Web and API | <https://fcourt.donan.site> (API under `/api`, WebSocket `/ws-fcourt`) |
+| Runtime | Amazon EKS cluster `fcourt-prod`, namespace `fcourt-prod` (services) and `data` (PostgreSQL, Kafka, Redis), region ap-southeast-1 |
+| Delivery | GitHub Actions builds images to ECR, `fcourt-gitops` holds the manifests, Argo CD syncs them |
+| Infrastructure | Terraform in `fcourt-infra` (VPC, EKS, ECR, S3, CloudFront, Route 53, ACM, SNS) |
+| Local vs cloud | Docker Compose is for local development only; production does not use it |
+
 ## CI/CD and deployment
 
 1. Pull requests run the per-service workflows in `.github/workflows/` (path-filtered, `mvn verify` on Java 21), plus the demo seed, gateway system test and production smoke runner checks.
 2. A push to `dev` runs `build-push-images.yml`: it builds only the services whose folder changed and pushes `fcourt/<service>:<short-sha>` (and `latest`) to Amazon ECR in ap-southeast-1.
 3. The `update-gitops` job then bumps the image tag in `fcourt-gitops` (`kustomize edit set image`) when the repository variable `GITOPS_UPDATE_ENABLED` is `true`.
 4. Argo CD syncs `fcourt-gitops` into the EKS cluster (namespace `fcourt-prod`). Infrastructure is managed in `fcourt-infra` (Terraform).
-5. Release: open a PR `dev` -> `main`.
+5. Release: open a PR `dev` -> `main` titled `merge: release vX.Y.Z` and merge it with a merge commit (do not squash).
 
 Details: [docs/operations/ci-image-build.md](docs/operations/ci-image-build.md), [docs/architecture/aws-architecture.md](docs/architecture/aws-architecture.md).
 
