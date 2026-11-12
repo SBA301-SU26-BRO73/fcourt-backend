@@ -70,3 +70,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 59 | 2026-11-08 | Hotfix | `facility-service` | #117 | Sửa lỗi upload ảnh sân vượt quá 5MB gây tràn bộ nhớ đệm (heap memory limit). |
 | 60 | 2026-11-08 | Docs update | `docs/architecture` | #120 | Tài liệu hoá kiến trúc thông báo thời gian thực qua WebSocket STOMP. |
 | 61 | 2026-11-08 | Hotfix | `discovery-service` | #129 | Cho route slot-conflicts (đã kiểm token) đi qua security chain, tránh bị chặn nhầm. |
+| 62 | 2026-11-08 | Hotfix | `gateway-service` | #130 | Chặn workflow chạy trùng lặp và tăng tốc độ build gateway-service trên CI. |
