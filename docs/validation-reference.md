@@ -14,3 +14,4 @@ contract. Follow the owning component's README for execution and build commands.
 | discovery validation notes | [discovery-service/VALIDATION.md](../discovery-service/VALIDATION.md) |
 | pos integration contracts | [pos-retail-service/CONTRACTS.md](../pos-retail-service/CONTRACTS.md) |
 | pos validation notes | [pos-retail-service/VALIDATION.md](../pos-retail-service/VALIDATION.md) |
+| staff integration contracts | [staff-operations-service/CONTRACTS.md](../staff-operations-service/CONTRACTS.md) |
