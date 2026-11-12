@@ -60,3 +60,4 @@ aids and do not establish runtime validation results.
 | BranchController | [facility-service/src/main/java/com/fcourt/facility/api/BranchController.java](../facility-service/src/main/java/com/fcourt/facility/api/BranchController.java) |
 | BranchImageController | [facility-service/src/main/java/com/fcourt/facility/api/BranchImageController.java](../facility-service/src/main/java/com/fcourt/facility/api/BranchImageController.java) |
 | BranchOwnerController | [facility-service/src/main/java/com/fcourt/facility/api/BranchOwnerController.java](../facility-service/src/main/java/com/fcourt/facility/api/BranchOwnerController.java) |
+| CourtController | [facility-service/src/main/java/com/fcourt/facility/api/CourtController.java](../facility-service/src/main/java/com/fcourt/facility/api/CourtController.java) |
