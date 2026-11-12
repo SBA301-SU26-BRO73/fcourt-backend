@@ -110,3 +110,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `POST /api/reviews` khách gửi đánh giá.
 - `POST /api/reviews/images` tải ảnh kèm đánh giá.
 - `GET /api/public/branches/{id}/reviews` xem đánh giá của chi nhánh.
+- `POST /api/admin/reviews/{id}/reply` chủ sân phản hồi đánh giá.
+
