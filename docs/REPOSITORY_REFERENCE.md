@@ -60,3 +60,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/subscription-plans/{id}` chi tiết một gói.
 - `POST`, `PUT`, `DELETE` trên `/api/subscription-plans` để quản lý gói.
 - `GET /api/court-types` và `GET /api/court-types/{id}` xem loại sân.
+- `POST`, `PUT`, `DELETE` trên `/api/court-types` để quản lý loại sân.
+- `GET /api/subscriptions/my-subscription` gói hiện tại của chủ sân.
