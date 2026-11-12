@@ -110,3 +110,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 99 | 2026-11-10 | Hotfix | `reporting-service` | #259 | Sửa lỗi chia cho 0 khi tính tỷ lệ lấp đầy sân ngày không có slot nào được tạo. |
 | 100 | 2026-11-11 | Docs update | `docs/reference` | #260 | Tài liệu hoá cấu trúc bảng giá linh hoạt theo thứ trong tuần và ngày lễ. |
 | 101 | 2026-11-11 | Hotfix | `facility-service` | #261 | Sửa lỗi áp dụng sai giá ngày lễ khi timezone hệ thống máy chủ bị lệch. |
+| 102 | 2026-11-11 | Hotfix | `tools` | #263 | Bổ sung script khởi tạo dữ liệu mẫu cho hệ thống đặt sân pickleball và cầu lông. |
