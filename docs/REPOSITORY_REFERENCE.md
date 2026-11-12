@@ -18,3 +18,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 |---|---|---|
 | `gateway-service` | không có | Cổng vào, định tuyến và xác thực JWT |
 | `auth-service` | `auth_db` | Tài khoản, đăng nhập, JWKS |
+| `subscription-service` | `subscription_db` | Gói dịch vụ SaaS cho chủ sân |
+| `facility-service` | `facility_db` | Chi nhánh, sân, khung giờ, giá |
