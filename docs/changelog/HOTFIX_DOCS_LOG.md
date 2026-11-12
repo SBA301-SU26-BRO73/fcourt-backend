@@ -51,3 +51,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 41 | 2026-11-09 | Docs update | `slot-hold-engine` | #203 | Bổ sung Swagger/OpenAPI (springdoc) cho slot-hold-engine. |
 | 42 | 2026-11-09 | Feature | `voucher-service` | #205 | Thêm `@RestControllerAdvice` trả lỗi chuẩn RFC 7807 ProblemDetail. |
 | 43 | 2026-11-09 | Feature | `notification-service` | #206 | Thêm `@RestControllerAdvice` trả lỗi chuẩn RFC 7807 ProblemDetail. |
+| 44 | 2026-11-09 | Feature | `slot-hold-engine` | #207 | Thêm `@RestControllerAdvice` trả lỗi chuẩn RFC 7807 ProblemDetail. |
