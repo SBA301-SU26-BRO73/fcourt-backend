@@ -139,3 +139,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | notification-service | [PushDeliveryServiceTest.java](../notification-service/src/test/java/com/fcourt/notification/push/PushDeliveryServiceTest.java) |
 | notification-service | [PushPlannerTest.java](../notification-service/src/test/java/com/fcourt/notification/push/PushPlannerTest.java) |
 | notification-service | [SnsPushSenderTest.java](../notification-service/src/test/java/com/fcourt/notification/push/SnsPushSenderTest.java) |
+| notification-service | [ReminderProjectionTest.java](../notification-service/src/test/java/com/fcourt/notification/reminder/ReminderProjectionTest.java) |
