@@ -100,3 +100,4 @@ vào `dev` với task triển khai, và ghi task gốc với ticket review.
 | 89 | [SCRUM-210](https://bro73.atlassian.net/browse/SCRUM-210) | Request review | Review | To Do | [SCRUM-86](https://bro73.atlassian.net/browse/SCRUM-86) | SCRUM-86 — Voucher apply, payment integration and usage |
 | 90 | [SCRUM-211](https://bro73.atlassian.net/browse/SCRUM-211) | Request code review | Review | To Do | [SCRUM-86](https://bro73.atlassian.net/browse/SCRUM-86) | SCRUM-86 — Voucher apply and payment-backed usage |
 | 91 | [SCRUM-212](https://bro73.atlassian.net/browse/SCRUM-212) | Request review | Review | To Do | [SCRUM-88](https://bro73.atlassian.net/browse/SCRUM-88) | SCRUM-88 — Voucher usage history and sponsored discount totals |
+| 92 | [SCRUM-213](https://bro73.atlassian.net/browse/SCRUM-213) | Request code review | Review | To Do | [SCRUM-88](https://bro73.atlassian.net/browse/SCRUM-88) | SCRUM-88 — Voucher usage history and discount totals |
