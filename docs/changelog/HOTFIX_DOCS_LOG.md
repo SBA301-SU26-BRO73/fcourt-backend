@@ -94,3 +94,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 84 | 2026-11-11 | Refactor | `docker-compose` | #249 | Gỡ Eureka, dùng AWS S3 thật trong Docker Compose. |
 | 85 | 2026-11-11 | Hotfix | `.github` | #250 | Gắn tag image `latest` thay vì `dev` và trỏ đúng cấu trúc gitops dạng phẳng. |
 | 86 | 2026-11-11 | Feature | `tools` | #262 | Script seed dữ liệu demo cho EKS kèm bộ ảnh mẫu. |
+| 87 | 2026-11-11 | Hotfix | `docker-compose` | #275 | Giữ giới hạn gói của facility ở mặc định cho tới khi subscription cung cấp giá trị. |
