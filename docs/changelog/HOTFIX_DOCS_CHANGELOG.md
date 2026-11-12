@@ -189,3 +189,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 178 | 2026-11-12 | Hotfix | `slot-hold-engine` | #524 | Sửa lỗi không nhận diện được IP client khi chạy qua nhiều lớp reverse proxy. |
 | 179 | 2026-11-12 | Hotfix | `slot-hold-engine` | #525 | Bổ sung metric giám sát số lượng slot đang bị khoá đồng thời (active holds gauge). |
 | 180 | 2026-11-12 | Docs update | `docs/operations` | #526 | Tài liệu hoá các chỉ số đo lường hiệu năng (SLI/SLO) của hệ thống slot-hold. |
+| 181 | 2026-11-12 | Hotfix | `payment-service` | #527 | Khắc phục lỗi lưu sai mã tham chiếu ngân hàng (bank_ref) trong bảng payment_transaction. |
