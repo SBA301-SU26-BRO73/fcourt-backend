@@ -152,3 +152,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 141 | 2026-11-12 | Docs update | `docs/operations` | #487 | Tài liệu hoá cấu hình OpenTelemetry Tracing và Jaeger theo dõi distributed trace. |
 | 142 | 2026-11-12 | Hotfix | `booking-service` | #488 | Khắc phục lỗi không hoàn tiền khi khách vãng lai thanh toán thừa số tiền quy định. |
 | 143 | 2026-11-12 | Hotfix | `booking-service` | #489 | Đảm bảo log chi tiết nguyên nhân khi huỷ booking từ phía chủ sân hoặc quản trị viên. |
+| 144 | 2026-11-12 | Docs update | `docs/business` | #490 | Tài liệu hoá quy định phạt tiền huỷ sân muộn (Late Cancellation Penalty Rules). |
