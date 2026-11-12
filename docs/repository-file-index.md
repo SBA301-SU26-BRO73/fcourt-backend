@@ -248,3 +248,4 @@
 - [payment-service/src/test/java/com/fcourt/payment/PaymentDatabaseTest.java](../payment-service/src/test/java/com/fcourt/payment/PaymentDatabaseTest.java) — Java test source; inspect fixtures and assertions before running.
 - [payment-service/src/test/java/com/fcourt/payment/PaymentReminderRecipientTest.java](../payment-service/src/test/java/com/fcourt/payment/PaymentReminderRecipientTest.java) — Java test source; inspect fixtures and assertions before running.
 - [payment-service/src/test/java/com/fcourt/payment/PaymentSessionsExpiryTest.java](../payment-service/src/test/java/com/fcourt/payment/PaymentSessionsExpiryTest.java) — Java test source; inspect fixtures and assertions before running.
+- [payment-service/src/test/java/com/fcourt/payment/PaymentVoucherBridgeTest.java](../payment-service/src/test/java/com/fcourt/payment/PaymentVoucherBridgeTest.java) — Java test source; inspect fixtures and assertions before running.
