@@ -120,3 +120,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 109 | 2026-11-11 | Docs update | `docs/reference` | #290 | Tài liệu hoá quy chuẩn xử lý ngoại lệ toàn cục GlobalExceptionHandler cho Spring Boot. |
 | 110 | 2026-11-11 | Hotfix | `booking-service` | #295 | Sửa lỗi hiển thị sai tổng tiền đơn khi áp dụng voucher giảm giá có giới hạn tối đa. |
 | 111 | 2026-11-11 | Hotfix | `tools` | #338 | Thay ảnh ngoại cảnh chi nhánh bằng ảnh sân thể thao thực tế chất lượng cao. |
+| 112 | 2026-11-12 | Docs update | `docs/operations` | #340 | Cập nhật tài liệu hướng dẫn giám sát hệ thống với Prometheus và Grafana Dashboards. |
