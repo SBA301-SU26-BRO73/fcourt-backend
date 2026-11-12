@@ -105,3 +105,4 @@ aids and do not establish runtime validation results.
 | PlanController | [subscription-service/src/main/java/com/fcourt/subscription/plan/PlanController.java](../subscription-service/src/main/java/com/fcourt/subscription/plan/PlanController.java) |
 | SaasRevenueController | [subscription-service/src/main/java/com/fcourt/subscription/stats/SaasRevenueController.java](../subscription-service/src/main/java/com/fcourt/subscription/stats/SaasRevenueController.java) |
 | VoucherApplyController | [voucher-service/src/main/java/com/fcourt/voucher/VoucherApplyController.java](../voucher-service/src/main/java/com/fcourt/voucher/VoucherApplyController.java) |
+| VoucherController | [voucher-service/src/main/java/com/fcourt/voucher/VoucherController.java](../voucher-service/src/main/java/com/fcourt/voucher/VoucherController.java) |
