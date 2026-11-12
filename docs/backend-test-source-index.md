@@ -106,3 +106,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | facility-service | [S3ImageStorageTest.java](../facility-service/src/test/java/com/fcourt/facility/integration/S3ImageStorageTest.java) |
 | facility-service | [CourtImageServiceTest.java](../facility-service/src/test/java/com/fcourt/facility/service/CourtImageServiceTest.java) |
 | facility-service | [CourtStatusEventsTest.java](../facility-service/src/test/java/com/fcourt/facility/service/CourtStatusEventsTest.java) |
+| facility-service | [ImageUploadValidatorTest.java](../facility-service/src/test/java/com/fcourt/facility/service/ImageUploadValidatorTest.java) |
