@@ -17,3 +17,12 @@ Inspect the Maven descriptor for dependencies and plugins, and the Dockerfile or
 - [mvnw](../../slot-hold-engine/mvnw)
 - [mvnw.cmd](../../slot-hold-engine/mvnw.cmd)
 - [pom.xml](../../slot-hold-engine/pom.xml)
+
+## Application resources
+
+Tracked application resources are listed below. Inspect property placeholders and profile selection before choosing local values; do not copy credentials into documentation.
+
+- [application.yml](../../slot-hold-engine/src/main/resources/application.yml)
+- [acquire.lua](../../slot-hold-engine/src/main/resources/redis/acquire.lua)
+- [release.lua](../../slot-hold-engine/src/main/resources/redis/release.lua)
+- [sweep.lua](../../slot-hold-engine/src/main/resources/redis/sweep.lua)
