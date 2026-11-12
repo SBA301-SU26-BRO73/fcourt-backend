@@ -40,3 +40,4 @@ aids and do not establish runtime validation results.
 | PasswordController | [auth-service/src/main/java/com/fcourt/auth/account/PasswordController.java](../auth-service/src/main/java/com/fcourt/auth/account/PasswordController.java) |
 | StaffAccountController | [auth-service/src/main/java/com/fcourt/auth/staff/StaffAccountController.java](../auth-service/src/main/java/com/fcourt/auth/staff/StaffAccountController.java) |
 | PlatformStatsController | [auth-service/src/main/java/com/fcourt/auth/superadmin/PlatformStatsController.java](../auth-service/src/main/java/com/fcourt/auth/superadmin/PlatformStatsController.java) |
+| SuperAdminController | [auth-service/src/main/java/com/fcourt/auth/superadmin/SuperAdminController.java](../auth-service/src/main/java/com/fcourt/auth/superadmin/SuperAdminController.java) |
