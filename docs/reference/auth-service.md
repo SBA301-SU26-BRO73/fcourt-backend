@@ -113,3 +113,37 @@ Java files are grouped by their tracked source directory. Package location alone
 For REST behavior, begin with controller classes in the source map and the existing service documentation; this inventory does not infer endpoints from class names.
 
 No `.proto` files are tracked in this service directory. This does not imply that the service makes no calls to other services.
+
+## Test inventory
+
+Test sources and fixtures listed here are navigation aids, not a report of passing tests. Review the test setup for Docker, Testcontainers, external services, and profile requirements before execution.
+
+- [OpenApiDocsTest.java](../../auth-service/src/test/java/com/fcourt/auth/OpenApiDocsTest.java)
+- [SuperAdminApiIntegrationTest.java](../../auth-service/src/test/java/com/fcourt/auth/SuperAdminApiIntegrationTest.java)
+- [AuthApiIntegrationTest.java](../../auth-service/src/test/java/com/fcourt/auth/account/AuthApiIntegrationTest.java)
+- [AuthControllerTest.java](../../auth-service/src/test/java/com/fcourt/auth/account/AuthControllerTest.java)
+- [AuthServiceTest.java](../../auth-service/src/test/java/com/fcourt/auth/account/AuthServiceTest.java)
+- [AvatarControllerTest.java](../../auth-service/src/test/java/com/fcourt/auth/account/AvatarControllerTest.java)
+- [AvatarServiceTest.java](../../auth-service/src/test/java/com/fcourt/auth/account/AvatarServiceTest.java)
+- [FailedAttemptThrottleTest.java](../../auth-service/src/test/java/com/fcourt/auth/account/FailedAttemptThrottleTest.java)
+- [GoogleLoginServiceTest.java](../../auth-service/src/test/java/com/fcourt/auth/account/GoogleLoginServiceTest.java)
+- [LocalFixtureApplication.java](../../auth-service/src/test/java/com/fcourt/auth/account/LocalFixtureApplication.java)
+- [PasswordChangeTokenValidatorTest.java](../../auth-service/src/test/java/com/fcourt/auth/account/PasswordChangeTokenValidatorTest.java)
+- [PasswordControllerTest.java](../../auth-service/src/test/java/com/fcourt/auth/account/PasswordControllerTest.java)
+- [PasswordServiceTest.java](../../auth-service/src/test/java/com/fcourt/auth/account/PasswordServiceTest.java)
+- [S3DocumentStorageContainerTest.java](../../auth-service/src/test/java/com/fcourt/auth/account/S3DocumentStorageContainerTest.java)
+- [S3DocumentStorageTest.java](../../auth-service/src/test/java/com/fcourt/auth/account/S3DocumentStorageTest.java)
+- [SessionServiceTest.java](../../auth-service/src/test/java/com/fcourt/auth/account/SessionServiceTest.java)
+- [SecurityConfigurationTest.java](../../auth-service/src/test/java/com/fcourt/auth/config/SecurityConfigurationTest.java)
+- [StaffAccountCommandsTest.java](../../auth-service/src/test/java/com/fcourt/auth/staff/StaffAccountCommandsTest.java)
+- [StaffAccountsTest.java](../../auth-service/src/test/java/com/fcourt/auth/staff/StaffAccountsTest.java)
+- [StaffReactivationTest.java](../../auth-service/src/test/java/com/fcourt/auth/staff/StaffReactivationTest.java)
+- [PlatformStatsRepositoryIntegrationTest.java](../../auth-service/src/test/java/com/fcourt/auth/superadmin/PlatformStatsRepositoryIntegrationTest.java)
+- [PlatformStatsServiceTest.java](../../auth-service/src/test/java/com/fcourt/auth/superadmin/PlatformStatsServiceTest.java)
+- [SuperAdminServiceTest.java](../../auth-service/src/test/java/com/fcourt/auth/superadmin/SuperAdminServiceTest.java)
+- [AccessTokenIssuerTest.java](../../auth-service/src/test/java/com/fcourt/auth/token/AccessTokenIssuerTest.java)
+- [JwksControllerTest.java](../../auth-service/src/test/java/com/fcourt/auth/token/JwksControllerTest.java)
+- [SigningKeyConfigurationTest.java](../../auth-service/src/test/java/com/fcourt/auth/token/SigningKeyConfigurationTest.java)
+- [application.properties](../../auth-service/src/test/resources/application.properties)
+
+From the repository root, the standard Maven verification entry point is `mvn -B -f auth-service/pom.xml verify`. Check the descriptor and environment requirements first.
