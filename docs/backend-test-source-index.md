@@ -188,3 +188,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | staff-operations-service | [ShiftValidationTest.java](../staff-operations-service/src/test/java/com/fcourt/staff/ShiftValidationTest.java) |
 | staff-operations-service | [SlotSafetyGatewayTest.java](../staff-operations-service/src/test/java/com/fcourt/staff/SlotSafetyGatewayTest.java) |
 | staff-operations-service | [StaffBootstrapTest.java](../staff-operations-service/src/test/java/com/fcourt/staff/StaffBootstrapTest.java) |
+| staff-operations-service | [StaffIntegrationTest.java](../staff-operations-service/src/test/java/com/fcourt/staff/StaffIntegrationTest.java) |
