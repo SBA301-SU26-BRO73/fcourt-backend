@@ -132,3 +132,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `POST /api/internal/bookings/walk-in` tạo booking tại quầy.
 - `POST /api/internal/bookings/walk-in/reconcile` đối soát booking offline.
 - `GET /api/internal/bookings/{id}/checkout-preview` xem trước trả sân.
+- `PUT /api/internal/bookings/{id}/checkout` trả sân.
+- `POST /api/internal/bookings/check-in/preview` xem trước check-in.
