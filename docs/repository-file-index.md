@@ -29,3 +29,4 @@
 - [docs/reference/booking-service.md](../docs/reference/booking-service.md) — booking-service: repository reference
 - [docs/reference/discovery-service.md](../docs/reference/discovery-service.md) — discovery-service: repository reference
 - [docs/reference/facility-service.md](../docs/reference/facility-service.md) — facility-service: repository reference
+- [docs/reference/gateway-service.md](../docs/reference/gateway-service.md) — gateway-service: repository reference
