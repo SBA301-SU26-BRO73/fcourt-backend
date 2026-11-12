@@ -106,3 +106,15 @@ Test sources and fixtures listed here are navigation aids, not a report of passi
 - [StaffDirectoryControllerTest.java](../../staff-operations-service/src/test/java/com/fcourt/staff/api/StaffDirectoryControllerTest.java)
 
 From the repository root, the standard Maven verification entry point is `mvn -B -f staff-operations-service/pom.xml verify`. Check the descriptor and environment requirements first.
+
+## Database scripts and migrations
+
+Review script contents and application configuration to distinguish initialization scripts from migrations loaded at runtime. Do not infer execution order across these two locations, or execute scripts against a shared database merely because they are listed here.
+
+- [V1__init_schema.sql](../../staff-operations-service/database/V1__init_schema.sql)
+- [V2__seed_sample_data.sql](../../staff-operations-service/database/V2__seed_sample_data.sql)
+- [V1__staff_schema.sql](../../staff-operations-service/src/main/resources/db/migration/V1__staff_schema.sql)
+- [V2__staff_management.sql](../../staff-operations-service/src/main/resources/db/migration/V2__staff_management.sql)
+- [V3__booking_commands_outbox.sql](../../staff-operations-service/src/main/resources/db/migration/V3__booking_commands_outbox.sql)
+- [V4__check_in_audit.sql](../../staff-operations-service/src/main/resources/db/migration/V4__check_in_audit.sql)
+- [V5__offline_check_in_channel.sql](../../staff-operations-service/src/main/resources/db/migration/V5__offline_check_in_channel.sql)
