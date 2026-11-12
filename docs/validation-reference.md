@@ -76,3 +76,4 @@ aids and do not establish runtime validation results.
 | CheckoutController | [payment-service/src/main/java/com/fcourt/payment/CheckoutController.java](../payment-service/src/main/java/com/fcourt/payment/CheckoutController.java) |
 | CompactPaymentStatusController | [payment-service/src/main/java/com/fcourt/payment/CompactPaymentStatusController.java](../payment-service/src/main/java/com/fcourt/payment/CompactPaymentStatusController.java) |
 | CustomerPaymentsController | [payment-service/src/main/java/com/fcourt/payment/CustomerPaymentsController.java](../payment-service/src/main/java/com/fcourt/payment/CustomerPaymentsController.java) |
+| FreeVoucherPaymentController | [payment-service/src/main/java/com/fcourt/payment/FreeVoucherPaymentController.java](../payment-service/src/main/java/com/fcourt/payment/FreeVoucherPaymentController.java) |
