@@ -82,3 +82,20 @@ Tracked Protocol Buffer definitions:
 - [voucher_validation.proto](../../voucher-service/src/main/proto/voucher_validation.proto)
 
 Consult the Maven descriptor for generation plugins before regenerating clients.
+
+## Test inventory
+
+Test sources and fixtures listed here are navigation aids, not a report of passing tests. Review the test setup for Docker, Testcontainers, external services, and profile requirements before execution.
+
+- [OpenApiDocsTest.java](../../voucher-service/src/test/java/com/fcourt/voucher/OpenApiDocsTest.java)
+- [VoucherApiTest.java](../../voucher-service/src/test/java/com/fcourt/voucher/VoucherApiTest.java)
+- [VoucherApplyTest.java](../../voucher-service/src/test/java/com/fcourt/voucher/VoucherApplyTest.java)
+- [VoucherAuthorityCircuitBreakerTest.java](../../voucher-service/src/test/java/com/fcourt/voucher/VoucherAuthorityCircuitBreakerTest.java)
+- [VoucherAuthorityWireMockTest.java](../../voucher-service/src/test/java/com/fcourt/voucher/VoucherAuthorityWireMockTest.java)
+- [VoucherGrpcServerTest.java](../../voucher-service/src/test/java/com/fcourt/voucher/VoucherGrpcServerTest.java)
+- [VoucherPhoneTest.java](../../voucher-service/src/test/java/com/fcourt/voucher/VoucherPhoneTest.java)
+- [VoucherPricingTest.java](../../voucher-service/src/test/java/com/fcourt/voucher/VoucherPricingTest.java)
+- [VoucherUsageMigrationTest.java](../../voucher-service/src/test/java/com/fcourt/voucher/VoucherUsageMigrationTest.java)
+- [GlobalExceptionHandlerTest.java](../../voucher-service/src/test/java/com/fcourt/voucher/exception/GlobalExceptionHandlerTest.java)
+
+From the repository root, the standard Maven verification entry point is `mvn -B -f voucher-service/pom.xml verify`. Check the descriptor and environment requirements first.
