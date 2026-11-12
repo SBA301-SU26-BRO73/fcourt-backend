@@ -67,3 +67,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | booking-service | [StaffCounterTest.java](../booking-service/src/test/java/com/fcourt/booking/StaffCounterTest.java) |
 | booking-service | [GlobalExceptionHandlerTest.java](../booking-service/src/test/java/com/fcourt/booking/exception/GlobalExceptionHandlerTest.java) |
 | discovery-service | [DiscoveryIntegrationTest.java](../discovery-service/src/test/java/com/fcourt/discovery/DiscoveryIntegrationTest.java) |
+| discovery-service | [ReviewIntegrationTest.java](../discovery-service/src/test/java/com/fcourt/discovery/ReviewIntegrationTest.java) |
