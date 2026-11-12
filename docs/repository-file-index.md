@@ -23,3 +23,4 @@
 - [docs/operations/docker-compose.md](../docs/operations/docker-compose.md) — Chạy cả hệ thống bằng Docker Compose
 - [docs/operations/gateway.md](../docs/operations/gateway.md) — Gateway (Spring Cloud Gateway)
 - [docs/operations/smoke-test-local.md](../docs/operations/smoke-test-local.md) — Smoke test local (Docker Compose + fcourt-web)
+- [docs/operations/storage-s3.md](../docs/operations/storage-s3.md) — Lưu trữ file và ảnh trên AWS S3
