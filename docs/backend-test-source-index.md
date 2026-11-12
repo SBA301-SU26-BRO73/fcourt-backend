@@ -55,3 +55,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | booking-service | [GuestBookingLookupApiTest.java](../booking-service/src/test/java/com/fcourt/booking/GuestBookingLookupApiTest.java) |
 | booking-service | [OnlineBookingDependenciesTest.java](../booking-service/src/test/java/com/fcourt/booking/OnlineBookingDependenciesTest.java) |
 | booking-service | [OnlineBookingTest.java](../booking-service/src/test/java/com/fcourt/booking/OnlineBookingTest.java) |
+| booking-service | [OpenApiDocsTest.java](../booking-service/src/test/java/com/fcourt/booking/OpenApiDocsTest.java) |
