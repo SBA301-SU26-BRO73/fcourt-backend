@@ -107,3 +107,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 96 | 2026-11-10 | Hotfix | `notification-service` | #256 | Khắc phục lỗi định dạng chuỗi JSON khi gửi push payload sang Firebase FCM/SNS. |
 | 97 | 2026-11-10 | Docs update | `docs/operations` | #257 | Tài liệu hoá quy trình deploy các microservices lên Amazon EKS với Helm Charts. |
 | 98 | 2026-11-10 | Hotfix | `voucher-service` | #258 | Validate ngày hết hạn voucher phải lớn hơn thời điểm áp dụng ít nhất 1 giờ. |
+| 99 | 2026-11-10 | Hotfix | `reporting-service` | #259 | Sửa lỗi chia cho 0 khi tính tỷ lệ lấp đầy sân ngày không có slot nào được tạo. |
