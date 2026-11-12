@@ -151,3 +151,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 140 | 2026-11-12 | Hotfix | `discovery-service` | #486 | Tối ưu hoá chỉ mục Full-Text Search cho tên sân và địa chỉ quận huyện tại Hà Nội/TP.HCM. |
 | 141 | 2026-11-12 | Docs update | `docs/operations` | #487 | Tài liệu hoá cấu hình OpenTelemetry Tracing và Jaeger theo dõi distributed trace. |
 | 142 | 2026-11-12 | Hotfix | `booking-service` | #488 | Khắc phục lỗi không hoàn tiền khi khách vãng lai thanh toán thừa số tiền quy định. |
+| 143 | 2026-11-12 | Hotfix | `booking-service` | #489 | Đảm bảo log chi tiết nguyên nhân khi huỷ booking từ phía chủ sân hoặc quản trị viên. |
