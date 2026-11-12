@@ -106,3 +106,4 @@
 - [subscription-service/Dockerfile](../subscription-service/Dockerfile) — Container image build definition.
 - [voucher-service/Dockerfile](../voucher-service/Dockerfile) — Container image build definition.
 - [auth-service/src/test/java/com/fcourt/auth/OpenApiDocsTest.java](../auth-service/src/test/java/com/fcourt/auth/OpenApiDocsTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/SuperAdminApiIntegrationTest.java](../auth-service/src/test/java/com/fcourt/auth/SuperAdminApiIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
