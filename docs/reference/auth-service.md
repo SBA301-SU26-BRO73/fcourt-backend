@@ -16,3 +16,9 @@ Inspect the Maven descriptor for dependencies and plugins, and the Dockerfile or
 - [mvnw](../../auth-service/mvnw)
 - [mvnw.cmd](../../auth-service/mvnw.cmd)
 - [pom.xml](../../auth-service/pom.xml)
+
+## Application resources
+
+Tracked application resources are listed below. Inspect property placeholders and profile selection before choosing local values; do not copy credentials into documentation.
+
+- [application.yml](../../auth-service/src/main/resources/application.yml)
