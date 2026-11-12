@@ -112,3 +112,37 @@ Java files are grouped by their tracked source directory. Package location alone
 For REST behavior, begin with controller classes in the source map and the existing service documentation; this inventory does not infer endpoints from class names.
 
 No `.proto` files are tracked in this service directory. This does not imply that the service makes no calls to other services.
+
+## Test inventory
+
+Test sources and fixtures listed here are navigation aids, not a report of passing tests. Review the test setup for Docker, Testcontainers, external services, and profile requirements before execution.
+
+- [BranchImageApiIntegrationTest.java](../../facility-service/src/test/java/com/fcourt/facility/BranchImageApiIntegrationTest.java)
+- [CourtImageApiIntegrationTest.java](../../facility-service/src/test/java/com/fcourt/facility/CourtImageApiIntegrationTest.java)
+- [CourtReservationIntegrationTest.java](../../facility-service/src/test/java/com/fcourt/facility/CourtReservationIntegrationTest.java)
+- [FacilityApiIntegrationTest.java](../../facility-service/src/test/java/com/fcourt/facility/FacilityApiIntegrationTest.java)
+- [OpenApiDocsTest.java](../../facility-service/src/test/java/com/fcourt/facility/OpenApiDocsTest.java)
+- [PricingRulesIntegrationTest.java](../../facility-service/src/test/java/com/fcourt/facility/PricingRulesIntegrationTest.java)
+- [BranchOwnerControllerTest.java](../../facility-service/src/test/java/com/fcourt/facility/api/BranchOwnerControllerTest.java)
+- [BranchRequestValidationTest.java](../../facility-service/src/test/java/com/fcourt/facility/api/BranchRequestValidationTest.java)
+- [BulkApplyRequestValidationTest.java](../../facility-service/src/test/java/com/fcourt/facility/api/BulkApplyRequestValidationTest.java)
+- [LockRequestValidationTest.java](../../facility-service/src/test/java/com/fcourt/facility/api/LockRequestValidationTest.java)
+- [PricingRequestValidationTest.java](../../facility-service/src/test/java/com/fcourt/facility/api/PricingRequestValidationTest.java)
+- [ReservationControllerTest.java](../../facility-service/src/test/java/com/fcourt/facility/api/ReservationControllerTest.java)
+- [TemplateRequestValidationTest.java](../../facility-service/src/test/java/com/fcourt/facility/api/TemplateRequestValidationTest.java)
+- [RedisLockScheduleEventsTest.java](../../facility-service/src/test/java/com/fcourt/facility/events/RedisLockScheduleEventsTest.java)
+- [ReservationRealtimeBridgeTest.java](../../facility-service/src/test/java/com/fcourt/facility/events/ReservationRealtimeBridgeTest.java)
+- [S3ImageStorageContainerTest.java](../../facility-service/src/test/java/com/fcourt/facility/integration/S3ImageStorageContainerTest.java)
+- [S3ImageStorageTest.java](../../facility-service/src/test/java/com/fcourt/facility/integration/S3ImageStorageTest.java)
+- [CourtImageServiceTest.java](../../facility-service/src/test/java/com/fcourt/facility/service/CourtImageServiceTest.java)
+- [CourtStatusEventsTest.java](../../facility-service/src/test/java/com/fcourt/facility/service/CourtStatusEventsTest.java)
+- [ImageUploadValidatorTest.java](../../facility-service/src/test/java/com/fcourt/facility/service/ImageUploadValidatorTest.java)
+- [LockRealtimeEventsTest.java](../../facility-service/src/test/java/com/fcourt/facility/service/LockRealtimeEventsTest.java)
+- [LockServiceTest.java](../../facility-service/src/test/java/com/fcourt/facility/service/LockServiceTest.java)
+- [PricingEngineTest.java](../../facility-service/src/test/java/com/fcourt/facility/service/PricingEngineTest.java)
+- [PricingServiceValidationTest.java](../../facility-service/src/test/java/com/fcourt/facility/service/PricingServiceValidationTest.java)
+- [ReservationServiceTest.java](../../facility-service/src/test/java/com/fcourt/facility/service/ReservationServiceTest.java)
+- [SlotTemplateEngineTest.java](../../facility-service/src/test/java/com/fcourt/facility/service/SlotTemplateEngineTest.java)
+- [SlotWindowsTest.java](../../facility-service/src/test/java/com/fcourt/facility/service/SlotWindowsTest.java)
+
+From the repository root, the standard Maven verification entry point is `mvn -B -f facility-service/pom.xml verify`. Check the descriptor and environment requirements first.
