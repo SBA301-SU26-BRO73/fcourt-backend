@@ -104,3 +104,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - Facility ghi sự kiện ra bảng `facility_outbox` để đồng bộ sang service khác.
 
 ## 7. discovery-service
+- `GET /api/public/branches` tìm kiếm chi nhánh công khai.
+- `GET /api/public/courts/{courtId}/slots` xem khung giờ còn trống của sân.
