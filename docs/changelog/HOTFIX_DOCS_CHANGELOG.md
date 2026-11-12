@@ -12,3 +12,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 1 | 2026-10-25 | Docs update | `docs/architecture` | #2 | Tài liệu hoá kiến trúc tổng thể 12 microservices và luồng dữ liệu Spring Cloud Gateway. |
 | 2 | 2026-10-25 | Hotfix | `gateway-service` | #4 | Sửa lỗi CORS preflight OPTIONS request bị từ chối trên môi trường staging. |
 | 3 | 2026-10-26 | Docs update | `docs/reference` | #6 | Khởi tạo tài liệu API reference và danh mục endpoint cho auth-service. |
+| 4 | 2026-10-26 | Hotfix | `auth-service` | #7 | Xử lý lỗi NullPointerException khi parse JWT token không chứa claim roles. |
