@@ -114,3 +114,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | facility-service | [ReservationServiceTest.java](../facility-service/src/test/java/com/fcourt/facility/service/ReservationServiceTest.java) |
 | facility-service | [SlotTemplateEngineTest.java](../facility-service/src/test/java/com/fcourt/facility/service/SlotTemplateEngineTest.java) |
 | facility-service | [SlotWindowsTest.java](../facility-service/src/test/java/com/fcourt/facility/service/SlotWindowsTest.java) |
+| gateway-service | [GatewaySecurityTests.java](../gateway-service/src/test/java/com/fcourt/gateway/GatewaySecurityTests.java) |
