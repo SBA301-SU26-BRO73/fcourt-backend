@@ -181,3 +181,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 170 | 2026-11-12 | Hotfix | `facility-service` | #516 | Bổ sung validate loại mặt sân (sàn cao su, thảm PVC, sàn gỗ) theo môn thể thao. |
 | 171 | 2026-11-12 | Docs update | `docs/business` | #517 | Tài liệu hoá quy chuẩn thiết kế sân thi đấu tiêu chuẩn BWF và USAPA. |
 | 172 | 2026-11-12 | Hotfix | `discovery-service` | #518 | Khắc phục lỗi cache Redis không được xoá khi chủ sân cập nhật thông tin chi nhánh. |
+| 173 | 2026-11-12 | Hotfix | `discovery-service` | #519 | Tối ưu thuật toán sắp xếp chi nhánh theo khoảng cách địa lý người dùng (Haversine Formula). |
