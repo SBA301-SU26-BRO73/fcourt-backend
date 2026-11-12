@@ -53,3 +53,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 43 | 2026-11-09 | Feature | `notification-service` | #206 | Thêm `@RestControllerAdvice` trả lỗi chuẩn RFC 7807 ProblemDetail. |
 | 44 | 2026-11-09 | Feature | `slot-hold-engine` | #207 | Thêm `@RestControllerAdvice` trả lỗi chuẩn RFC 7807 ProblemDetail. |
 | 45 | 2026-11-09 | Feature | `booking-service` | #213 | Trả presigned URL cho biên lai thanh toán lưu trên S3. |
+| 46 | 2026-11-09 | Feature | `booking-service` | #204 | Thêm `@RestControllerAdvice` trả lỗi chuẩn RFC 7807 ProblemDetail. |
