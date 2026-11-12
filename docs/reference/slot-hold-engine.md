@@ -26,3 +26,31 @@ Tracked application resources are listed below. Inspect property placeholders an
 - [acquire.lua](../../slot-hold-engine/src/main/resources/redis/acquire.lua)
 - [release.lua](../../slot-hold-engine/src/main/resources/redis/release.lua)
 - [sweep.lua](../../slot-hold-engine/src/main/resources/redis/sweep.lua)
+
+## Java source map
+
+Java files are grouped by their tracked source directory. Package location alone does not establish an API contract or runtime dependency.
+
+### `com/fcourt/hold`
+
+- [CounterHolds.java](../../slot-hold-engine/src/main/java/com/fcourt/hold/CounterHolds.java)
+- [CounterSafetyServer.java](../../slot-hold-engine/src/main/java/com/fcourt/hold/CounterSafetyServer.java)
+- [DiscoveryGateway.java](../../slot-hold-engine/src/main/java/com/fcourt/hold/DiscoveryGateway.java)
+- [HoldApplication.java](../../slot-hold-engine/src/main/java/com/fcourt/hold/HoldApplication.java)
+- [HoldConfiguration.java](../../slot-hold-engine/src/main/java/com/fcourt/hold/HoldConfiguration.java)
+- [HoldController.java](../../slot-hold-engine/src/main/java/com/fcourt/hold/HoldController.java)
+- [HoldExpirySweeper.java](../../slot-hold-engine/src/main/java/com/fcourt/hold/HoldExpirySweeper.java)
+- [HoldRequest.java](../../slot-hold-engine/src/main/java/com/fcourt/hold/HoldRequest.java)
+- [HoldResponse.java](../../slot-hold-engine/src/main/java/com/fcourt/hold/HoldResponse.java)
+- [HoldService.java](../../slot-hold-engine/src/main/java/com/fcourt/hold/HoldService.java)
+- [HoldStaffIdentity.java](../../slot-hold-engine/src/main/java/com/fcourt/hold/HoldStaffIdentity.java)
+- [OnlineHolds.java](../../slot-hold-engine/src/main/java/com/fcourt/hold/OnlineHolds.java)
+- [RedisHoldStore.java](../../slot-hold-engine/src/main/java/com/fcourt/hold/RedisHoldStore.java)
+
+### `com/fcourt/hold/config`
+
+- [OpenApiConfig.java](../../slot-hold-engine/src/main/java/com/fcourt/hold/config/OpenApiConfig.java)
+
+### `com/fcourt/hold/exception`
+
+- [GlobalExceptionHandler.java](../../slot-hold-engine/src/main/java/com/fcourt/hold/exception/GlobalExceptionHandler.java)
