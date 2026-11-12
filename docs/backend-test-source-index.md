@@ -182,3 +182,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | staff-operations-service | [AvailabilityGatewayTest.java](../staff-operations-service/src/test/java/com/fcourt/staff/AvailabilityGatewayTest.java) |
 | staff-operations-service | [OfflinePermitTest.java](../staff-operations-service/src/test/java/com/fcourt/staff/OfflinePermitTest.java) |
 | staff-operations-service | [OpenApiDocsTest.java](../staff-operations-service/src/test/java/com/fcourt/staff/OpenApiDocsTest.java) |
+| staff-operations-service | [OutboxIntegrationTest.java](../staff-operations-service/src/test/java/com/fcourt/staff/OutboxIntegrationTest.java) |
