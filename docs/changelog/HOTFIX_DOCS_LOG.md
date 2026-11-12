@@ -89,3 +89,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 79 | 2026-11-09 | Feature | `payment-service` | #245 | Cấu hình `storage.s3.presign-endpoint` cho URL biên lai và chứng từ hoàn tiền. |
 | 80 | 2026-11-09 | Feature | `booking-service` | #246 | Cấu hình `storage.s3.presign-endpoint` cho URL biên lai thanh toán. |
 | 81 | 2026-11-09 | Hotfix | `docker-compose` | #247 | Cho đọc ẩn danh các prefix ảnh công khai trên MinIO; presigned host truy cập được từ trình duyệt. |
+| 82 | 2026-11-09 | Hotfix | `docker-compose` | #243 | Bật profile realtime của booking để handshake STOMP `/ws-fcourt` chạy được ở local. |
