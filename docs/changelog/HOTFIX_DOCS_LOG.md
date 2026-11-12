@@ -61,3 +61,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 51 | 2026-11-09 | Docs update | `facility-service` | #188 | Bổ sung Swagger/OpenAPI (springdoc) cho facility-service. |
 | 52 | 2026-11-09 | Feature | `reporting-service` | #196 | Gọi facility-service qua OpenFeign kèm Resilience4J (circuit breaker, retry). |
 | 53 | 2026-11-09 | Docs update | `auth-service` | #200 | Bổ sung Swagger/OpenAPI (springdoc) cho auth-service. |
+| 54 | 2026-11-09 | Docs update | `docs/operations` | #220 | Public read theo prefix thay cho CloudFront; ghi rõ không migrate dữ liệu Cloudinary. |
