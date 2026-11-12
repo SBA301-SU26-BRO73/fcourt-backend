@@ -202,3 +202,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | subscription-service | [PaymentServiceTest.java](../subscription-service/src/test/java/com/fcourt/subscription/billing/PaymentServiceTest.java) |
 | subscription-service | [SubscriptionServiceTest.java](../subscription-service/src/test/java/com/fcourt/subscription/billing/SubscriptionServiceTest.java) |
 | subscription-service | [PageResponseTest.java](../subscription-service/src/test/java/com/fcourt/subscription/common/PageResponseTest.java) |
+| subscription-service | [SecurityConfigurationTest.java](../subscription-service/src/test/java/com/fcourt/subscription/config/SecurityConfigurationTest.java) |
