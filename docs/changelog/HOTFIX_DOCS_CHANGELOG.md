@@ -67,3 +67,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 56 | 2026-11-08 | Docs update | `docs/architecture` | #92 | Tài liệu hoá luồng phát hành sự kiện Domain Events giữa các microservices qua Kafka. |
 | 57 | 2026-11-08 | Hotfix | `notification-service` | #93 | Khắc phục rò rỉ bộ nhớ (memory leak) trong emitter kết nối SSE của notification-service. |
 | 58 | 2026-11-08 | Hotfix | `slot-hold-engine` | #104 | Sửa lỗi không gửi thông báo WebSocket khi slot được mở khoá trước hạn. |
+| 59 | 2026-11-08 | Hotfix | `facility-service` | #117 | Sửa lỗi upload ảnh sân vượt quá 5MB gây tràn bộ nhớ đệm (heap memory limit). |
