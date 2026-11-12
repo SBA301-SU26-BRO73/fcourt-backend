@@ -14,3 +14,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 3 | 2026-10-26 | Docs update | `docs/reference` | #6 | Khởi tạo tài liệu API reference và danh mục endpoint cho auth-service. |
 | 4 | 2026-10-26 | Hotfix | `auth-service` | #7 | Xử lý lỗi NullPointerException khi parse JWT token không chứa claim roles. |
 | 5 | 2026-10-26 | Hotfix | `auth-service` | #9 | Khắc phục timeout kết nối Redis blacklist khi refresh token với tải đồng thời. |
+| 6 | 2026-10-27 | Docs update | `docs/operations` | #11 | Tài liệu hoá hướng dẫn cài đặt và khởi chạy môi trường dev qua Docker Compose. |
