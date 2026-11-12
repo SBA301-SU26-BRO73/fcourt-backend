@@ -214,3 +214,4 @@
 - [gateway-service/src/test/java/com/fcourt/gateway/StaticDiscoveryTests.java](../gateway-service/src/test/java/com/fcourt/gateway/StaticDiscoveryTests.java) — Java test source; inspect fixtures and assertions before running.
 - [gateway-service/src/test/java/com/fcourt/gateway/ratelimit/RateLimitUnitTests.java](../gateway-service/src/test/java/com/fcourt/gateway/ratelimit/RateLimitUnitTests.java) — Java test source; inspect fixtures and assertions before running.
 - [notification-service/src/test/java/com/fcourt/notification/NotificationFlowIntegrationTest.java](../notification-service/src/test/java/com/fcourt/notification/NotificationFlowIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/OpenApiDocsTest.java](../notification-service/src/test/java/com/fcourt/notification/OpenApiDocsTest.java) — Java test source; inspect fixtures and assertions before running.
