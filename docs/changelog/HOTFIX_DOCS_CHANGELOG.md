@@ -77,3 +77,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 66 | 2026-11-09 | Hotfix | `booking-service` | #136 | Đảm bảo hoàn tiền tự động khi saga đặt sân thất bại tại bước trừ voucher. |
 | 67 | 2026-11-09 | Docs update | `docs/architecture` | #174 | Chuẩn hoá và tài liệu hoá cấu trúc package đồng nhất cho 12 microservices. |
 | 68 | 2026-11-09 | Hotfix | `notification-service` | #175 | Khắc phục lỗi gửi email trùng lặp khi subscriber nhận message retry từ hàng đợi. |
+| 69 | 2026-11-09 | Hotfix | `facility-service` | #188 | Sửa lỗi tính sai giá tiền slot theo khung giờ cao điểm (Peak Hours Pricing). |
