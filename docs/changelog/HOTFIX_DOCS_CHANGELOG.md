@@ -98,3 +98,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 87 | 2026-11-09 | Hotfix | `payment-service` | #245 | Cấu hình storage.s3.presign-endpoint cho URL biên lai và chứng từ hoàn tiền. |
 | 88 | 2026-11-09 | Docs update | `docs/reference` | #246 | Tài liệu hoá các mã lỗi (Error Codes) thống nhất của toàn hệ thống microservice. |
 | 89 | 2026-11-09 | Hotfix | `docker-compose` | #247 | Cấp quyền đọc ẩn danh ảnh công khai trên MinIO và fix presign host truy cập web. |
+| 90 | 2026-11-09 | Hotfix | `booking-service` | #248 | Cho phép huỷ booking chưa thanh toán vào bất kỳ lúc nào mà không bị phạt phí. |
