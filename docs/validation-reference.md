@@ -59,3 +59,4 @@ aids and do not establish runtime validation results.
 | BookingContextController | [facility-service/src/main/java/com/fcourt/facility/api/BookingContextController.java](../facility-service/src/main/java/com/fcourt/facility/api/BookingContextController.java) |
 | BranchController | [facility-service/src/main/java/com/fcourt/facility/api/BranchController.java](../facility-service/src/main/java/com/fcourt/facility/api/BranchController.java) |
 | BranchImageController | [facility-service/src/main/java/com/fcourt/facility/api/BranchImageController.java](../facility-service/src/main/java/com/fcourt/facility/api/BranchImageController.java) |
+| BranchOwnerController | [facility-service/src/main/java/com/fcourt/facility/api/BranchOwnerController.java](../facility-service/src/main/java/com/fcourt/facility/api/BranchOwnerController.java) |
