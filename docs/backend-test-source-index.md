@@ -141,3 +141,4 @@ index was prepared and should be updated when a linked file moves or is removed.
 | notification-service | [SnsPushSenderTest.java](../notification-service/src/test/java/com/fcourt/notification/push/SnsPushSenderTest.java) |
 | notification-service | [ReminderProjectionTest.java](../notification-service/src/test/java/com/fcourt/notification/reminder/ReminderProjectionTest.java) |
 | notification-service | [ReminderScheduleProjectionTest.java](../notification-service/src/test/java/com/fcourt/notification/reminder/ReminderScheduleProjectionTest.java) |
+| notification-service | [ReminderSchedulerTest.java](../notification-service/src/test/java/com/fcourt/notification/reminder/ReminderSchedulerTest.java) |
