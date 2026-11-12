@@ -4,3 +4,5 @@ Nội dung được tổng hợp từ các controller trong từng service.
 Mọi đường dẫn bên dưới là đường dẫn qua gateway, trừ khi ghi chú khác.
 
 ## 1. Tổng quan
+FCOURT là hệ thống đặt sân thể thao theo kiến trúc microservices.
+Mỗi service nằm trong một folder riêng ở gốc repo.
