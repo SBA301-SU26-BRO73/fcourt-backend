@@ -147,3 +147,4 @@
 - [booking-service/src/test/java/com/fcourt/booking/LocalFixtureApplication.java](../booking-service/src/test/java/com/fcourt/booking/LocalFixtureApplication.java) — Java test source; inspect fixtures and assertions before running.
 - [booking-service/src/test/java/com/fcourt/booking/OnlineBookingDependenciesTest.java](../booking-service/src/test/java/com/fcourt/booking/OnlineBookingDependenciesTest.java) — Java test source; inspect fixtures and assertions before running.
 - [booking-service/src/test/java/com/fcourt/booking/OnlineBookingTest.java](../booking-service/src/test/java/com/fcourt/booking/OnlineBookingTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/OpenApiDocsTest.java](../booking-service/src/test/java/com/fcourt/booking/OpenApiDocsTest.java) — Java test source; inspect fixtures and assertions before running.
