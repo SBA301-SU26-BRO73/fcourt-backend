@@ -166,3 +166,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 155 | 2026-11-12 | Hotfix | `reporting-service` | #501 | Tối ưu câu truy vấn tổng hợp báo cáo tài chính tháng theo từng môn thể thao. |
 | 156 | 2026-11-12 | Docs update | `docs/reference` | #502 | Tài liệu hoá cấu trúc dữ liệu xuất báo cáo định dạng CSV và Excel của reporting-service. |
 | 157 | 2026-11-12 | Hotfix | `staff-operations-service` | #503 | Sửa lỗi không cho phép check-in đối với các slot kéo dài qua mốc 0h sáng ngày hôm sau. |
+| 158 | 2026-11-12 | Hotfix | `staff-operations-service` | #504 | Bổ sung quyền ghi chú check-in cho nhân viên quản lý quầy khi khách đến trễ. |
