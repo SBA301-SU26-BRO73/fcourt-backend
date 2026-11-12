@@ -44,3 +44,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 34 | 2026-11-09 | Feature | `discovery-service` | #214 | Chuyển ảnh đánh giá (review) từ Cloudinary sang AWS S3. |
 | 35 | 2026-11-09 | Docs update | `discovery-service` | #189 | Bổ sung Swagger/OpenAPI (springdoc) cho discovery-service. |
 | 36 | 2026-11-09 | Docs update | `booking-service` | #192 | Bổ sung Swagger/OpenAPI (springdoc) cho booking-service. |
+| 37 | 2026-11-09 | Docs update | `voucher-service` | #194 | Bổ sung Swagger/OpenAPI (springdoc) cho voucher-service. |
