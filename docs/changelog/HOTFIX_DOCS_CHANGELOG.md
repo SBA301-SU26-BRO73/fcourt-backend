@@ -124,3 +124,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 113 | 2026-11-12 | Hotfix | `gateway-service` | #345 | Sửa lỗi memory leak trong WebFilter khi xử lý luồng phản hồi streaming dung lượng lớn. |
 | 114 | 2026-11-12 | Hotfix | `subscription-service` | #387 | Bổ sung endpoint nội bộ kiểm tra hạn ngạch gói và lý do từ chối khi đăng nhập. |
 | 115 | 2026-11-12 | Docs update | `docs/architecture` | #390 | Tài liệu hoá giải pháp bảo vệ dữ liệu nhạy cảm PII và tuân thủ mã hoá trong CSDL. |
+| 116 | 2026-11-12 | Hotfix | `notification-service` | #395 | Bổ sung REST API và WebSocket cho chuông thông báo in-app trên giao diện web. |
