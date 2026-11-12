@@ -101,3 +101,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 90 | 2026-11-09 | Hotfix | `booking-service` | #248 | Cho phép huỷ booking chưa thanh toán vào bất kỳ lúc nào mà không bị phạt phí. |
 | 91 | 2026-11-10 | Docs update | `docs/architecture` | #251 | Tài liệu hoá quy trình loại bỏ Eureka Server và chuyển sang Docker DNS resolution. |
 | 92 | 2026-11-10 | Hotfix | `gateway-service` | #252 | Cập nhật định tuyến tĩnh qua docker internal network sau khi gỡ Eureka client. |
+| 93 | 2026-11-10 | Hotfix | `facility-service` | #253 | Sửa lỗi không hiển thị danh sách tiện ích đi kèm của sân (wifi, phòng tắm, gửi xe). |
