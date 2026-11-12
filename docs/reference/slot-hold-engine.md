@@ -81,3 +81,11 @@ From the repository root, the standard Maven verification entry point is `mvn -B
 Review script contents and application configuration to distinguish initialization scripts from migrations loaded at runtime. Do not infer execution order across these two locations, or execute scripts against a shared database merely because they are listed here.
 
 - [V1__init_schema.sql](../../slot-hold-engine/database/V1__init_schema.sql)
+
+## Related documentation
+
+Read the existing service documentation for behavior, setup instructions, and recorded validation details. Historical validation notes describe the run they record and are not fresh verification results.
+
+- [README.md](../../slot-hold-engine/README.md)
+
+For shared runtime setup, see [Docker Compose operations](../operations/docker-compose.md). For request routing, see [gateway operations](../operations/gateway.md).
