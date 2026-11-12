@@ -122,3 +122,9 @@ Java files are grouped by their tracked source directory. Package location alone
 - [ReminderTrigger.java](../../notification-service/src/main/java/com/fcourt/notification/reminder/ReminderTrigger.java)
 - [ReminderWorker.java](../../notification-service/src/main/java/com/fcourt/notification/reminder/ReminderWorker.java)
 - [SchedulerReminderTrigger.java](../../notification-service/src/main/java/com/fcourt/notification/reminder/SchedulerReminderTrigger.java)
+
+## Protocol definitions
+
+For REST behavior, begin with controller classes in the source map and the existing service documentation; this inventory does not infer endpoints from class names.
+
+No `.proto` files are tracked in this service directory. This does not imply that the service makes no calls to other services.
