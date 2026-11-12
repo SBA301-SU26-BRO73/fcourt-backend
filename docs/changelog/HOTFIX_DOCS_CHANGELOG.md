@@ -27,3 +27,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 16 | 2026-10-29 | Docs update | `docs/architecture` | #22 | Tài liệu hoá chiến lược phân quyền và xác thực token JWT qua API Gateway. |
 | 17 | 2026-10-29 | Hotfix | `booking-service` | #25 | Ngăn chặn tạo booking trùng lặp khi người dùng bấm nút thanh toán nhiều lần liên tiếp. |
 | 18 | 2026-10-30 | Docs update | `docs/operations` | #26 | Tài liệu hoá quy trình quản lý biến môi trường .env và cấu hình bảo mật credential. |
+| 19 | 2026-10-30 | Hotfix | `payment-service` | #27 | Xử lý lỗi timeout khi sinh mã VietQR động với ngân hàng Vietcombank qua PayOS. |
