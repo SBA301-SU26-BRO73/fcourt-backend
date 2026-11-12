@@ -73,3 +73,13 @@ Java files are grouped by their tracked source directory. Package location alone
 - [WalkInPricing.java](../../staff-operations-service/src/main/java/com/fcourt/staff/service/WalkInPricing.java)
 - [WalkInService.java](../../staff-operations-service/src/main/java/com/fcourt/staff/service/WalkInService.java)
 - [WeekScheduleService.java](../../staff-operations-service/src/main/java/com/fcourt/staff/service/WeekScheduleService.java)
+
+## Protocol definitions
+
+For REST behavior, begin with controller classes in the source map and the existing service documentation; this inventory does not infer endpoints from class names.
+
+Tracked Protocol Buffer definitions:
+
+- [slot_safety.proto](../../staff-operations-service/src/main/proto/slot_safety.proto)
+
+Consult the Maven descriptor for generation plugins before regenerating clients.
