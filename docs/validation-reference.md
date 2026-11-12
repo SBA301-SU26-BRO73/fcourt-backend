@@ -94,3 +94,4 @@ aids and do not establish runtime validation results.
 | HoldController | [slot-hold-engine/src/main/java/com/fcourt/hold/HoldController.java](../slot-hold-engine/src/main/java/com/fcourt/hold/HoldController.java) |
 | CheckInController | [staff-operations-service/src/main/java/com/fcourt/staff/api/CheckInController.java](../staff-operations-service/src/main/java/com/fcourt/staff/api/CheckInController.java) |
 | OfflineCheckInController | [staff-operations-service/src/main/java/com/fcourt/staff/api/OfflineCheckInController.java](../staff-operations-service/src/main/java/com/fcourt/staff/api/OfflineCheckInController.java) |
+| StaffController | [staff-operations-service/src/main/java/com/fcourt/staff/api/StaffController.java](../staff-operations-service/src/main/java/com/fcourt/staff/api/StaffController.java) |
