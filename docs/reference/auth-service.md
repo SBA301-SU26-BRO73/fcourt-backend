@@ -7,3 +7,12 @@ This reference maps tracked files to their purpose for repository navigation. It
 ## Service directory
 
 The service lives in [`auth-service/`](../../auth-service/). Its build descriptor is [`pom.xml`](../../auth-service/pom.xml). Paths below are relative to the repository root. Generated output and untracked local configuration are excluded.
+
+## Build and container entry points
+
+Inspect the Maven descriptor for dependencies and plugins, and the Dockerfile or Compose descriptor when present for container behavior. These links identify definitions; they do not execute them.
+
+- [Dockerfile](../../auth-service/Dockerfile)
+- [mvnw](../../auth-service/mvnw)
+- [mvnw.cmd](../../auth-service/mvnw.cmd)
+- [pom.xml](../../auth-service/pom.xml)
