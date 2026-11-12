@@ -147,3 +147,22 @@ Test sources and fixtures listed here are navigation aids, not a report of passi
 - [application.properties](../../auth-service/src/test/resources/application.properties)
 
 From the repository root, the standard Maven verification entry point is `mvn -B -f auth-service/pom.xml verify`. Check the descriptor and environment requirements first.
+
+## Database scripts and migrations
+
+Review script contents and application configuration to distinguish initialization scripts from migrations loaded at runtime. Do not infer execution order across these two locations, or execute scripts against a shared database merely because they are listed here.
+
+- [V1__init_schema.sql](../../auth-service/database/V1__init_schema.sql)
+- [V2__seed_sample_data.sql](../../auth-service/database/V2__seed_sample_data.sql)
+- [V10__staff_reactivation_commands.sql](../../auth-service/src/main/resources/db/migration/V10__staff_reactivation_commands.sql)
+- [V11__staff_account_commands.sql](../../auth-service/src/main/resources/db/migration/V11__staff_account_commands.sql)
+- [V12__google_identity.sql](../../auth-service/src/main/resources/db/migration/V12__google_identity.sql)
+- [V1__init_schema.sql](../../auth-service/src/main/resources/db/migration/V1__init_schema.sql)
+- [V2__seed_sample_data.sql](../../auth-service/src/main/resources/db/migration/V2__seed_sample_data.sql)
+- [V3__owner_approval_and_outbox.sql](../../auth-service/src/main/resources/db/migration/V3__owner_approval_and_outbox.sql)
+- [V4__seed_super_admin_and_pending_owners.sql](../../auth-service/src/main/resources/db/migration/V4__seed_super_admin_and_pending_owners.sql)
+- [V5__refresh_tokens.sql](../../auth-service/src/main/resources/db/migration/V5__refresh_tokens.sql)
+- [V6__failed_attempts.sql](../../auth-service/src/main/resources/db/migration/V6__failed_attempts.sql)
+- [V7__password_reset_tokens.sql](../../auth-service/src/main/resources/db/migration/V7__password_reset_tokens.sql)
+- [V8__outbox_sensitive_payloads.sql](../../auth-service/src/main/resources/db/migration/V8__outbox_sensitive_payloads.sql)
+- [V9__users_password_changed_at.sql](../../auth-service/src/main/resources/db/migration/V9__users_password_changed_at.sql)
