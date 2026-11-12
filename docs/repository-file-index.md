@@ -90,3 +90,4 @@
 - [payment-service/compose.yml](../payment-service/compose.yml) — Docker Compose service and dependency configuration.
 - [pos-retail-service/compose.yml](../pos-retail-service/compose.yml) — Docker Compose service and dependency configuration.
 - [slot-hold-engine/compose.yml](../slot-hold-engine/compose.yml) — Docker Compose service and dependency configuration.
+- [staff-operations-service/compose.yml](../staff-operations-service/compose.yml) — Docker Compose service and dependency configuration.
