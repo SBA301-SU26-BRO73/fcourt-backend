@@ -53,3 +53,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 42 | 2026-11-05 | Docs update | `docs/architecture` | #76 | Viết tài liệu tích hợp cơ chế bảo đảm tính nhất quán sau cùng (Eventual Consistency). |
 | 43 | 2026-11-06 | Hotfix | `pos-retail-service` | #77 | Sửa lỗi trừ âm tồn kho sản phẩm khi 2 quầy thu ngân cùng bán mặt hàng cuối cùng. |
 | 44 | 2026-11-06 | Hotfix | `pos-retail-service` | #78 | Validate mã vạch sản phẩm (barcode) chỉ chứa ký tự số chuẩn EAN-13. |
+| 45 | 2026-11-06 | Docs update | `docs/operations` | #79 | Tài liệu hoá quy trình sao lưu và phục hồi dữ liệu cơ sở dữ liệu PostgreSQL định kỳ. |
