@@ -48,3 +48,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 38 | 2026-11-09 | Docs update | `notification-service` | #195 | Bổ sung Swagger/OpenAPI (springdoc) cho notification-service. |
 | 39 | 2026-11-09 | Docs update | `reporting-service` | #198 | Bổ sung Swagger/OpenAPI (springdoc) cho reporting-service. |
 | 40 | 2026-11-09 | Docs update | `subscription-service` | #202 | Bổ sung Swagger/OpenAPI (springdoc) cho subscription-service. |
+| 41 | 2026-11-09 | Docs update | `slot-hold-engine` | #203 | Bổ sung Swagger/OpenAPI (springdoc) cho slot-hold-engine. |
