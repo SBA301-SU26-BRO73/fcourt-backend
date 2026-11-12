@@ -111,3 +111,38 @@ Tracked Protocol Buffer definitions:
 - [slot_safety.proto](../../booking-service/src/main/proto/slot_safety.proto)
 
 Consult the Maven descriptor for generation plugins before regenerating clients.
+
+## Test inventory
+
+Test sources and fixtures listed here are navigation aids, not a report of passing tests. Review the test setup for Docker, Testcontainers, external services, and profile requirements before execution.
+
+- [AdminBookingApiTest.java](../../booking-service/src/test/java/com/fcourt/booking/AdminBookingApiTest.java)
+- [AdminBookingCancelApiTest.java](../../booking-service/src/test/java/com/fcourt/booking/AdminBookingCancelApiTest.java)
+- [AdminBranchAuthorityTest.java](../../booking-service/src/test/java/com/fcourt/booking/AdminBranchAuthorityTest.java)
+- [BookingApiTest.java](../../booking-service/src/test/java/com/fcourt/booking/BookingApiTest.java)
+- [BookingCancellationTest.java](../../booking-service/src/test/java/com/fcourt/booking/BookingCancellationTest.java)
+- [CancellationRefundContractTest.java](../../booking-service/src/test/java/com/fcourt/booking/CancellationRefundContractTest.java)
+- [CounterSafetyServerTest.java](../../booking-service/src/test/java/com/fcourt/booking/CounterSafetyServerTest.java)
+- [FullCourtCatalogTest.java](../../booking-service/src/test/java/com/fcourt/booking/FullCourtCatalogTest.java)
+- [FullCourtFacilityTest.java](../../booking-service/src/test/java/com/fcourt/booking/FullCourtFacilityTest.java)
+- [FullCourtQuoteTest.java](../../booking-service/src/test/java/com/fcourt/booking/FullCourtQuoteTest.java)
+- [FullCourtReservationTest.java](../../booking-service/src/test/java/com/fcourt/booking/FullCourtReservationTest.java)
+- [GuestBookingCancelApiTest.java](../../booking-service/src/test/java/com/fcourt/booking/GuestBookingCancelApiTest.java)
+- [GuestBookingLookupApiTest.java](../../booking-service/src/test/java/com/fcourt/booking/GuestBookingLookupApiTest.java)
+- [LocalFixtureApplication.java](../../booking-service/src/test/java/com/fcourt/booking/LocalFixtureApplication.java)
+- [OnlineBookingDependenciesTest.java](../../booking-service/src/test/java/com/fcourt/booking/OnlineBookingDependenciesTest.java)
+- [OnlineBookingTest.java](../../booking-service/src/test/java/com/fcourt/booking/OnlineBookingTest.java)
+- [OpenApiDocsTest.java](../../booking-service/src/test/java/com/fcourt/booking/OpenApiDocsTest.java)
+- [ReceiptUrlsTest.java](../../booking-service/src/test/java/com/fcourt/booking/ReceiptUrlsTest.java)
+- [SlotFanoutLatencyTest.java](../../booking-service/src/test/java/com/fcourt/booking/SlotFanoutLatencyTest.java)
+- [SlotLatencyHarness.java](../../booking-service/src/test/java/com/fcourt/booking/SlotLatencyHarness.java)
+- [SlotOccupancyTest.java](../../booking-service/src/test/java/com/fcourt/booking/SlotOccupancyTest.java)
+- [SlotRealtimeTest.java](../../booking-service/src/test/java/com/fcourt/booking/SlotRealtimeTest.java)
+- [SlotRedisLatencyIntegrationTest.java](../../booking-service/src/test/java/com/fcourt/booking/SlotRedisLatencyIntegrationTest.java)
+- [SlotWebSocketIntegrationTest.java](../../booking-service/src/test/java/com/fcourt/booking/SlotWebSocketIntegrationTest.java)
+- [StaffAdmissionsTest.java](../../booking-service/src/test/java/com/fcourt/booking/StaffAdmissionsTest.java)
+- [StaffAuthorityTest.java](../../booking-service/src/test/java/com/fcourt/booking/StaffAuthorityTest.java)
+- [StaffCounterTest.java](../../booking-service/src/test/java/com/fcourt/booking/StaffCounterTest.java)
+- [GlobalExceptionHandlerTest.java](../../booking-service/src/test/java/com/fcourt/booking/exception/GlobalExceptionHandlerTest.java)
+
+From the repository root, the standard Maven verification entry point is `mvn -B -f booking-service/pom.xml verify`. Check the descriptor and environment requirements first.
