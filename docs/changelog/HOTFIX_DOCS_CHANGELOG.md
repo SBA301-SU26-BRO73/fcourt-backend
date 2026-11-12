@@ -188,3 +188,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 177 | 2026-11-12 | Docs update | `docs/reference` | #523 | Tài liệu hoá chi tiết cấu trúc Webhook gửi từ booking-service sang các hệ thống tích hợp. |
 | 178 | 2026-11-12 | Hotfix | `slot-hold-engine` | #524 | Sửa lỗi không nhận diện được IP client khi chạy qua nhiều lớp reverse proxy. |
 | 179 | 2026-11-12 | Hotfix | `slot-hold-engine` | #525 | Bổ sung metric giám sát số lượng slot đang bị khoá đồng thời (active holds gauge). |
+| 180 | 2026-11-12 | Docs update | `docs/operations` | #526 | Tài liệu hoá các chỉ số đo lường hiệu năng (SLI/SLO) của hệ thống slot-hold. |
