@@ -16,3 +16,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 ## 3. Danh sách service
 | Service | Database | Vai trò chính |
 |---|---|---|
+| `gateway-service` | không có | Cổng vào, định tuyến và xác thực JWT |
+| `auth-service` | `auth_db` | Tài khoản, đăng nhập, JWKS |
