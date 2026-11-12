@@ -51,3 +51,4 @@ vào `dev` với task triển khai, và ghi task gốc với ticket review.
 | 40 | [SCRUM-127](https://bro73.atlassian.net/browse/SCRUM-127) | Code review | Review | To Do | [SCRUM-33](https://bro73.atlassian.net/browse/SCRUM-33) | Flutter Payment — SCRUM-33 |
 | 41 | [SCRUM-131](https://bro73.atlassian.net/browse/SCRUM-131) | Review approach | Review | To Do | [SCRUM-34](https://bro73.atlassian.net/browse/SCRUM-34) | BE: payment-service Payment — Upload biên lai Cloudinary & cập nhật Awaiting Confirm |
 | 42 | [SCRUM-132](https://bro73.atlassian.net/browse/SCRUM-132) | Review approach | Review | To Do | [SCRUM-35](https://bro73.atlassian.net/browse/SCRUM-35) | Flutter: Customer Payment — Image Picker upload bill & Polling trạng thái duyệt |
+| 43 | [SCRUM-133](https://bro73.atlassian.net/browse/SCRUM-133) | Review approach | Review | To Do | [SCRUM-36](https://bro73.atlassian.net/browse/SCRUM-36) | BE: payment-service Payment — Admin confirm / reject payment API |
