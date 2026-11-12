@@ -81,6 +81,7 @@ class GuestBookingCancelApiTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.refundAmount").value(100000));
         assertThat(jdbc.queryForObject("SELECT cancellation_reason FROM bookings WHERE id=2", String.class)).isEqualTo("Bận việc");
         assertThat(jdbc.queryForObject("SELECT payload->>'type' FROM booking_outbox", String.class)).isEqualTo("BookingCancelledEvent");
+        assertThat(jdbc.queryForObject("SELECT payload->'booking'->>'cancelledByRole' FROM booking_outbox", String.class)).isEqualTo("CUSTOMER");
     }
 
     @Test

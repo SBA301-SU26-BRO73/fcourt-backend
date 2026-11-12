@@ -13,6 +13,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.fcourt.auth.outbox.OutboxWriter;
 import com.fcourt.auth.account.AccountDtos.AuthResponse;
 import com.fcourt.auth.account.AccountDtos.LoginRequest;
 import com.fcourt.auth.account.AccountDtos.RegisterCourtOwnerRequest;
@@ -52,6 +53,7 @@ class AuthServiceTest {
     DocumentStorage storage;
     PasswordEncoder encoder;
     FailedAttemptThrottle throttle;
+    OutboxWriter outbox;
     AuthService service;
 
     @BeforeEach
@@ -61,7 +63,8 @@ class AuthServiceTest {
         storage = mock(DocumentStorage.class);
         encoder = spy(new BCryptPasswordEncoder(4));
         throttle = mock(FailedAttemptThrottle.class);
-        service = new AuthService(accounts, sessions, encoder, storage, throttle, Clock.fixed(NOW, ZoneOffset.UTC));
+        outbox = mock(OutboxWriter.class);
+        service = new AuthService(accounts, sessions, encoder, storage, throttle, Clock.fixed(NOW, ZoneOffset.UTC), outbox);
         // registerCourtOwner is @Transactional and registers a rollback hook; emulate the transaction here.
         TransactionSynchronizationManager.initSynchronization();
     }
@@ -133,6 +136,20 @@ class AuthServiceTest {
         verify(accounts).insertDocument(9, "owner-documents/legal/9/a.pdf", "LEGAL", NOW);
         verify(accounts).insertDocument(9, "owner-documents/court/9/b.jpg", "COURT_IMAGE", NOW);
         verifyNoInteractions(sessions);
+    }
+
+    @Test
+    void courtOwnerRegistrationTellsTheActiveSuperAdminsThroughTheOutbox() {
+        var created = account(9, "owner@demo.com", "ADMIN", "PENDING_APPROVAL");
+        when(accounts.insert(any(), any(), any(), any(), any(), any(), any())).thenReturn(9L);
+        when(accounts.findById(9)).thenReturn(Optional.of(created));
+        when(accounts.activeSuperAdminIds()).thenReturn(List.of(1L, 2L));
+        when(storage.storePrivate(any(), anyString())).thenReturn("owner-documents/legal/9/a.png");
+
+        service.registerCourtOwner(owner(List.of(file("id.png", "image/png", 10)), null));
+
+        verify(outbox).append(9L, "OwnerRegisteredEvent", 1,
+                new OwnerRegisteredEvent(9, "owner@demo.com", "Full Name", NOW, List.of(1L, 2L)));
     }
 
     @Test
@@ -289,6 +306,20 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> service.login(new LoginRequest("owner@demo.com", PASSWORD)))
                 .satisfies(error -> assertApi(error, HttpStatus.FORBIDDEN, detail));
+        verifyNoInteractions(sessions);
+    }
+
+    @Test
+    void rejectedOwnerLoginCarriesTheRejectionReason() {
+        when(accounts.findByEmail("owner@demo.com"))
+                .thenReturn(Optional.of(accountWithPassword(9, "owner@demo.com", "ADMIN", "REJECTED")));
+        when(accounts.rejectionReason(9)).thenReturn(Optional.of("Documents are unreadable"));
+
+        assertThatThrownBy(() -> service.login(new LoginRequest("owner@demo.com", PASSWORD)))
+                .satisfies(error -> {
+                    assertApi(error, HttpStatus.FORBIDDEN, "Account registration was rejected");
+                    assertThat(((ApiException) error).properties()).containsEntry("reason", "Documents are unreadable");
+                });
         verifyNoInteractions(sessions);
     }
 

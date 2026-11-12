@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -25,8 +26,24 @@ class AccountRepository {
                          String status, OffsetDateTime createdAt) {
     }
 
+    /** Ids of the active super admins, the recipients of a new owner registration. */
+    List<Long> activeSuperAdminIds() {
+        return jdbc.queryForList(
+                "SELECT id FROM users WHERE role = 'SUPER_ADMIN' AND status = 'ACTIVE' AND deleted_at IS NULL ORDER BY id",
+                Long.class);
+    }
+
     Optional<AccountRecord> findById(long id) {
         return jdbc.query(COLUMNS + "WHERE id = ? AND deleted_at IS NULL", this::account, id)
+                .stream().findFirst();
+    }
+
+    /** Reason the super admin gave when rejecting the owner; the latest REJECT log entry wins. */
+    Optional<String> rejectionReason(long userId) {
+        return jdbc.query("""
+                SELECT reason FROM user_account_action_logs
+                WHERE target_user_id = ? AND action = 'REJECT' AND reason IS NOT NULL
+                ORDER BY id DESC LIMIT 1""", (row, i) -> row.getString("reason"), userId)
                 .stream().findFirst();
     }
 

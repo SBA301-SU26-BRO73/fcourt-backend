@@ -35,6 +35,12 @@ public class SubscriptionService {
         this.zone = ZoneId.of(zone);
     }
 
+    /** Limits of the subscription covering today, if any. Read only: no starter subscription is created. */
+    @Transactional(readOnly = true)
+    java.util.Optional<SubscriptionRecord> liveLimits(long adminId) {
+        return subscriptions.findLive(adminId, today());
+    }
+
     /** The live subscription, else the latest one that lapsed, else a freshly created starter one. */
     @Transactional
     public SubscriptionResponse current(long adminId) {

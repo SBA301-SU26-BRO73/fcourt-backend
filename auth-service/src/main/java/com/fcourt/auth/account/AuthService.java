@@ -9,6 +9,7 @@ import com.fcourt.auth.account.AccountDtos.UpdateProfileRequest;
 import com.fcourt.auth.account.AccountDtos.UserResponse;
 import com.fcourt.auth.account.AccountRepository.AccountRecord;
 import com.fcourt.auth.common.ApiException;
+import com.fcourt.auth.outbox.OutboxWriter;
 import com.fcourt.auth.user.UserRole;
 import com.fcourt.auth.user.UserStatus;
 import java.io.IOException;
@@ -44,11 +45,13 @@ public class AuthService {
     private final DocumentStorage storage;
     private final FailedAttemptThrottle throttle;
     private final Clock clock;
+    private final OutboxWriter outbox;
     /** Verified against when the email is unknown, so login timing does not reveal which emails exist. */
     private final String timingEqualiserHash;
 
     AuthService(AccountRepository accounts, SessionService sessions, PasswordEncoder passwordEncoder,
-                DocumentStorage storage, FailedAttemptThrottle throttle, Clock clock) {
+                DocumentStorage storage, FailedAttemptThrottle throttle, Clock clock, OutboxWriter outbox) {
+        this.outbox = outbox;
         this.accounts = accounts;
         this.sessions = sessions;
         this.passwordEncoder = passwordEncoder;
@@ -77,6 +80,10 @@ public class AuthService {
         List<String> uploaded = deleteUploadsIfRolledBack();
         saveDocuments(account.id(), legal, LEGAL, "owner-documents/legal/" + account.id(), uploaded);
         saveDocuments(account.id(), images, COURT_IMAGE, "owner-documents/court/" + account.id(), uploaded);
+        // Same transaction as the account: the event exists if and only if the registration committed.
+        outbox.append(account.id(), OwnerRegisteredEvent.TYPE, OwnerRegisteredEvent.VERSION,
+                new OwnerRegisteredEvent(account.id(), account.email(), account.fullName(), clock.instant(),
+                        accounts.activeSuperAdminIds()));
         return new RegistrationResponse(account.id(), account.status(),
                 "Registration submitted. You can sign in once a super admin approves it.");
     }
@@ -98,7 +105,7 @@ public class AuthService {
         }
         throttle.recordSuccess(attemptKey);
         // Status is only revealed after the password proved who is asking.
-        AccountPolicy.requireActive(account);
+        AccountPolicy.requireActive(account, accounts);
         return sessions.open(account);
     }
 

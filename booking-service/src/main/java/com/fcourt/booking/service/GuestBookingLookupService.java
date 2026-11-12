@@ -55,7 +55,8 @@ public class GuestBookingLookupService {
                 List.copyOf(slots), (java.math.BigDecimal) row.get("total_price"), status,
                 (String) row.get("payment_status"),
                 confirmed ? (String) row.get("checkin_code") : null,
-                confirmed ? (String) row.get("qr_image_url") : null);
+                confirmed ? (String) row.get("qr_image_url") : null,
+                ((Number) row.get("branch_id")).longValue(), (java.math.BigDecimal) row.get("refund_amount"));
     }
 
     /** 0901234567, 84901234567 và +84901234567 coi là cùng một số. */

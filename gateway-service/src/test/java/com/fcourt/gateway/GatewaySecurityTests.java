@@ -134,6 +134,7 @@ class GatewaySecurityTests {
                 of(HttpMethod.POST, "/api/bookings"),
                 of(HttpMethod.DELETE, "/api/bookings/hold-slots/6f1a"),
                 of(HttpMethod.POST, "/api/public/bookings/lookup"), of(HttpMethod.POST, "/api/public/bookings/cancel"), of(HttpMethod.GET, "/api/bookings/42"), of(HttpMethod.GET, "/api/payments/42/status"),
+                of(HttpMethod.POST, "/api/public/refunds"), of(HttpMethod.POST, "/api/public/refunds/lookup"),
                 of(HttpMethod.GET, "/api/payments/checkout-info/42"),
                 of(HttpMethod.POST, "/api/payments/42/upload-receipt"),
                 of(HttpMethod.GET, "/actuator/health"));
@@ -159,6 +160,8 @@ class GatewaySecurityTests {
                 of(HttpMethod.GET, "/api/payments/my-transactions"),
                 of(HttpMethod.POST, "/api/payments/42/confirm-free"), of(HttpMethod.POST, "/api/refunds/request"),
                 of(HttpMethod.PUT, "/devices"), of(HttpMethod.DELETE, "/devices/abc"),
+                of(HttpMethod.GET, "/api/notifications/me"), of(HttpMethod.GET, "/api/notifications/me/unread-count"),
+                of(HttpMethod.PATCH, "/api/notifications/5/read"), of(HttpMethod.PATCH, "/api/notifications/me/read-all"),
                 of(HttpMethod.POST, "/api/vouchers/apply"), of(HttpMethod.POST, "/api/reviews"),
                 of(HttpMethod.GET, "/api/staff/schedule"), of(HttpMethod.GET, "/api/admin/dashboard/summary"),
                 of(HttpMethod.POST, "/api/court-types"), of(HttpMethod.GET, "/api/subscription-plans"),

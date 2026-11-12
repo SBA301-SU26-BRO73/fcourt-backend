@@ -74,6 +74,17 @@ spring:
                   args:
                     rate-limiter: "#{@guestLookupRateLimiter}"
                     key-resolver: "#{@guestLookupKeyResolver}"
+            - id: payment-guest-refunds-limited
+              uri: lb://payment-service
+              order: 5
+              predicates:
+                - Path=/api/public/refunds,/api/public/refunds/lookup
+                - Method=POST
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    rate-limiter: "#{@guestLookupRateLimiter}"
+                    key-resolver: "#{@guestLookupKeyResolver}"
             # Guests may now hold and book without a token: cap creation per client (token subject when signed in, else IP).
             - id: booking-create-limited
               uri: lb://booking-service
@@ -180,7 +191,7 @@ spring:
               uri: lb://notification-service
               order: 20
               predicates:
-                - Path=/devices/**
+                - Path=/devices/**,/api/notifications/**
             - id: pos-retail-service
               uri: lb://pos-retail-service
               order: 20
@@ -235,6 +246,8 @@ fcourt:
         - ANY /ws-fcourt/**
         # payment-service: customer and guest authorization is delegated to booking per request
         - ANY /api/payments/**
+        - POST /api/public/refunds
+        - POST /api/public/refunds/lookup
         # aggregated Swagger UI
         - GET /swagger-ui.html
         - GET /swagger-ui/**

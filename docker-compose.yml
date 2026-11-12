@@ -27,7 +27,6 @@ x-env: &env
   AUTH_URL: http://auth-service:8081
   AUTH_SERVICE_URL: http://auth-service:8081
   SUBSCRIPTION_URL: http://subscription-service:8082
-  SUBSCRIPTION_BASE_URL: http://subscription-service:8082
   FACILITY_URL: http://facility-service:8083
   DISCOVERY_URL: http://discovery-service:8085
   DISCOVERY_BASE_URL: http://discovery-service:8085
@@ -55,6 +54,8 @@ x-env: &env
   POS_SETTLEMENT_SERVICE_TOKEN: ${POS_SETTLEMENT_SERVICE_TOKEN:-dev-pos-settlement-token-0123456789ab}
   FACILITY_RESERVATION_TOKEN: ${FACILITY_RESERVATION_TOKEN:-dev-facility-reservation-token-0123456789}
   DISCOVERY_INTERNAL_SLOT_TOKEN: ${DISCOVERY_INTERNAL_SLOT_TOKEN:-dev-discovery-slot-token-0123456789abc}
+  # staff-operations-service /api/internal/branches/{id}/staff-user-ids, called by notification-service (in-app notifications for branch staff).
+  STAFF_DIRECTORY_TOKEN: ${STAFF_DIRECTORY_TOKEN:-dev-staff-directory-token-0123456789abcd}
   STAFF_OFFLINE_SIGNING_KEY: ${STAFF_OFFLINE_SIGNING_KEY:-dev-staff-offline-signing-key-0123456789ab}
   SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: "5"
 
@@ -210,6 +211,8 @@ services:
       FACILITY_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       # Khoa/mo khoa san phat su kien slot qua Redis cho STOMP (docs/SCRUM-108.md).
       FACILITY_REALTIME_ENABLED: "true"
+      # Han muc goi dang ky (3 chi nhanh / 15 san mac dinh neu chua co goi) lay tu subscription-service.
+      SUBSCRIPTION_BASE_URL: http://subscription-service:8082
 
   booking-service:
     build: ./booking-service

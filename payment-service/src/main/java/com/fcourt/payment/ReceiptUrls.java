@@ -23,7 +23,7 @@ class ReceiptUrls {
     RefundView view(RefundView r) {
         if (r == null || r.transferProofUrl() == null) return r;
         return new RefundView(r.id(), r.bookingId(), r.amount(), r.status(), r.bankName(), r.bankBin(), r.bankAccountNumber(),
-                r.bankAccountName(), r.reason(), r.adminNote(), view(r.transferProofUrl()), r.createdAt(), r.updatedAt());
+                r.bankAccountName(), r.reason(), r.adminNote(), view(r.transferProofUrl()), r.createdAt(), r.updatedAt(), r.customerPhone());
     }
 
     CustomerPayments.Page view(CustomerPayments.Page page) {

@@ -94,6 +94,7 @@ class OnlineBookingExpiry {
           data.put("paymentId", booking.get("payment_id"));
           data.put("paymentStatus", "CANCELLED");
           data.put("refundAmount", 0);
+          data.put("cancelledByRole", "SYSTEM");
           try {
             jdbc.update(
                 "INSERT INTO booking_outbox(event_id,booking_id,payload) VALUES (?,?,?::jsonb)",

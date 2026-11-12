@@ -61,6 +61,8 @@ class StaffSecurity {
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
+                        // Service token checked in the controller (503 when unset), like the other internal routes.
+                        .requestMatchers(HttpMethod.GET, "/api/internal/branches/*/staff-user-ids").permitAll()
                         .requestMatchers("/api/admin/staff", "/api/admin/staff/**").hasRole("ADMIN")
                         .requestMatchers("/api/staff/**").hasRole("STAFF")
                         .anyRequest().denyAll())
