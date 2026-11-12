@@ -58,3 +58,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/subscription-plans` danh sách gói đang bán.
 - `GET /api/subscription-plans/all` toàn bộ gói, kể cả gói đã ẩn.
 - `GET /api/subscription-plans/{id}` chi tiết một gói.
+- `POST`, `PUT`, `DELETE` trên `/api/subscription-plans` để quản lý gói.
+- `GET /api/court-types` và `GET /api/court-types/{id}` xem loại sân.
