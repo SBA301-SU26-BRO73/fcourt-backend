@@ -88,3 +88,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `DELETE /api/admin/courts/lock-slots/{id}` mở khóa.
 - `POST /api/admin/courts/out-of-service` đặt sân ngừng hoạt động.
 - `DELETE /api/admin/courts/out-of-service/{groupId}` hủy ngừng hoạt động.
+- `GET`, `POST` trên `/api/admin/courts/{courtId}/time-slot-templates`.
+- `PUT`, `DELETE` trên `/api/admin/time-slot-templates/{id}`.
