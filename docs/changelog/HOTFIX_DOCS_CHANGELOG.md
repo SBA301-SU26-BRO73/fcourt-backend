@@ -61,3 +61,4 @@ xếp theo trình tự thời gian triển khai từ giai đoạn tích hợp đ
 | 50 | 2026-11-07 | Docs update | `docs/operations` | #86 | Tài liệu hoá cấu hình biến môi trường AWS S3 và MinIO cho lưu trữ chứng từ. |
 | 51 | 2026-11-07 | Hotfix | `slot-hold-engine` | #87 | Xử lý ngoại lệ JedisConnectionException khi Redis cluster chuyển đổi node master. |
 | 52 | 2026-11-07 | Hotfix | `auth-service` | #88 | Sửa lỗi không xoá refreshToken trong cơ sở dữ liệu khi người dùng bấm logout. |
+| 53 | 2026-11-07 | Docs update | `docs/reference` | #89 | Cập nhật tài liệu API reference cho voucher-service và điều kiện áp dụng mã. |
