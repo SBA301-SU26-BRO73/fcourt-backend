@@ -190,3 +190,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `PUT /api/admin/pos/products/{id}` cập nhật sản phẩm.
 - `POST /api/admin/pos/products/{id}/stock-adjustments` điều chỉnh tồn kho.
 - `GET /api/super-admin/pos/products` xem sản phẩm toàn nền tảng.
+- `POST /api/staff/pos/orders` tạo đơn bán lẻ.
