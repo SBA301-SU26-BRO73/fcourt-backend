@@ -102,3 +102,4 @@
 - [pos-retail-service/Dockerfile](../pos-retail-service/Dockerfile) — Container image build definition.
 - [reporting-service/Dockerfile](../reporting-service/Dockerfile) — Container image build definition.
 - [slot-hold-engine/Dockerfile](../slot-hold-engine/Dockerfile) — Container image build definition.
+- [staff-operations-service/Dockerfile](../staff-operations-service/Dockerfile) — Container image build definition.
