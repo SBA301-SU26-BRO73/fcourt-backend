@@ -42,3 +42,4 @@ vào `dev` với task triển khai, và ghi task gốc với ticket review.
 | 31 | [SCRUM-109](https://bro73.atlassian.net/browse/SCRUM-109) | Task | QA: Regression | Code Review | — | Kiểm thử hồi quy toàn diện luồng Đặt sân & Thanh toán VietQR |
 | 32 | [SCRUM-114](https://bro73.atlassian.net/browse/SCRUM-114) | Task | BE: booking-service | Code Review | [backend#132](https://github.com/SBA301-SU26-BRO73/fcourt-backend/pull/132), [backend#105](https://github.com/SBA301-SU26-BRO73/fcourt-backend/pull/105) | Booking — Nghiệp vụ Đặt bao sân trọn gói & tính giá ưu đãi sự kiện |
 | 33 | [SCRUM-120](https://bro73.atlassian.net/browse/SCRUM-120) | Review approach | Review | To Do | [SCRUM-24](https://bro73.atlassian.net/browse/SCRUM-24) | BE slot-hold-engine — SCRUM-24 Redis hold 5 phút |
+| 34 | [SCRUM-121](https://bro73.atlassian.net/browse/SCRUM-121) | Code review | Review | To Do | [SCRUM-24](https://bro73.atlassian.net/browse/SCRUM-24) | BE slot-hold-engine — SCRUM-24 |
