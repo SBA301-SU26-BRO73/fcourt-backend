@@ -165,3 +165,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/admin/vouchers/{id}/usages` lịch sử sử dụng voucher.
 - `POST /api/vouchers/validate` kiểm tra voucher có hợp lệ không.
 - `POST /api/vouchers/apply` áp dụng voucher vào booking.
+- `DELETE /api/vouchers/apply/{bookingId}` gỡ voucher khỏi booking.
