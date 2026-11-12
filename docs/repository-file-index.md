@@ -44,3 +44,4 @@
 - [notification-service/README.md](../notification-service/README.md) — notification-service
 - [payment-service/README.md](../payment-service/README.md) — Payment service — SCRUM-32
 - [pos-retail-service/CONTRACTS.md](../pos-retail-service/CONTRACTS.md) — Proposed POS contracts — SCRUM-106 Backend
+- [pos-retail-service/README.md](../pos-retail-service/README.md) — POS retail Backend — SCRUM-106
