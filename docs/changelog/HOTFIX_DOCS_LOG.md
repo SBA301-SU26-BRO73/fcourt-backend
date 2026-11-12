@@ -79,3 +79,4 @@ pull request tham chiếu và mô tả ngắn nội dung.
 | 69 | 2026-11-09 | Feature | `booking-service` | #234 | API nội bộ gỡ voucher khỏi booking chưa thanh toán. |
 | 70 | 2026-11-09 | Feature | `booking-service` | #235 | Khách vãng lai huỷ booking bằng mã booking và số điện thoại. |
 | 71 | 2026-11-09 | Feature | `gateway-service` | #236 | Áp chính sách rate limit của lookup cho API huỷ booking công khai. |
+| 72 | 2026-11-09 | Feature | `booking-service` | #237 | Trả số điện thoại khách trong booking view để payment-service sử dụng. |
