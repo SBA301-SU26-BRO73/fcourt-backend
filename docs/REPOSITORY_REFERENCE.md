@@ -195,3 +195,4 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `POST /api/internal/pos/settlements` quyết toán đơn gắn với booking.
 
 ## 14. reporting-service
+- Reporting dùng read model `booking_facts`, `branch_snapshots`, `processed_events`.
