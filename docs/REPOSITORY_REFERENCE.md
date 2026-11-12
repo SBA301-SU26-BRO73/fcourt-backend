@@ -100,3 +100,5 @@ Tiền tố `/api/public` là công khai, `/api/auth` là tài khoản, `/api/ad
 - `GET /api/internal/courts/{id}/booking-context` ngữ cảnh phục vụ đặt sân.
 - `GET /api/internal/courts/{courtId}/price-quote` báo giá theo khung giờ.
 - `GET /api/internal/courts/{courtId}/slot-schedule` lịch khung giờ của sân.
+- `/api/internal/court-reservations` tạo, commit, rollback, xem đặt chỗ sân.
+- Facility ghi sự kiện ra bảng `facility_outbox` để đồng bộ sang service khác.
