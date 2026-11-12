@@ -92,3 +92,4 @@ aids and do not establish runtime validation results.
 | SuperAdminDashboardController | [reporting-service/src/main/java/com/fcourt/reporting/api/SuperAdminDashboardController.java](../reporting-service/src/main/java/com/fcourt/reporting/api/SuperAdminDashboardController.java) |
 | ReportingSecurity | [reporting-service/src/main/java/com/fcourt/reporting/config/ReportingSecurity.java](../reporting-service/src/main/java/com/fcourt/reporting/config/ReportingSecurity.java) |
 | HoldController | [slot-hold-engine/src/main/java/com/fcourt/hold/HoldController.java](../slot-hold-engine/src/main/java/com/fcourt/hold/HoldController.java) |
+| CheckInController | [staff-operations-service/src/main/java/com/fcourt/staff/api/CheckInController.java](../staff-operations-service/src/main/java/com/fcourt/staff/api/CheckInController.java) |
