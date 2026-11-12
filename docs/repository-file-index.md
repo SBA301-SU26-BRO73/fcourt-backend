@@ -136,3 +136,4 @@
 - [booking-service/src/test/java/com/fcourt/booking/AdminBranchAuthorityTest.java](../booking-service/src/test/java/com/fcourt/booking/AdminBranchAuthorityTest.java) — Java test source; inspect fixtures and assertions before running.
 - [booking-service/src/test/java/com/fcourt/booking/BookingApiTest.java](../booking-service/src/test/java/com/fcourt/booking/BookingApiTest.java) — Java test source; inspect fixtures and assertions before running.
 - [booking-service/src/test/java/com/fcourt/booking/BookingCancellationTest.java](../booking-service/src/test/java/com/fcourt/booking/BookingCancellationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/CancellationRefundContractTest.java](../booking-service/src/test/java/com/fcourt/booking/CancellationRefundContractTest.java) — Java test source; inspect fixtures and assertions before running.
