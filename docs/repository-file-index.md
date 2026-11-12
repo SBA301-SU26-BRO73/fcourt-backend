@@ -48,3 +48,4 @@
 - [pos-retail-service/VALIDATION.md](../pos-retail-service/VALIDATION.md) — SCRUM-106 Backend validation
 - [reporting-service/README.md](../reporting-service/README.md) — reporting-service
 - [slot-hold-engine/README.md](../slot-hold-engine/README.md) — Slot hold engine — SCRUM-24
+- [staff-operations-service/CONTRACTS.md](../staff-operations-service/CONTRACTS.md) — Proposed staff integration contracts
