@@ -89,3 +89,4 @@ aids and do not establish runtime validation results.
 | AnalyticsController | [reporting-service/src/main/java/com/fcourt/reporting/api/AnalyticsController.java](../reporting-service/src/main/java/com/fcourt/reporting/api/AnalyticsController.java) |
 | DashboardController | [reporting-service/src/main/java/com/fcourt/reporting/api/DashboardController.java](../reporting-service/src/main/java/com/fcourt/reporting/api/DashboardController.java) |
 | ExportController | [reporting-service/src/main/java/com/fcourt/reporting/api/ExportController.java](../reporting-service/src/main/java/com/fcourt/reporting/api/ExportController.java) |
+| SuperAdminDashboardController | [reporting-service/src/main/java/com/fcourt/reporting/api/SuperAdminDashboardController.java](../reporting-service/src/main/java/com/fcourt/reporting/api/SuperAdminDashboardController.java) |
