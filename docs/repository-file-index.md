@@ -1,0 +1,251 @@
+# Repository file index
+
+- [.github/PULL_REQUEST_TEMPLATE.md](../.github/PULL_REQUEST_TEMPLATE.md) — Repository documentation
+- [README.md](../README.md) — FCourt Backend
+- [auth-service/README.md](../auth-service/README.md) — auth-service
+- [booking-service/FULL_COURT.md](../booking-service/FULL_COURT.md) — SCRUM-114 — full-court pricing preview and atomic reservation
+- [booking-service/ONLINE_BOOKING.md](../booking-service/ONLINE_BOOKING.md) — Online booking authority — SCRUM-91
+- [booking-service/README.md](../booking-service/README.md) — Booking history — SCRUM-53
+- [discovery-service/README.md](../discovery-service/README.md) — Discovery service
+- [discovery-service/REQUEST_REVIEW.md](../discovery-service/REQUEST_REVIEW.md) — Review BE Discovery - Initialize service and public branch search
+- [discovery-service/SCRUM-22_AVAILABLE_SLOTS.md](../discovery-service/SCRUM-22_AVAILABLE_SLOTS.md) — SCRUM-22 — Available slots by court and date
+- [discovery-service/VALIDATION.md](../discovery-service/VALIDATION.md) — Validation evidence
+- [docs/README.md](../docs/README.md) — Tài liệu backend FCourt
+- [docs/REPOSITORY_REFERENCE.md](../docs/REPOSITORY_REFERENCE.md) — FCOURT Backend — Repository Reference
+- [docs/architecture/aws-architecture.md](../docs/architecture/aws-architecture.md) — Kiến trúc AWS và phương án triển khai FCOURT
+- [docs/architecture/code-structure.md](../docs/architecture/code-structure.md) — Cấu trúc package chuẩn của backend FCourt
+- [docs/architecture/realtime-schedule-notifications.md](../docs/architecture/realtime-schedule-notifications.md) — SCRUM-108 — public schedule notifications
+- [docs/architecture/spring-cloud.md](../docs/architecture/spring-cloud.md) — Spring Cloud: Gateway và tìm service
+- [docs/business/business-gap-a.md](../docs/business/business-gap-a.md) — Business gap analysis – Phần A (booking, payment, refund)
+- [docs/business/business-gap-b.md](../docs/business/business-gap-b.md) — Business gap analysis — part B
+- [docs/business/cancellation-refunds.md](../docs/business/cancellation-refunds.md) — booking-service
+- [docs/operations/ci-image-build.md](../docs/operations/ci-image-build.md) — CI build và push image
+- [docs/operations/docker-compose.md](../docs/operations/docker-compose.md) — Chạy cả hệ thống bằng Docker Compose
+- [docs/operations/gateway.md](../docs/operations/gateway.md) — Gateway (Spring Cloud Gateway)
+- [docs/operations/smoke-test-local.md](../docs/operations/smoke-test-local.md) — Smoke test local (Docker Compose + fcourt-web)
+- [docs/operations/storage-s3.md](../docs/operations/storage-s3.md) — Lưu trữ file và ảnh trên AWS S3
+- [docs/reference/README.md](../docs/reference/README.md) — Service file references
+- [docs/reference/auth-service.md](../docs/reference/auth-service.md) — auth-service: repository reference
+- [docs/reference/booking-service.md](../docs/reference/booking-service.md) — booking-service: repository reference
+- [docs/reference/discovery-service.md](../docs/reference/discovery-service.md) — discovery-service: repository reference
+- [docs/reference/facility-service.md](../docs/reference/facility-service.md) — facility-service: repository reference
+- [docs/reference/gateway-service.md](../docs/reference/gateway-service.md) — gateway-service: repository reference
+- [docs/reference/notification-service.md](../docs/reference/notification-service.md) — notification-service: repository reference
+- [docs/reference/payment-service.md](../docs/reference/payment-service.md) — payment-service: repository reference
+- [docs/reference/pos-retail-service.md](../docs/reference/pos-retail-service.md) — pos-retail-service: repository reference
+- [docs/reference/reporting-service.md](../docs/reference/reporting-service.md) — reporting-service: repository reference
+- [docs/reference/slot-hold-engine.md](../docs/reference/slot-hold-engine.md) — slot-hold-engine: repository reference
+- [docs/reference/staff-operations-service.md](../docs/reference/staff-operations-service.md) — staff-operations-service: repository reference
+- [docs/reference/subscription-service.md](../docs/reference/subscription-service.md) — subscription-service: repository reference
+- [docs/reference/voucher-service.md](../docs/reference/voucher-service.md) — voucher-service: repository reference
+- [docs/report/README.md](../docs/report/README.md) — Báo cáo cuối kỳ
+- [facility-service/README.md](../facility-service/README.md) — facility-service
+- [notification-service/PUSH_REMINDERS.md](../notification-service/PUSH_REMINDERS.md) — Push delivery and booking reminders
+- [notification-service/README.md](../notification-service/README.md) — notification-service
+- [payment-service/README.md](../payment-service/README.md) — Payment service — SCRUM-32
+- [pos-retail-service/CONTRACTS.md](../pos-retail-service/CONTRACTS.md) — Proposed POS contracts — SCRUM-106 Backend
+- [pos-retail-service/README.md](../pos-retail-service/README.md) — POS retail Backend — SCRUM-106
+- [pos-retail-service/VALIDATION.md](../pos-retail-service/VALIDATION.md) — SCRUM-106 Backend validation
+- [reporting-service/README.md](../reporting-service/README.md) — reporting-service
+- [slot-hold-engine/README.md](../slot-hold-engine/README.md) — Slot hold engine — SCRUM-24
+- [staff-operations-service/CONTRACTS.md](../staff-operations-service/CONTRACTS.md) — Proposed staff integration contracts
+- [staff-operations-service/FLUTTER_SUPPORT.md](../staff-operations-service/FLUTTER_SUPPORT.md) — Flutter API support
+- [staff-operations-service/README.md](../staff-operations-service/README.md) — Staff operations — SCRUM-26
+- [staff-operations-service/REASSESSMENT_SCRUM_65.md](../staff-operations-service/REASSESSMENT_SCRUM_65.md) — SCRUM-65 — opaque ticket contract, 2026-11-05
+- [staff-operations-service/REQUEST_REVIEW.md](../staff-operations-service/REQUEST_REVIEW.md) — SCRUM-26 — Staff management review preparation
+- [staff-operations-service/VALIDATION.md](../staff-operations-service/VALIDATION.md) — SCRUM-26 validation
+- [staff-operations-service/VALIDATION_SCRUM_28.md](../staff-operations-service/VALIDATION_SCRUM_28.md) — SCRUM-28 validation
+- [staff-operations-service/VALIDATION_SCRUM_30.md](../staff-operations-service/VALIDATION_SCRUM_30.md) — SCRUM-30 validation
+- [staff-operations-service/VALIDATION_SCRUM_61.md](../staff-operations-service/VALIDATION_SCRUM_61.md) — SCRUM-61 validation
+- [staff-operations-service/VALIDATION_SCRUM_63.md](../staff-operations-service/VALIDATION_SCRUM_63.md) — SCRUM-63 validation
+- [staff-operations-service/VALIDATION_SCRUM_65.md](../staff-operations-service/VALIDATION_SCRUM_65.md) — SCRUM-65 validation
+- [subscription-service/README.md](../subscription-service/README.md) — subscription-service
+- [tools/demo_seed/README.md](../tools/demo_seed/README.md) — SCRUM-92 — Resumable demo seeder
+- [tools/demo_seed/REASSESSMENT.md](../tools/demo_seed/REASSESSMENT.md) — SCRUM-92 reassessment — 2026-11-05
+- [tools/production_smoke/LIVE_VALIDATION.md](../tools/production_smoke/LIVE_VALIDATION.md) — SCRUM-107 validation evidence
+- [tools/production_smoke/README.md](../tools/production_smoke/README.md) — SCRUM-107: Backend production smoke preparation
+- [tools/seed-assets/REVIEW.md](../tools/seed-assets/REVIEW.md) — Review anh san va chi nhanh (seed demo)
+- [tools/system_tests/LIVE_VALIDATION.md](../tools/system_tests/LIVE_VALIDATION.md) — SCRUM-91 validation evidence
+- [tools/system_tests/README.md](../tools/system_tests/README.md) — SCRUM-91: gateway flow and Saga
+- [tools/system_tests/REASSESSMENT.md](../tools/system_tests/REASSESSMENT.md) — SCRUM-91 — reassessment and local integration evidence
+- [booking-service/src/main/proto/slot_safety.proto](../booking-service/src/main/proto/slot_safety.proto) — Protocol Buffer contract; inspect service and message definitions here.
+- [slot-hold-engine/src/main/proto/slot_safety.proto](../slot-hold-engine/src/main/proto/slot_safety.proto) — Protocol Buffer contract; inspect service and message definitions here.
+- [staff-operations-service/src/main/proto/slot_safety.proto](../staff-operations-service/src/main/proto/slot_safety.proto) — Protocol Buffer contract; inspect service and message definitions here.
+- [voucher-service/src/main/proto/voucher_validation.proto](../voucher-service/src/main/proto/voucher_validation.proto) — Protocol Buffer contract; inspect service and message definitions here.
+- [auth-service/pom.xml](../auth-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
+- [booking-service/pom.xml](../booking-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
+- [discovery-service/pom.xml](../discovery-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
+- [facility-service/pom.xml](../facility-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
+- [gateway-service/pom.xml](../gateway-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
+- [notification-service/pom.xml](../notification-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
+- [payment-service/pom.xml](../payment-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
+- [pos-retail-service/pom.xml](../pos-retail-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
+- [reporting-service/pom.xml](../reporting-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
+- [slot-hold-engine/pom.xml](../slot-hold-engine/pom.xml) — Maven dependencies, build plugins, and verification configuration.
+- [staff-operations-service/pom.xml](../staff-operations-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
+- [subscription-service/pom.xml](../subscription-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
+- [voucher-service/pom.xml](../voucher-service/pom.xml) — Maven dependencies, build plugins, and verification configuration.
+- [discovery-service/compose.yml](../discovery-service/compose.yml) — Docker Compose service and dependency configuration.
+- [docker-compose.yml](../docker-compose.yml) — Docker Compose service and dependency configuration.
+- [payment-service/compose.yml](../payment-service/compose.yml) — Docker Compose service and dependency configuration.
+- [pos-retail-service/compose.yml](../pos-retail-service/compose.yml) — Docker Compose service and dependency configuration.
+- [slot-hold-engine/compose.yml](../slot-hold-engine/compose.yml) — Docker Compose service and dependency configuration.
+- [staff-operations-service/compose.yml](../staff-operations-service/compose.yml) — Docker Compose service and dependency configuration.
+- [voucher-service/compose.yml](../voucher-service/compose.yml) — Docker Compose service and dependency configuration.
+- [auth-service/Dockerfile](../auth-service/Dockerfile) — Container image build definition.
+- [booking-service/Dockerfile](../booking-service/Dockerfile) — Container image build definition.
+- [discovery-service/Dockerfile](../discovery-service/Dockerfile) — Container image build definition.
+- [facility-service/Dockerfile](../facility-service/Dockerfile) — Container image build definition.
+- [gateway-service/Dockerfile](../gateway-service/Dockerfile) — Container image build definition.
+- [notification-service/Dockerfile](../notification-service/Dockerfile) — Container image build definition.
+- [payment-service/Dockerfile](../payment-service/Dockerfile) — Container image build definition.
+- [pos-retail-service/Dockerfile](../pos-retail-service/Dockerfile) — Container image build definition.
+- [reporting-service/Dockerfile](../reporting-service/Dockerfile) — Container image build definition.
+- [slot-hold-engine/Dockerfile](../slot-hold-engine/Dockerfile) — Container image build definition.
+- [staff-operations-service/Dockerfile](../staff-operations-service/Dockerfile) — Container image build definition.
+- [subscription-service/Dockerfile](../subscription-service/Dockerfile) — Container image build definition.
+- [voucher-service/Dockerfile](../voucher-service/Dockerfile) — Container image build definition.
+- [auth-service/src/test/java/com/fcourt/auth/OpenApiDocsTest.java](../auth-service/src/test/java/com/fcourt/auth/OpenApiDocsTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/SuperAdminApiIntegrationTest.java](../auth-service/src/test/java/com/fcourt/auth/SuperAdminApiIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/account/AuthApiIntegrationTest.java](../auth-service/src/test/java/com/fcourt/auth/account/AuthApiIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/account/AuthControllerTest.java](../auth-service/src/test/java/com/fcourt/auth/account/AuthControllerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/account/AuthServiceTest.java](../auth-service/src/test/java/com/fcourt/auth/account/AuthServiceTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/account/AvatarControllerTest.java](../auth-service/src/test/java/com/fcourt/auth/account/AvatarControllerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/account/AvatarServiceTest.java](../auth-service/src/test/java/com/fcourt/auth/account/AvatarServiceTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/account/FailedAttemptThrottleTest.java](../auth-service/src/test/java/com/fcourt/auth/account/FailedAttemptThrottleTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/account/GoogleLoginServiceTest.java](../auth-service/src/test/java/com/fcourt/auth/account/GoogleLoginServiceTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/account/LocalFixtureApplication.java](../auth-service/src/test/java/com/fcourt/auth/account/LocalFixtureApplication.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/account/PasswordChangeTokenValidatorTest.java](../auth-service/src/test/java/com/fcourt/auth/account/PasswordChangeTokenValidatorTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/account/PasswordControllerTest.java](../auth-service/src/test/java/com/fcourt/auth/account/PasswordControllerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/account/PasswordServiceTest.java](../auth-service/src/test/java/com/fcourt/auth/account/PasswordServiceTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/account/S3DocumentStorageContainerTest.java](../auth-service/src/test/java/com/fcourt/auth/account/S3DocumentStorageContainerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/account/S3DocumentStorageTest.java](../auth-service/src/test/java/com/fcourt/auth/account/S3DocumentStorageTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/account/SessionServiceTest.java](../auth-service/src/test/java/com/fcourt/auth/account/SessionServiceTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/config/SecurityConfigurationTest.java](../auth-service/src/test/java/com/fcourt/auth/config/SecurityConfigurationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/staff/StaffAccountCommandsTest.java](../auth-service/src/test/java/com/fcourt/auth/staff/StaffAccountCommandsTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/staff/StaffAccountsTest.java](../auth-service/src/test/java/com/fcourt/auth/staff/StaffAccountsTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/staff/StaffReactivationTest.java](../auth-service/src/test/java/com/fcourt/auth/staff/StaffReactivationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/superadmin/PlatformStatsRepositoryIntegrationTest.java](../auth-service/src/test/java/com/fcourt/auth/superadmin/PlatformStatsRepositoryIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/superadmin/PlatformStatsServiceTest.java](../auth-service/src/test/java/com/fcourt/auth/superadmin/PlatformStatsServiceTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/superadmin/SuperAdminServiceTest.java](../auth-service/src/test/java/com/fcourt/auth/superadmin/SuperAdminServiceTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/token/AccessTokenIssuerTest.java](../auth-service/src/test/java/com/fcourt/auth/token/AccessTokenIssuerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/token/JwksControllerTest.java](../auth-service/src/test/java/com/fcourt/auth/token/JwksControllerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [auth-service/src/test/java/com/fcourt/auth/token/SigningKeyConfigurationTest.java](../auth-service/src/test/java/com/fcourt/auth/token/SigningKeyConfigurationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/AdminBookingApiTest.java](../booking-service/src/test/java/com/fcourt/booking/AdminBookingApiTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/AdminBookingCancelApiTest.java](../booking-service/src/test/java/com/fcourt/booking/AdminBookingCancelApiTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/AdminBranchAuthorityTest.java](../booking-service/src/test/java/com/fcourt/booking/AdminBranchAuthorityTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/BookingApiTest.java](../booking-service/src/test/java/com/fcourt/booking/BookingApiTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/BookingCancellationTest.java](../booking-service/src/test/java/com/fcourt/booking/BookingCancellationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/CancellationRefundContractTest.java](../booking-service/src/test/java/com/fcourt/booking/CancellationRefundContractTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/CounterSafetyServerTest.java](../booking-service/src/test/java/com/fcourt/booking/CounterSafetyServerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/FullCourtCatalogTest.java](../booking-service/src/test/java/com/fcourt/booking/FullCourtCatalogTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/FullCourtFacilityTest.java](../booking-service/src/test/java/com/fcourt/booking/FullCourtFacilityTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/FullCourtQuoteTest.java](../booking-service/src/test/java/com/fcourt/booking/FullCourtQuoteTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/FullCourtReservationTest.java](../booking-service/src/test/java/com/fcourt/booking/FullCourtReservationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/GuestBookingCancelApiTest.java](../booking-service/src/test/java/com/fcourt/booking/GuestBookingCancelApiTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/GuestBookingLookupApiTest.java](../booking-service/src/test/java/com/fcourt/booking/GuestBookingLookupApiTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/LocalFixtureApplication.java](../booking-service/src/test/java/com/fcourt/booking/LocalFixtureApplication.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/OnlineBookingDependenciesTest.java](../booking-service/src/test/java/com/fcourt/booking/OnlineBookingDependenciesTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/OnlineBookingTest.java](../booking-service/src/test/java/com/fcourt/booking/OnlineBookingTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/OpenApiDocsTest.java](../booking-service/src/test/java/com/fcourt/booking/OpenApiDocsTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/ReceiptUrlsTest.java](../booking-service/src/test/java/com/fcourt/booking/ReceiptUrlsTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/SlotFanoutLatencyTest.java](../booking-service/src/test/java/com/fcourt/booking/SlotFanoutLatencyTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/SlotLatencyHarness.java](../booking-service/src/test/java/com/fcourt/booking/SlotLatencyHarness.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/SlotOccupancyTest.java](../booking-service/src/test/java/com/fcourt/booking/SlotOccupancyTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/SlotRealtimeTest.java](../booking-service/src/test/java/com/fcourt/booking/SlotRealtimeTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/SlotRedisLatencyIntegrationTest.java](../booking-service/src/test/java/com/fcourt/booking/SlotRedisLatencyIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/SlotWebSocketIntegrationTest.java](../booking-service/src/test/java/com/fcourt/booking/SlotWebSocketIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/StaffAdmissionsTest.java](../booking-service/src/test/java/com/fcourt/booking/StaffAdmissionsTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/StaffAuthorityTest.java](../booking-service/src/test/java/com/fcourt/booking/StaffAuthorityTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/StaffCounterTest.java](../booking-service/src/test/java/com/fcourt/booking/StaffCounterTest.java) — Java test source; inspect fixtures and assertions before running.
+- [booking-service/src/test/java/com/fcourt/booking/exception/GlobalExceptionHandlerTest.java](../booking-service/src/test/java/com/fcourt/booking/exception/GlobalExceptionHandlerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [discovery-service/src/test/java/com/fcourt/discovery/DiscoveryIntegrationTest.java](../discovery-service/src/test/java/com/fcourt/discovery/DiscoveryIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [discovery-service/src/test/java/com/fcourt/discovery/ReviewIntegrationTest.java](../discovery-service/src/test/java/com/fcourt/discovery/ReviewIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [discovery-service/src/test/java/com/fcourt/discovery/component/BranchEventListenerTest.java](../discovery-service/src/test/java/com/fcourt/discovery/component/BranchEventListenerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [discovery-service/src/test/java/com/fcourt/discovery/component/ReviewImageCleanupTest.java](../discovery-service/src/test/java/com/fcourt/discovery/component/ReviewImageCleanupTest.java) — Java test source; inspect fixtures and assertions before running.
+- [discovery-service/src/test/java/com/fcourt/discovery/component/ReviewImagePolicyTest.java](../discovery-service/src/test/java/com/fcourt/discovery/component/ReviewImagePolicyTest.java) — Java test source; inspect fixtures and assertions before running.
+- [discovery-service/src/test/java/com/fcourt/discovery/component/ReviewImageValidatorTest.java](../discovery-service/src/test/java/com/fcourt/discovery/component/ReviewImageValidatorTest.java) — Java test source; inspect fixtures and assertions before running.
+- [discovery-service/src/test/java/com/fcourt/discovery/component/ReviewUploadLimiterTest.java](../discovery-service/src/test/java/com/fcourt/discovery/component/ReviewUploadLimiterTest.java) — Java test source; inspect fixtures and assertions before running.
+- [discovery-service/src/test/java/com/fcourt/discovery/component/ReviewerNamesTest.java](../discovery-service/src/test/java/com/fcourt/discovery/component/ReviewerNamesTest.java) — Java test source; inspect fixtures and assertions before running.
+- [discovery-service/src/test/java/com/fcourt/discovery/component/ReviewerProfileClientTest.java](../discovery-service/src/test/java/com/fcourt/discovery/component/ReviewerProfileClientTest.java) — Java test source; inspect fixtures and assertions before running.
+- [discovery-service/src/test/java/com/fcourt/discovery/component/S3ImageStorageTest.java](../discovery-service/src/test/java/com/fcourt/discovery/component/S3ImageStorageTest.java) — Java test source; inspect fixtures and assertions before running.
+- [discovery-service/src/test/java/com/fcourt/discovery/component/SlotSourceClientTest.java](../discovery-service/src/test/java/com/fcourt/discovery/component/SlotSourceClientTest.java) — Java test source; inspect fixtures and assertions before running.
+- [discovery-service/src/test/java/com/fcourt/discovery/config/InternalSlotConflictsSecurityTest.java](../discovery-service/src/test/java/com/fcourt/discovery/config/InternalSlotConflictsSecurityTest.java) — Java test source; inspect fixtures and assertions before running.
+- [discovery-service/src/test/java/com/fcourt/discovery/config/KafkaConfigurationTest.java](../discovery-service/src/test/java/com/fcourt/discovery/config/KafkaConfigurationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [discovery-service/src/test/java/com/fcourt/discovery/config/OpenApiDocsTest.java](../discovery-service/src/test/java/com/fcourt/discovery/config/OpenApiDocsTest.java) — Java test source; inspect fixtures and assertions before running.
+- [discovery-service/src/test/java/com/fcourt/discovery/controller/BranchControllerTest.java](../discovery-service/src/test/java/com/fcourt/discovery/controller/BranchControllerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [discovery-service/src/test/java/com/fcourt/discovery/controller/CourtSlotControllerTest.java](../discovery-service/src/test/java/com/fcourt/discovery/controller/CourtSlotControllerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [discovery-service/src/test/java/com/fcourt/discovery/repository/SlotHoldRepositoryTest.java](../discovery-service/src/test/java/com/fcourt/discovery/repository/SlotHoldRepositoryTest.java) — Java test source; inspect fixtures and assertions before running.
+- [discovery-service/src/test/java/com/fcourt/discovery/service/BranchAvailabilitySearchTest.java](../discovery-service/src/test/java/com/fcourt/discovery/service/BranchAvailabilitySearchTest.java) — Java test source; inspect fixtures and assertions before running.
+- [discovery-service/src/test/java/com/fcourt/discovery/service/BranchSearchServiceTest.java](../discovery-service/src/test/java/com/fcourt/discovery/service/BranchSearchServiceTest.java) — Java test source; inspect fixtures and assertions before running.
+- [discovery-service/src/test/java/com/fcourt/discovery/service/CourtSlotServiceTest.java](../discovery-service/src/test/java/com/fcourt/discovery/service/CourtSlotServiceTest.java) — Java test source; inspect fixtures and assertions before running.
+- [discovery-service/src/test/java/com/fcourt/discovery/service/ReviewImageServiceTest.java](../discovery-service/src/test/java/com/fcourt/discovery/service/ReviewImageServiceTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/BranchImageApiIntegrationTest.java](../facility-service/src/test/java/com/fcourt/facility/BranchImageApiIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/CourtImageApiIntegrationTest.java](../facility-service/src/test/java/com/fcourt/facility/CourtImageApiIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/CourtReservationIntegrationTest.java](../facility-service/src/test/java/com/fcourt/facility/CourtReservationIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/FacilityApiIntegrationTest.java](../facility-service/src/test/java/com/fcourt/facility/FacilityApiIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/OpenApiDocsTest.java](../facility-service/src/test/java/com/fcourt/facility/OpenApiDocsTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/PricingRulesIntegrationTest.java](../facility-service/src/test/java/com/fcourt/facility/PricingRulesIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/api/BranchOwnerControllerTest.java](../facility-service/src/test/java/com/fcourt/facility/api/BranchOwnerControllerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/api/BranchRequestValidationTest.java](../facility-service/src/test/java/com/fcourt/facility/api/BranchRequestValidationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/api/BulkApplyRequestValidationTest.java](../facility-service/src/test/java/com/fcourt/facility/api/BulkApplyRequestValidationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/api/LockRequestValidationTest.java](../facility-service/src/test/java/com/fcourt/facility/api/LockRequestValidationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/api/PricingRequestValidationTest.java](../facility-service/src/test/java/com/fcourt/facility/api/PricingRequestValidationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/api/ReservationControllerTest.java](../facility-service/src/test/java/com/fcourt/facility/api/ReservationControllerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/api/TemplateRequestValidationTest.java](../facility-service/src/test/java/com/fcourt/facility/api/TemplateRequestValidationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/events/RedisLockScheduleEventsTest.java](../facility-service/src/test/java/com/fcourt/facility/events/RedisLockScheduleEventsTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/events/ReservationRealtimeBridgeTest.java](../facility-service/src/test/java/com/fcourt/facility/events/ReservationRealtimeBridgeTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/integration/S3ImageStorageContainerTest.java](../facility-service/src/test/java/com/fcourt/facility/integration/S3ImageStorageContainerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/integration/S3ImageStorageTest.java](../facility-service/src/test/java/com/fcourt/facility/integration/S3ImageStorageTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/service/CourtImageServiceTest.java](../facility-service/src/test/java/com/fcourt/facility/service/CourtImageServiceTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/service/CourtStatusEventsTest.java](../facility-service/src/test/java/com/fcourt/facility/service/CourtStatusEventsTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/service/ImageUploadValidatorTest.java](../facility-service/src/test/java/com/fcourt/facility/service/ImageUploadValidatorTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/service/LockRealtimeEventsTest.java](../facility-service/src/test/java/com/fcourt/facility/service/LockRealtimeEventsTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/service/LockServiceTest.java](../facility-service/src/test/java/com/fcourt/facility/service/LockServiceTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/service/PricingEngineTest.java](../facility-service/src/test/java/com/fcourt/facility/service/PricingEngineTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/service/PricingServiceValidationTest.java](../facility-service/src/test/java/com/fcourt/facility/service/PricingServiceValidationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/service/ReservationServiceTest.java](../facility-service/src/test/java/com/fcourt/facility/service/ReservationServiceTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/service/SlotTemplateEngineTest.java](../facility-service/src/test/java/com/fcourt/facility/service/SlotTemplateEngineTest.java) — Java test source; inspect fixtures and assertions before running.
+- [facility-service/src/test/java/com/fcourt/facility/service/SlotWindowsTest.java](../facility-service/src/test/java/com/fcourt/facility/service/SlotWindowsTest.java) — Java test source; inspect fixtures and assertions before running.
+- [gateway-service/src/test/java/com/fcourt/gateway/GatewaySecurityTests.java](../gateway-service/src/test/java/com/fcourt/gateway/GatewaySecurityTests.java) — Java test source; inspect fixtures and assertions before running.
+- [gateway-service/src/test/java/com/fcourt/gateway/RateLimitGatewayTests.java](../gateway-service/src/test/java/com/fcourt/gateway/RateLimitGatewayTests.java) — Java test source; inspect fixtures and assertions before running.
+- [gateway-service/src/test/java/com/fcourt/gateway/RateLimitRedisDownTests.java](../gateway-service/src/test/java/com/fcourt/gateway/RateLimitRedisDownTests.java) — Java test source; inspect fixtures and assertions before running.
+- [gateway-service/src/test/java/com/fcourt/gateway/RouteTableTests.java](../gateway-service/src/test/java/com/fcourt/gateway/RouteTableTests.java) — Java test source; inspect fixtures and assertions before running.
+- [gateway-service/src/test/java/com/fcourt/gateway/StaticDiscoveryTests.java](../gateway-service/src/test/java/com/fcourt/gateway/StaticDiscoveryTests.java) — Java test source; inspect fixtures and assertions before running.
+- [gateway-service/src/test/java/com/fcourt/gateway/ratelimit/RateLimitUnitTests.java](../gateway-service/src/test/java/com/fcourt/gateway/ratelimit/RateLimitUnitTests.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/NotificationFlowIntegrationTest.java](../notification-service/src/test/java/com/fcourt/notification/NotificationFlowIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/OpenApiDocsTest.java](../notification-service/src/test/java/com/fcourt/notification/OpenApiDocsTest.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/device/DeviceControllerIntegrationTest.java](../notification-service/src/test/java/com/fcourt/notification/device/DeviceControllerIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/device/DeviceServiceTest.java](../notification-service/src/test/java/com/fcourt/notification/device/DeviceServiceTest.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/event/EmailPlannerTest.java](../notification-service/src/test/java/com/fcourt/notification/event/EmailPlannerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/exception/GlobalExceptionHandlerTest.java](../notification-service/src/test/java/com/fcourt/notification/exception/GlobalExceptionHandlerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/inapp/HttpBranchDirectoryTest.java](../notification-service/src/test/java/com/fcourt/notification/inapp/HttpBranchDirectoryTest.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/inapp/InAppEventHandlerTest.java](../notification-service/src/test/java/com/fcourt/notification/inapp/InAppEventHandlerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/inapp/InAppNotificationIntegrationTest.java](../notification-service/src/test/java/com/fcourt/notification/inapp/InAppNotificationIntegrationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/inapp/InAppPlannerTest.java](../notification-service/src/test/java/com/fcourt/notification/inapp/InAppPlannerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/inbox/NotificationServiceTest.java](../notification-service/src/test/java/com/fcourt/notification/inbox/NotificationServiceTest.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/kafka/KafkaErrorHandlingConfigurationTest.java](../notification-service/src/test/java/com/fcourt/notification/kafka/KafkaErrorHandlingConfigurationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/kafka/NotificationTopicsTest.java](../notification-service/src/test/java/com/fcourt/notification/kafka/NotificationTopicsTest.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/kafka/RedactingDeadLetterPublishingRecovererTest.java](../notification-service/src/test/java/com/fcourt/notification/kafka/RedactingDeadLetterPublishingRecovererTest.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/mail/SmtpEmailSenderTest.java](../notification-service/src/test/java/com/fcourt/notification/mail/SmtpEmailSenderTest.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/mail/TemplateRendererTest.java](../notification-service/src/test/java/com/fcourt/notification/mail/TemplateRendererTest.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/push/PushDeliveryServiceTest.java](../notification-service/src/test/java/com/fcourt/notification/push/PushDeliveryServiceTest.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/push/PushPlannerTest.java](../notification-service/src/test/java/com/fcourt/notification/push/PushPlannerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/push/SnsPushSenderTest.java](../notification-service/src/test/java/com/fcourt/notification/push/SnsPushSenderTest.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/reminder/ReminderProjectionTest.java](../notification-service/src/test/java/com/fcourt/notification/reminder/ReminderProjectionTest.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/reminder/ReminderScheduleProjectionTest.java](../notification-service/src/test/java/com/fcourt/notification/reminder/ReminderScheduleProjectionTest.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/reminder/ReminderSchedulerTest.java](../notification-service/src/test/java/com/fcourt/notification/reminder/ReminderSchedulerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [notification-service/src/test/java/com/fcourt/notification/reminder/ReminderWorkerTest.java](../notification-service/src/test/java/com/fcourt/notification/reminder/ReminderWorkerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [payment-service/src/test/java/com/fcourt/payment/AdminRefundProofCleanupTest.java](../payment-service/src/test/java/com/fcourt/payment/AdminRefundProofCleanupTest.java) — Java test source; inspect fixtures and assertions before running.
+- [payment-service/src/test/java/com/fcourt/payment/AutomaticRefundServiceTest.java](../payment-service/src/test/java/com/fcourt/payment/AutomaticRefundServiceTest.java) — Java test source; inspect fixtures and assertions before running.
+- [payment-service/src/test/java/com/fcourt/payment/BookingRefundConsumerTest.java](../payment-service/src/test/java/com/fcourt/payment/BookingRefundConsumerTest.java) — Java test source; inspect fixtures and assertions before running.
+- [payment-service/src/test/java/com/fcourt/payment/CheckoutApiTest.java](../payment-service/src/test/java/com/fcourt/payment/CheckoutApiTest.java) — Java test source; inspect fixtures and assertions before running.
+- [payment-service/src/test/java/com/fcourt/payment/GuestRefundAuthorityTest.java](../payment-service/src/test/java/com/fcourt/payment/GuestRefundAuthorityTest.java) — Java test source; inspect fixtures and assertions before running.
+- [payment-service/src/test/java/com/fcourt/payment/GuestRefundLifecycleTest.java](../payment-service/src/test/java/com/fcourt/payment/GuestRefundLifecycleTest.java) — Java test source; inspect fixtures and assertions before running.
+- [payment-service/src/test/java/com/fcourt/payment/JwtVerificationTest.java](../payment-service/src/test/java/com/fcourt/payment/JwtVerificationTest.java) — Java test source; inspect fixtures and assertions before running.
+- [payment-service/src/test/java/com/fcourt/payment/LocalFixtureApplication.java](../payment-service/src/test/java/com/fcourt/payment/LocalFixtureApplication.java) — Java test source; inspect fixtures and assertions before running.
+- [payment-service/src/test/java/com/fcourt/payment/OpenApiDocsTest.java](../payment-service/src/test/java/com/fcourt/payment/OpenApiDocsTest.java) — Java test source; inspect fixtures and assertions before running.
+- [payment-service/src/test/java/com/fcourt/payment/PaymentDatabaseTest.java](../payment-service/src/test/java/com/fcourt/payment/PaymentDatabaseTest.java) — Java test source; inspect fixtures and assertions before running.
+- [payment-service/src/test/java/com/fcourt/payment/PaymentReminderRecipientTest.java](../payment-service/src/test/java/com/fcourt/payment/PaymentReminderRecipientTest.java) — Java test source; inspect fixtures and assertions before running.
+- [payment-service/src/test/java/com/fcourt/payment/PaymentSessionsExpiryTest.java](../payment-service/src/test/java/com/fcourt/payment/PaymentSessionsExpiryTest.java) — Java test source; inspect fixtures and assertions before running.
+- [payment-service/src/test/java/com/fcourt/payment/PaymentVoucherBridgeTest.java](../payment-service/src/test/java/com/fcourt/payment/PaymentVoucherBridgeTest.java) — Java test source; inspect fixtures and assertions before running.
