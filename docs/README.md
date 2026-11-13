@@ -14,7 +14,7 @@ Quay lại [README của repository](../README.md). Phần lớn tài liệu hi�
 
 ## Báo cáo
 
-[report/](report/README.md) là nơi lưu cục bộ báo cáo cuối kỳ của dự án (DOCX/PDF); bản thân các file này không được đưa vào git.
+[report/](report/README.md) chứa báo cáo cuối kỳ của dự án: bản chính thức `FCourt_Report_MSS301.docx` được đưa vào git; bản nháp và PDF chỉ lưu cục bộ.
 
 ## Tài liệu khác
 
