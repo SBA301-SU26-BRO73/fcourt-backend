@@ -133,7 +133,7 @@ Client chỉ gọi gateway (`http://localhost:8080` ở local, `https://fcourt.d
 
 ## Tài liệu
 
-[docs/README.md](docs/README.md) là mục lục: kiến trúc, vận hành, phân tích nghiệp vụ và thư mục `docs/report/` cho báo cáo cuối kỳ.
+[docs/README.md](docs/README.md) là mục lục: tham chiếu chức năng, kiến trúc, tham chiếu theo service và báo cáo cuối kỳ trong `docs/report/`.
 
 ## Đóng góp
 
