@@ -75,8 +75,6 @@ curl http://localhost:8080/api/public/branches
 - Upload/download file cần khóa S3 thật trong `.env` (hỏi tech lead). Nếu không có, các chức năng khác vẫn hoạt động bình thường.
 - Xóa toàn bộ dữ liệu: `docker compose --profile all down -v`.
 
-Hướng dẫn đầy đủ (port, bộ nhớ, xử lý sự cố): [docs/operations/docker-compose.md](docs/operations/docker-compose.md). Kết quả smoke test đã ghi lại: [docs/operations/smoke-test-local.md](docs/operations/smoke-test-local.md).
-
 ## Build và test một service
 
 Không có root POM nên cần trỏ Maven tới `pom.xml` của service (đúng lệnh CI chạy):
@@ -105,7 +103,7 @@ Cấu hình là các biến môi trường, có giá trị mặc định cho loc
 | `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY` | Thanh toán PayOS (bí mật) |
 | `NOTIFICATION_SMTP_HOST`, `NOTIFICATION_SMTP_USER`, `NOTIFICATION_SMTP_PASSWORD` | SMTP thật (mặc định: Mailpit) |
 | `BOOKING_HOLD_SERVICE_TOKEN` | Token nội bộ giữa các service (giá trị DEV trong Compose) |
-| `<NAME>_URI` (ví dụ `AUTH_SERVICE_URI`), `RATE_LIMIT_*`, `GATEWAY_*` | Định tuyến gateway, rate limit, CORS, Swagger: [docs/operations/gateway.md](docs/operations/gateway.md) |
+| `<NAME>_URI` (ví dụ `AUTH_SERVICE_URI`), `RATE_LIMIT_*`, `GATEWAY_*` | Định tuyến gateway, rate limit, CORS, Swagger |
 
 Script cơ sở dữ liệu nằm trong `<service>/database/`; danh sách database ở `docker/postgres/services.txt`. Cố ý không có khóa ngoại giữa các service.
 
@@ -127,11 +125,11 @@ Script cơ sở dữ liệu nằm trong `<service>/database/`; danh sách databa
 4. Argo CD đồng bộ `fcourt-gitops` vào cluster EKS (namespace `fcourt-prod`). Hạ tầng được quản lý trong `fcourt-infra` (Terraform).
 5. Phát hành: tạo PR `dev` -> `main` với tiêu đề `merge: release vX.Y.Z` và merge bằng merge commit (không squash).
 
-Chi tiết: [docs/operations/ci-image-build.md](docs/operations/ci-image-build.md), [docs/architecture/aws-architecture.md](docs/architecture/aws-architecture.md).
+Chi tiết: [docs/architecture/aws-architecture.md](docs/architecture/aws-architecture.md).
 
 ## Điểm vào API
 
-Client chỉ gọi gateway (`http://localhost:8080` ở local, `https://fcourt.donan.site` ở production, cùng origin dưới `/api`). Các prefix chính: `/api/auth/**`, `/api/public/**` (không cần token), `/api/bookings/**`, `/api/payments/**`, `/api/refunds/**`, `/api/vouchers/**`, `/api/subscriptions/**`, `/api/staff/**`, `/api/admin/**`, `/api/super-admin/**`, `/api/notifications/**` và WebSocket `/ws-fcourt`. `/api/internal/**` và `/actuator/**` không bao giờ được chuyển tiếp. Bảng route đầy đủ và các đường dẫn công khai: [docs/operations/gateway.md](docs/operations/gateway.md).
+Client chỉ gọi gateway (`http://localhost:8080` ở local, `https://fcourt.donan.site` ở production, cùng origin dưới `/api`). Các prefix chính: `/api/auth/**`, `/api/public/**` (không cần token), `/api/bookings/**`, `/api/payments/**`, `/api/refunds/**`, `/api/vouchers/**`, `/api/subscriptions/**`, `/api/staff/**`, `/api/admin/**`, `/api/super-admin/**`, `/api/notifications/**` và WebSocket `/ws-fcourt`. `/api/internal/**` và `/actuator/**` không bao giờ được chuyển tiếp.
 
 ## Tài liệu
 
