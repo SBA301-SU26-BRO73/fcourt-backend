@@ -23,7 +23,7 @@ Thumbs.db
 tools/demo_seed/*.local.json
 __pycache__/
 
-# Final report (DOCX/PDF stay local; the folder is kept)
+# Final report: only the official DOCX is tracked; other DOCX/PDF stay local
 docs/report/*
 !docs/report/README.md
-!docs/report/.gitkeep
+!docs/report/FCourt_Report_MSS301.docx
